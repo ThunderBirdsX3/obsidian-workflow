@@ -1,0 +1,23 @@
+# obsidian-workflow — local artifacts
+test-artifacts/
+worktrees/
+
+# Obsidian per-machine state
+.obsidian/workspace*
+.obsidian/cache
+
+# OS
+.DS_Store
+**/.DS_Store
+
+# claude-mem auto-generated context files (keep root /CLAUDE.md only)
+**/CLAUDE.md
+!/CLAUDE.md
+
+# Claude Code per-machine state
+.claude/settings.local.json
+
+# env / secrets
+.env
+.env.*
+!.env.test.example
