@@ -6,7 +6,7 @@
 #   bash install.sh /path/to/project       # absolute path
 #
 # Copies: .ow/ , .claude/commands/ow-*.md , .claude/agents/ ,
-#         scripts/ow-paths.sh , .ow.yml (if absent) , vault skeleton (if absent)
+#         scripts/ow-paths.sh + ow-upgrade.sh , .ow.yml (if absent) , vault skeleton (if absent)
 # Never overwrites: .ow.yml, CLAUDE.md, existing vault content, anything outside its list.
 # After install: open the target in Claude Code and run /ow-init
 
@@ -40,9 +40,9 @@ mkdir -p "$DEST/.ow/rules"
 mkdir -p "$DEST/.claude/commands"
 copy_agents "$SRC" "$DEST"
 
-# 3) resolver + shared libs
+# 3) resolver + shared libs + self-upgrade
 mkdir -p "$DEST/scripts"
-for f in scripts/ow-paths.sh scripts/ow-claude-manifest.sh scripts/ow-config-merge.sh; do
+for f in scripts/ow-paths.sh scripts/ow-claude-manifest.sh scripts/ow-config-merge.sh scripts/ow-upgrade.sh; do
   cp "$SRC/$f" "$DEST/$f"
   chmod +x "$DEST/$f"
 done

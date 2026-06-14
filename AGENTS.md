@@ -104,9 +104,12 @@ Does NOT overwrite: existing `.ow.yml` values, existing `.ow/rules/` content, ex
 
 ## upgrade.sh behaviour
 
-`ow-upgrade.sh <target-dir>` refreshes toolkit-owned files only.
-User-customised files are left untouched. Backups auto-created before overwrite.
-`--dry-run` shows diff without applying. `--rollback` restores last backup.
+`ow-upgrade.sh` is smart about context:
+
+- **From toolkit source** (`.ow/commands/` exists next to scripts/): `bash scripts/ow-upgrade.sh /path/to/project [--dry-run|--rollback]`
+- **From installed project** (no toolkit source): `bash scripts/ow-upgrade.sh [--dry-run|--rollback]` — auto-clones toolkit from GitHub into a temp dir, runs the upgrade, then cleans up
+
+Refreshes toolkit-owned files only. User-customised files untouched. Backups auto-created before overwrite.
 
 ## Dependencies
 

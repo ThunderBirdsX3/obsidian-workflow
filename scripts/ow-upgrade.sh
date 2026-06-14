@@ -1,10 +1,16 @@
 #!/usr/bin/env bash
-# ow-upgrade — upgrade an existing obsidian-workflow install in a target project
+# ow-upgrade — upgrade an existing obsidian-workflow install
 #
-# Usage (run from the toolkit checkout, like install.sh):
-#   bash scripts/ow-upgrade.sh /path/to/target-project              # apply upgrade
-#   bash scripts/ow-upgrade.sh /path/to/target-project --dry-run    # show what would change
-#   bash scripts/ow-upgrade.sh /path/to/target-project --rollback   # restore last backup
+# Usage from an INSTALLED project (no toolkit clone needed):
+#   bash scripts/ow-upgrade.sh                    # upgrade this project
+#   bash scripts/ow-upgrade.sh --dry-run
+#   bash scripts/ow-upgrade.sh --rollback
+#
+# Usage from the toolkit source checkout:
+#   bash scripts/ow-upgrade.sh /path/to/project [--dry-run|--rollback]
+#
+# When run from an installed project (no toolkit source next to the script),
+# fetches the latest toolkit from GitHub automatically, then upgrades.
 #
 # Refreshes ONLY toolkit-owned paths:
 #   .ow/STANDARD.md  .ow/{policies,checklists,templates,commands}
@@ -19,19 +25,33 @@
 
 set -euo pipefail
 
+TOOLKIT_REPO="https://github.com/ThunderBirdsX3/obsidian-workflow.git"
+
 # script lives in scripts/ — toolkit root is the parent
 SRC="$(cd "$(dirname "$0")/.." && pwd)"
-DEST="${1:?usage: bash scripts/ow-upgrade.sh /path/to/target-project [--dry-run|--rollback]}"
-DEST="$(cd "$DEST" 2>/dev/null && pwd)" || { echo "FATAL: target not found: $1"; exit 1; }
-shift
+
+# detect: running from installed project (no toolkit source) → self-fetch
+if [ ! -d "$SRC/.ow/commands" ]; then
+  DEST="$SRC"  # the project this script lives in
+  TMP=$(mktemp -d)
+  trap 'rm -rf "$TMP"' EXIT
+  echo "Fetching latest obsidian-workflow..."
+  git clone --depth=1 "$TOOLKIT_REPO" "$TMP/toolkit" 2>&1 | grep -v "^$" || true
+  exec bash "$TMP/toolkit/scripts/ow-upgrade.sh" "$DEST" "$@"
+fi
+
+# running from toolkit source — original behaviour
 DRY_RUN=0; ROLLBACK=0
+DEST=""
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --dry-run) DRY_RUN=1; shift ;;
     --rollback) ROLLBACK=1; shift ;;
-    *) echo "Unknown flag: $1" >&2; exit 1 ;;
+    *) DEST="$1"; shift ;;
   esac
 done
+[ -n "$DEST" ] || { echo "usage: bash scripts/ow-upgrade.sh /path/to/project [--dry-run|--rollback]" >&2; exit 1; }
+DEST="$(cd "$DEST" 2>/dev/null && pwd)" || { echo "FATAL: target not found: $DEST"; exit 1; }
 
 [ "$SRC" = "$DEST" ] && { echo "FATAL: target is the toolkit repo itself"; exit 1; }
 
@@ -43,7 +63,7 @@ BACKUP_ROOT="$DEST/.ow-backup"
 
 # toolkit-owned paths refreshed wholesale (relative to both roots)
 OWNED_DIRS=(.ow/policies .ow/checklists .ow/templates .ow/commands)
-OWNED_FILES=(.ow/STANDARD.md scripts/ow-paths.sh scripts/ow-claude-manifest.sh scripts/ow-config-merge.sh)
+OWNED_FILES=(.ow/STANDARD.md scripts/ow-paths.sh scripts/ow-claude-manifest.sh scripts/ow-config-merge.sh scripts/ow-upgrade.sh)
 
 # ── rollback ──────────────────────────────────────────────────────────────────
 if [ "$ROLLBACK" -eq 1 ]; then
@@ -118,7 +138,7 @@ echo "  refreshed .ow/ owned dirs"
 
 # ── apply: resolver + libs ────────────────────────────────────────────────────
 mkdir -p "$DEST/scripts"
-for f in scripts/ow-paths.sh scripts/ow-claude-manifest.sh scripts/ow-config-merge.sh; do
+for f in scripts/ow-paths.sh scripts/ow-claude-manifest.sh scripts/ow-config-merge.sh scripts/ow-upgrade.sh; do
   cp "$SRC/$f" "$DEST/$f"; chmod +x "$DEST/$f"
 done
 echo "  refreshed scripts/ow-*.sh"

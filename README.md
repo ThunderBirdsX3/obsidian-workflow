@@ -49,17 +49,17 @@ PRD (ทำไม — สั้น)
 - **Plan ≠ Implement** — `/ow-plan` เขียนแผน (ไม่แตะโค้ด) → user approve → `/ow-implement`
 - **No fake evidence** — test count/commit hash/URL ต้องมาจากการรันจริง
 
-### Upgrade install เดิม
+### Upgrade
 
 ```bash
-# จาก toolkit checkout เวอร์ชันใหม่ → refresh เฉพาะไฟล์ที่ toolkit เป็นเจ้าของ
-bash scripts/ow-upgrade.sh /path/to/your-project              # apply (backup อัตโนมัติ)
-bash scripts/ow-upgrade.sh /path/to/your-project --dry-run    # ดูก่อนว่าจะเปลี่ยนอะไร
-bash scripts/ow-upgrade.sh /path/to/your-project --rollback   # ย้อนกลับ backup ล่าสุด
+# รันจาก project ที่ install แล้ว — ดึง latest จาก GitHub เองเลย
+bash scripts/ow-upgrade.sh              # apply (backup อัตโนมัติ)
+bash scripts/ow-upgrade.sh --dry-run    # ดูก่อนว่าจะเปลี่ยนอะไร
+bash scripts/ow-upgrade.sh --rollback   # ย้อนกลับ backup ล่าสุด
 ```
 
 upgrade ไม่แตะ: CLAUDE.md, vault content, `.ow/rules/` content,
-agent ที่ project customize (specialized), ค่าใน `.ow.yml` ที่มีอยู่แล้ว (backfill เฉพาะ block ใหม่)
+agent ที่ project customize, ค่าใน `.ow.yml` ที่มีอยู่แล้ว (backfill เฉพาะ block ใหม่)
 
 ## คำสั่ง (22)
 
