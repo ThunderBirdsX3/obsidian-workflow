@@ -2,7 +2,8 @@
 # install.sh — copy the obsidian-workflow toolkit into a target project
 #
 # Usage:
-#   bash install.sh /path/to/target-project
+#   bash install.sh .                      # current directory (existing project)
+#   bash install.sh /path/to/project       # absolute path
 #
 # Copies: .ow/ , .claude/commands/ow-*.md , .claude/agents/ ,
 #         scripts/ow-paths.sh , .ow.yml (if absent) , vault skeleton (if absent)

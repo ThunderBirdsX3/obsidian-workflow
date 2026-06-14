@@ -17,9 +17,23 @@ Reference ฉบับเต็มอยู่ที่ [USAGE.md](USAGE.md)
 ## ขั้น 1 — ติดตั้งเข้า project
 
 ```bash
-# clone toolkit repo นี้ไว้ที่ไหนก็ได้ แล้ว copy เข้า project ปลายทาง
-bash install.sh /path/to/your-project
+cd /path/to/your-project
+bash <(curl -fsSL https://raw.githubusercontent.com/ThunderBirdsX3/obsidian-workflow/main/bootstrap.sh) .
 ```
+
+> ไม่ต้อง clone ก่อน — bootstrap.sh ดึง toolkit มาเองแล้ว install ให้เลย  
+> ใช้ `.` = project ปัจจุบัน, หรือระบุ path เต็มก็ได้
+
+<details>
+<summary>ถ้าต้องการ clone เก็บไว้ (เพื่อ upgrade ทีหลังด้วย ow-upgrade.sh)</summary>
+
+```bash
+git clone https://github.com/ThunderBirdsX3/obsidian-workflow.git
+bash obsidian-workflow/install.sh /path/to/your-project
+```
+
+</details>
+
 
 install.sh จะ:
 

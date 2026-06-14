@@ -3,9 +3,33 @@
 Personal spec-driven development toolkit สำหรับ Claude Code + Obsidian —
 เอกสารเป็น source of truth (ลึกถึงระดับ SRS), แผนแยกจากการลงมือทำ, ทุกผลลัพธ์มี evidence ตรวจได้
 
+## ติดตั้ง
+
+ต้องมี: `yq` · `git` · Claude Code
+
+```bash
+# cd เข้า project ก่อน แล้วรัน
+cd /path/to/your-project
+bash <(curl -fsSL https://raw.githubusercontent.com/ThunderBirdsX3/obsidian-workflow/main/bootstrap.sh) .
+```
+
+แล้วรัน `/ow-init` ใน Claude Code
+
+<details>
+<summary>หรือ clone ก่อนแล้ว install (ถ้าอยากเก็บ toolkit ไว้ upgrade ทีหลัง)</summary>
+
+```bash
+git clone https://github.com/ThunderBirdsX3/obsidian-workflow.git
+bash obsidian-workflow/install.sh /path/to/your-project
+```
+
+</details>
+
+หรือใช้ repo นี้เป็น project เลย — แก้ `.ow.yml` `project.name/slug` แล้ว `/ow-new`
+
 📚 **เอกสาร:**
-[Getting Started](docs/GETTING-STARTED.md) — ติดตั้ง → ปิด feature แรก ·
-[Usage Guide](docs/USAGE.md) — reference ครบ 22 commands + workflows + กติกา ·
+[Getting Started](GETTING-STARTED.md) — ติดตั้ง → ปิด feature แรก ·
+[Usage Guide](USAGE.md) — reference ครบ 22 commands + workflows + กติกา ·
 หรือพิมพ์ `/ow-help` ใน Claude Code
 
 ## แนวคิด
@@ -24,21 +48,6 @@ PRD (ทำไม — สั้น)
   (รวม sad path) + error handling; NFR มี threshold วัดได้; มี State & Lifecycle + Error Catalog
 - **Plan ≠ Implement** — `/ow-plan` เขียนแผน (ไม่แตะโค้ด) → user approve → `/ow-implement`
 - **No fake evidence** — test count/commit hash/URL ต้องมาจากการรันจริง
-
-## ติดตั้งเข้า project
-
-ต้องมี: `yq` (hard requirement), `jq` (สำหรับ `--json`), `git`
-
-```bash
-# จาก repo นี้ → copy toolkit เข้า project ปลายทาง
-bash install.sh /path/to/your-project
-
-# แล้วใน Claude Code (ที่ project ปลายทาง)
-/ow-init
-```
-
-หรือใช้ repo นี้เป็น project เลยก็ได้ (vault skeleton อยู่ที่ `docs/vault/` แล้ว) —
-แก้ `.ow.yml` `project.name/slug` แล้วเริ่ม `/ow-new`
 
 ### Upgrade install เดิม
 
