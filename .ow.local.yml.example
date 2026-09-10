@@ -1,0 +1,47 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# obsidian-workflow — PERSONAL / per-machine config (gitignored)
+# ─────────────────────────────────────────────────────────────────────────────
+# This file (`.ow.local.yml.example`) คือ reference template ที่ commit
+# `.ow.local.yml` เวอร์ชัน editable ถูก installer สร้างให้คุณอัตโนมัติแล้ว
+# (ถ้าเริ่มต้นใหม่ในเครื่องอื่น: `cp .ow.local.yml.example .ow.local.yml`)
+#
+# Scope: ค่าที่เฉพาะเครื่อง/บุคคล — ห้ามใส่ใน `.ow.yml` (shared)
+#   - paths เฉพาะเครื่อง (external_vault, mirror, secrets)
+#   - personal preferences (user.name)
+#
+# Override precedence (scripts/ow-paths.sh):
+#   .ow.local.yml  >  .ow.yml  >  hardcoded defaults
+#
+# ห้าม commit `.ow.local.yml` — `.gitignore` block ไว้แล้ว
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Paths — เฉพาะเครื่องของคุณ
+paths:
+  # ถ้า Obsidian vault อยู่นอก project (เช่น shared org vault หรือ iCloud)
+  # ใส่ absolute path ที่นี่; commands จะใช้ตัวนี้แทน `vault_path` ใน .ow.yml
+  # ทิ้งว่างไว้ = ใช้ vault ใน repo (docs/obsidian-vault/)
+  external_vault: ""
+  # ตัวอย่าง: external_vault: "/Volumes/workspace/ObsidianVaults/MyProject"
+
+  # ที่เก็บ secret/credential สำหรับการ test (ถ้าจำเป็น)
+  # ห้ามใส่ secret ใน vault — ใช้ path นี้ + env var
+  secrets_file: ""
+  # ตัวอย่าง: secrets_file: "~/.secrets/ow-project-x.env"
+
+# Personal preferences
+user:
+  name: ""                       # ชื่อที่ปรากฏใน handoff (default: git config user.name)
+
+# Personal commands/templates ของคุณเอง (ไม่ commit)
+# วาง override ไว้ใน .ow/local/{commands,templates}/ แล้ว resolver จะหยิบก่อนตัว shared
+# (path คงที่ — key ด้านล่างเป็น documentation เฉยๆ, resolver ไม่ได้อ่านค่าที่ override)
+local_commands_dir: ".ow/local/commands"
+local_templates_dir: ".ow/local/templates"
+
+# ─────────────────────────────────────────────────────────────
+# Test credentials
+# ─────────────────────────────────────────────────────────────
+# schema (which roles / which env vars) อยู่ใน `.ow.yml` → test_credentials
+# ค่าจริงอยู่ในไฟล์ env ที่ gitignored — ห้ามใส่ค่าจริงที่นี่
+test_credentials:
+  env_file: ".env.test"

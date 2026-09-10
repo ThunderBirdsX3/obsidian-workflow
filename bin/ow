@@ -1,0 +1,227 @@
+#!/usr/bin/env bash
+# obsidian-workflow CLI — convenience wrapper around scripts/install.sh
+# Install:
+#   sudo ln -s "$(pwd)/bin/ow" /usr/local/bin/ow
+# Or add obsidian-workflow/bin to PATH
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+OW_HOME="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# Some subcommands (init/update/test) wrap SOURCE-ONLY scripts that ship only with a
+# obsidian-workflow source checkout — never installed into a consumer project. When bin/ow
+# is run from inside an installed project those scripts are absent; fail with a clear
+# message instead of a raw "No such file or directory".
+_require_source_script() {
+  # $1 = script filename under scripts/, $2 = this subcommand name
+  if [ ! -f "$OW_HOME/scripts/$1" ]; then
+    echo "obsidian-workflow: '$2' is a source-checkout command (needs scripts/$1, not shipped to projects)." >&2
+    echo "  In an installed project use: 'ow upgrade' (or the /ow-* slash commands)." >&2
+    exit 2
+  fi
+}
+
+print_help() {
+  cat <<EOF
+obsidian-workflow — AI + Obsidian docs-driven development workflow
+
+USAGE
+  obsidian-workflow <command> [args]
+
+COMMANDS (in an installed project)
+  upgrade                  Bump obsidian-workflow template (preserves templates/, docs/, config, custom scripts)
+  doctor                   Diagnose project — check vault, configs, scripts, subagents
+  lint                     Run the conformance lint (#14 — preamble/§0/no-vault-binary gate)
+  paths [--json]           Show resolved paths from .ow.yml + .ow.local.yml
+  version                  Show version
+  help                     Show this help
+
+COMMANDS (source checkout only — bootstrap new projects from a obsidian-workflow clone)
+  init [name] [--ai <list>]  Initialize obsidian-workflow (greenfield: name/, brownfield/empty: --here)
+  init --here [--ai <list>]  Initialize in current directory
+                             --ai accepts any name in scripts/ow-frontends.sh, or 'all'
+                             (claude, codex, google, gpt, glm, cline, kimi; default: interactive)
+  init --local               Already-adopted repo: materialize only YOUR missing gitignored
+                             personal files (.ow.local.yml, .ow/local/, secrets env).
+  init [...] --force         Re-run over an already-adopted project without prompting
+                             (.ow.yml is protected — never overwritten)
+  init [...] --no-sample     Skip the greenfield sample vault
+  update                     Re-run install over the current project (alias-ish of upgrade)
+  test                       Run obsidian-workflow's own smoke tests
+  sync                       (use /ow-sync in Claude Code, or 'ow upgrade')
+
+REQUIREMENTS
+  yq is a HARD prerequisite (v0.7+) — the resolver parses YAML lists/nested keys.
+  Install: brew install yq | apt install yq | https://github.com/mikefarah/yq
+
+EXAMPLES
+  # New project (greenfield)
+  ow init my-awesome-app
+  cd my-awesome-app
+  claude    # then run /ow-init
+
+  # Existing project (brownfield)
+  cd existing-project
+  ow init --here
+
+  # Upgrade
+  ow update
+
+EOF
+}
+
+cmd_init() {
+  local target="" here=0 ai_flag="" local_flag=""
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --here) here=1; shift ;;
+      --force) FORCE_FLAG="--force"; shift ;;
+      --no-sample) NO_SAMPLE_FLAG="--no-sample"; shift ;;
+      --ai) ai_flag="--ai $2"; shift 2 ;;
+      --yes|-y) YES_FLAG="--yes"; shift ;;
+      --local) local_flag="--local"; shift ;;   # materialize only missing personal files (#23)
+      -*) echo "Unknown flag: $1" >&2; exit 1 ;;
+      *) target="$1"; shift ;;
+    esac
+  done
+
+  _require_source_script install.sh init
+  if [ "$here" -eq 1 ] || [ -z "$target" ]; then
+    target="$(pwd)"
+  else
+    mkdir -p "$target"
+    target="$(cd "$target" && pwd)"
+  fi
+
+  bash "$OW_HOME/scripts/install.sh" \
+    "$target" \
+    --source "$OW_HOME" \
+    ${ai_flag:-} ${FORCE_FLAG:-} ${NO_SAMPLE_FLAG:-} ${YES_FLAG:-} ${local_flag:-}
+}
+
+cmd_update() {
+  _require_source_script install.sh update
+  bash "$OW_HOME/scripts/install.sh" \
+    --source "$OW_HOME" \
+    --target "$(pwd)" \
+    --force --no-sample
+}
+
+cmd_sync() {
+  [ -f ".ow.yml" ] || { echo "Not a obsidian-workflow project (no .ow.yml)" >&2; exit 1; }
+  # There is no standalone sync script — snapshot sync runs via the /ow-sync slash
+  # command (Claude Code), and the obsidian-workflow template bump runs via upgrade.
+  echo "obsidian-workflow: run '/ow-sync' inside Claude Code to pull the latest snapshot," >&2
+  echo "  or 'ow upgrade' to bump the installed obsidian-workflow template." >&2
+  exit 2
+}
+
+cmd_doctor() {
+  [ -f ".ow.yml" ] || { echo "Not a obsidian-workflow project (no .ow.yml)" >&2; exit 1; }
+  set +e   # don't abort on individual check failures
+  set +o pipefail 2>/dev/null || true
+  echo "ow doctor"
+  echo "  Config:           $([ -f .ow.yml ] && echo OK || echo MISSING)"
+  echo "  CLAUDE.md:        $([ -f CLAUDE.md ] && echo OK || echo MISSING)"
+  echo "  .gitignore:       $([ -f .gitignore ] && echo OK || echo "(missing — recommended)")"
+  # Commands lookup: .ow/commands/ (v0.4.1+) → root commands/ (legacy)
+  cmd_dir=""
+  if [ -d ".ow/commands" ]; then cmd_dir=".ow/commands"
+  elif [ -d "commands" ]; then cmd_dir="commands (legacy — run upgrade)"
+  fi
+  if [ -n "$cmd_dir" ]; then
+    cmd_count=$(ls "${cmd_dir%% *}"/ow-*.md 2>/dev/null | wc -l | tr -d ' ')
+    echo "  commands ($cmd_dir): $cmd_count verbs"
+  else
+    echo "  commands:         MISSING"
+  fi
+  echo "  .claude/commands: $([ -d .claude/commands ] && echo "$(ls .claude/commands/*.md 2>/dev/null | wc -l) shims" || echo MISSING)"
+  echo "  .claude/agents/:  $([ -d .claude/agents ] && echo "$(ls .claude/agents/*.md 2>/dev/null | wc -l) agents" || echo MISSING)"
+  echo "  templates/:       $([ -d templates ] && echo "$(ls templates/*.md 2>/dev/null | wc -l) templates (project override layer)" || echo "(none — using .ow/templates/)")"
+  # runtime helpers shipped to a project — checked against the owned-file manifest
+  # (single source of truth). install.sh/test.sh are source-only, never installed.
+  owned_list=""
+  if [ -f "scripts/ow-owned.sh" ]; then
+    # shellcheck disable=SC1091
+    . "scripts/ow-owned.sh" 2>/dev/null && owned_list="$(ow_owned_scripts 2>/dev/null)"
+  fi
+  # Fallback only fires when scripts/ow-owned.sh is itself missing — i.e. exactly the
+  # degraded install this check exists to report. It MUST list every owned script, or
+  # doctor reports "OK" while the runtime is short a helper. scripts/test.sh pins the
+  # two lists equal so this copy can never drift from the manifest again.
+  [ -n "$owned_list" ] || owned_list="ow-paths.sh ow-safe-paths.sh ow-gitignore.sh ow-claude-md.sh ow-git-sync.sh ow-version.sh ow-owned.sh ow-frontends.sh ow-shims.sh ow-claude-manifest.sh ow-settings-merge.sh ow-config-merge.sh conformance-lint.sh ow-verify-vault-lang.sh ow-verify-vault-style.sh upgrade.sh"
+  miss=""; n=0; for s in $owned_list; do n=$((n+1)); [ -f "scripts/$s" ] || miss="$miss $s"; done
+  echo "  scripts/:         $([ -z "$miss" ] && echo "OK ($n runtime helpers)" || echo "(missing:$miss)")"
+  echo "  bin/ow:     $([ -f bin/ow ] && echo OK || echo "(missing — run upgrade)")"
+  echo "  yq (hard prereq): $(command -v yq >/dev/null 2>&1 && echo OK || echo "MISSING — brew install yq")"
+  # Personal/gitignored files (#23) — a teammate who cloned an adopted repo has none of these.
+  # Report which are missing + the one command that materializes them.
+  echo "  Personal files (gitignored — run 'ow init --local' to create any missing):"
+  echo "    .ow.local.yml:  $([ -f .ow.local.yml ] && echo OK || echo "missing — run: ow init --local")"
+  echo "    .ow/local/:      $([ -d .ow/local ] && echo OK || echo "missing — run: ow init --local")"
+  pf_miss=0
+  for ex in .env.example .ow/test-credentials.env.example test-credentials.env.example; do
+    [ -f "$ex" ] || continue
+    dest="${ex%.example}"
+    [ -e "$dest" ] || { echo "    $dest:  missing — run: ow init --local (from $ex)"; pf_miss=1; }
+  done
+  [ "$pf_miss" -eq 0 ] && echo "    secrets/env:          $([ -f .env ] || [ -f test-credentials.env ] && echo OK || echo "(none expected)")"
+  local vault
+  vault="$(grep -E '^vault_path:' .ow.yml 2>/dev/null | awk '{print $2}' | tr -d '"')"
+  vault="${vault:-docs/obsidian-vault}"
+  echo "  vault ($vault): $([ -d "$vault" ] && echo OK || echo MISSING)"
+  for sub in 00-Index 10-PRD 20-Features 30-Roles 40-Functions 50-Phases 60-Flows 70-Reference 80-ImplementPlan 85-FixLog 90-TestPlan 95-Handoff; do
+    [ -d "$vault/$sub" ] || echo "    ⚠ Missing: $vault/$sub"
+  done
+}
+
+cmd_version() {
+  # obsidian-workflow's own version lives in .ow.yml `ow.version` (v0.4+) — there is
+  # no root VERSION file. Read the project's config first (cwd), then OW_HOME.
+  local v="" f
+  for f in ".ow.yml" "$OW_HOME/.ow.yml"; do
+    [ -f "$f" ] || continue
+    v=$(awk '/^ow:/{b=1;next} /^[a-zA-Z_]/{b=0} b && /^  version:/{gsub(/^[^"]*"|"[^"]*$/,"");print;exit}' "$f" 2>/dev/null)
+    [ -n "$v" ] && break
+  done
+  echo "obsidian-workflow ${v:-unknown}"
+}
+
+cmd_test() {
+  _require_source_script test.sh test
+  bash "$OW_HOME/scripts/test.sh" "$@"
+}
+
+cmd_lint() {
+  # #14 conformance lint — hard gate (preamble/§0/no-vault-binary). Exits non-zero on failure.
+  bash "$OW_HOME/scripts/conformance-lint.sh" "$@"
+}
+
+cmd_upgrade() {
+  bash "$OW_HOME/scripts/upgrade.sh" "$@"
+}
+
+cmd_paths() {
+  bash "$OW_HOME/scripts/ow-paths.sh" "$@"
+}
+
+main() {
+  local cmd="${1:-help}"
+  shift || true
+  case "$cmd" in
+    init)         cmd_init "$@" ;;
+    upgrade)      cmd_upgrade "$@" ;;
+    update)       cmd_update "$@" ;;
+    sync)         cmd_sync "$@" ;;
+    doctor)       cmd_doctor "$@" ;;
+    test)         cmd_test "$@" ;;
+    lint)         cmd_lint "$@" ;;
+    paths)        cmd_paths "$@" ;;
+    version)      cmd_version ;;
+    help|-h|--help) print_help ;;
+    *) echo "Unknown command: $cmd" >&2; print_help >&2; exit 1 ;;
+  esac
+}
+
+main "$@"

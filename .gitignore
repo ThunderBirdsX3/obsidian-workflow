@@ -1,0 +1,44 @@
+# ─────────────────────────────────────────────────────────────
+# obsidian-workflow — gitignore
+#
+# The block between the obsidian-workflow markers below is the SAME block that
+# install/upgrade inject into a host project (see scripts/ow-gitignore.sh —
+# single source of truth). Keep edits to obsidian-workflow-internal paths inside it.
+#
+# Everything OUTSIDE the markers is this source repo's own dev noise and is NOT
+# shipped to host projects — host projects own their stack/OS/editor ignores.
+# ─────────────────────────────────────────────────────────────
+
+# >>> obsidian-workflow managed (auto-updated by install/upgrade — do not edit inside) >>>
+# Personal / per-machine config — never commit
+.ow.local.yml
+.ow/local/
+.ow/cache/
+.ow.cache/
+.ow/standards/.cache/
+.ow/standards/.tmp/
+.ow/.last-sync
+# Sync/migration backups
+*.md.new
+*.md.bak
+*.md.orig
+# Local Claude settings (per-machine)
+.claude/settings.local.json
+# <<< obsidian-workflow managed end <<<
+
+# ── obsidian-workflow source-repo dev only (NOT shipped to host projects) ──
+.DS_Store
+**/.DS_Store
+
+# superpowers design specs — scratch for authoring commands, not a repo deliverable
+.superpowers/
+
+# claude-mem auto-generated context files (keep root /CLAUDE.md only)
+**/CLAUDE.md
+!/CLAUDE.md
+
+.vscode/
+.ow.backup-*/
+
+# leftover from the retired evidence subsystem (v2.0.0) — nothing writes here any more; safe to delete
+test-artifacts/
