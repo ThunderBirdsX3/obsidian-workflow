@@ -1756,6 +1756,26 @@ run "phase gate blocks on planned"  'grep -q "Never proceed on .planned." '"$FRA
 run "no-flag runs every phase"      'grep -q "phase in .## Phases. order" '"$FRAG33"
 run "6.0 gates per phase section"   'grep -q "phase_section()" '"$FRAG33"
 # ── regressions found by adversarial trace: each gate must be able to FAIL ──
+# ── selective read: a phased plan must not cost every phase the whole file ──
+run "phases: reads the plan selectively" 'grep -q "^## 1.5 Read the plan \*\*selectively\*\*" '"$FRAG33"' && grep -q "offset=" '"$FRAG33"
+run "phases: forbids reading siblings"   'grep -q "Never read another phase.s section" '"$FRAG33"
+run "implement Phase 1 points at 1.5"    'grep -q "read it \*\*selectively\*\*" '"$IMPL33"
+run "plan: budget is the slice not file" 'grep -q "SESSION_FIXED=20000" '"$PLAN"' && ! grep -q "est + 25000" '"$PLAN"
+run "plan: re-measures after writing"    'grep -q "Re-measure once the file exists" '"$PLAN"
+# behavioral: the re-measure awk must charge each phase header+own-section, never the whole file
+run "plan[behavioral]: per-phase slice < whole file" '
+  d=$(mktemp -d); P="$d/plan.md"
+  { printf -- "---\ntitle: x\n---\n"; i=0; while [ $i -lt 20 ]; do printf "header line\n"; i=$((i+1)); done
+    printf -- "### Phase P1 — a\n"; i=0; while [ $i -lt 60 ];  do printf "p1 line\n"; i=$((i+1)); done
+    printf -- "### Phase P2 — b\n"; i=0; while [ $i -lt 100 ]; do printf "p2 line\n"; i=$((i+1)); done
+  } > "$P"
+  H=$(awk "/^### Phase /{exit} {print}" "$P" | wc -c | tr -d " ")
+  out=$(awk -v h="$H" "/^### Phase /{ if (id) printf \"%s %d\\n\", id, (h + n) / 2; id=\$3; n=0 } id { n += length(\$0) + 1 } END { if (id) printf \"%s %d\\n\", id, (h + n) / 2 }" "$P")
+  whole=$(( $(wc -c < "$P" | tr -d " ") / 2 )); rm -rf "$d"
+  p1=$(printf "%s" "$out" | awk "/^P1 /{print \$2}"); p2=$(printf "%s" "$out" | awk "/^P2 /{print \$2}")
+  [ -n "$p1" ] && [ -n "$p2" ] || { echo "awk produced no rows: $out"; exit 1; }
+  [ "$p1" -lt "$whole" ] && [ "$p2" -lt "$whole" ] && [ "$p2" -gt "$p1" ] || {
+    echo "p1=$p1 p2=$p2 whole=$whole — want each < whole, and p2 (bigger section) > p1"; exit 1; }'
 run "6.0 block derives its own vars" 'sed -n "/^## 4\. The done-gate/,/^## 5\./p" '"$FRAG33"' | grep -q "PLAN_PATH=" && sed -n "/^## 4\. The done-gate/,/^## 5\./p" '"$FRAG33"' | grep -q "PHASE_ID="'
 run "6.0 refuses an empty PHASE_ID"  'grep -q "passes vacuously" '"$FRAG33"
 run "DS gate reads the phase area"   'sed -n "/^## Phase 4 /,/^## Phase 5 /p" '"$IMPL33"' | grep -q "running phase.s .area."'

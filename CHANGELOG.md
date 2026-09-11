@@ -3,6 +3,28 @@
 Format: [Keep a Changelog](https://keepachangelog.com). Versions: SemVer.
 Version marker: `ow.version` in `.ow.yml`.
 
+## [1.1.1] — 2026-09-11
+
+### Fixed — a phased plan is read one phase at a time, and sized that way
+
+`/ow-split` kept each unit in its own file, so an executor opened only what it
+needed. Folding phases into one plan file lost that: `/ow-implement --phase P2`
+read every sibling phase's section too, and `/ow-plan` 2.5.2 charged a flat
+25,000 for "plan + prompt + rules + agent" — a constant that does not grow with
+the phase count, so an 8-phase plan under-priced its own read set by ~20k tokens.
+
+- `_shared/phases.md` §1.5 — read the plan **selectively**: `grep -n` the section
+  boundaries, then two `Read`s with `offset`/`limit` (the shared header, then this
+  phase's section). Reading a sibling phase "for context" is forbidden — a value
+  needed across phases belongs in `## Shared Contract`, which the header already
+  carries. The whole file is still read for the last phase's 6.0 gate and `/ow-verify`.
+- `/ow-plan` 2.5.2 — the per-phase estimate now counts that slice, not the whole
+  file, and `SESSION_FIXED` (20,000) covers only what every run pays regardless of
+  the plan. After Phase 3 writes the file, the real slice sizes are measured and the
+  `est tokens` column is corrected.
+- `## Shared Contract` is unchanged and stays cheap (~1 line per shared value, and
+  the section is omitted entirely when phases share nothing).
+
 ## [1.1.0] — 2026-09-11
 
 ### Changed — `/ow-split` retired; phases live inside the plan (BREAKING)

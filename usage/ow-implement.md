@@ -43,6 +43,7 @@
 plan ที่ `/ow-plan` แตกเป็น phase จะมีตาราง `## Phases` (id · area · depends_on · est tokens · status)
 และ `## Shared Contract` สำหรับค่าที่ใช้ข้าม phase
 
+- **อ่าน plan แบบเลือกส่วน** — `Read` ด้วย `offset`/`limit`: อ่าน header ร่วม (frontmatter/Task/Shared Contract/ตาราง Phases) + `### Phase` ของตัวเองเท่านั้น 🔴 ไม่อ่าน section ของ phase อื่น (ถ้าจำเป็นต้องรู้ค่าจาก phase อื่น = ค่านั้นควรอยู่ใน Shared Contract อยู่แล้ว)
 - `/ow-implement <plan> --phase P2` → รัน **เฉพาะ section ของ P2** — context_refs, Affected Files, Steps,
   Test Plan, Success Criteria, doc ที่ P2 เป็นเจ้าของ · 🔴 ห้ามแตะไฟล์/doc ของ phase อื่น
 - **gate ก่อนเริ่ม** — `depends_on` ต้อง `done` ครบ และ Shared Contract row ที่ P2 เป็น consumer ต้อง

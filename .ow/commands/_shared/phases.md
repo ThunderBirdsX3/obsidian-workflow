@@ -40,6 +40,30 @@ entry gate entirely. Assert it, never let it fail open.
 🔴 A flat plan (`PHASED=0`) plus `--phase` = **STOP** — there is nothing to select, and running the whole
 plan "because the flag looked harmless" is not what the user asked for.
 
+## 1.5 Read the plan **selectively** — never the whole file
+
+🔴 A phased plan holds every phase's section in one file. Opening all of it puts 6 phases you will not touch
+into the context this phase was sized against — the exact cost the breakdown exists to avoid, paid back in
+full. `Read` takes `offset`/`limit`, so read only the slices this run needs:
+
+```bash
+grep -n '^## Shared Contract\|^## Phases\|^### Phase \|^## Design System\|^## Verification' "$PLAN_PATH"
+# → the line numbers that bound (a) the shared header and (b) each phase section
+```
+
+Then **two Reads, not one**:
+1. **Shared header** — `Read(PLAN_PATH, offset=1, limit=<first "### Phase " line - 1>)`: frontmatter, Problem,
+   Task, Goals, Non-goals, Doc Gaps, `## Shared Contract`, the `## Phases` table. Every gate in §2 reads from here
+2. **This phase only** — `Read(PLAN_PATH, offset=<its "### Phase <id>" line>, limit=<next "### Phase " or
+   "## " line − that line>)`. Plus, at the end of the file, the plan-level `## Design System Compliance` /
+   `## Verification` / `## Risks` / `## Approvals` when a gate actually needs them
+
+🔴 Never read another phase's section "for context" — if this phase genuinely needs something from a sibling,
+that value belongs in `## Shared Contract`, which you already hold. Needing more than the contract means the
+phase boundary was drawn wrong: report it rather than reading across.
+🔴 The whole-file reads that remain legitimate: the Phase 6.0 final gate on the **last** phase, and
+`/ow-verify`. Both are cheap by comparison and neither precedes code.
+
 ## 2. The entry gate — every item, before any code
 
 With `--phase <id>`:

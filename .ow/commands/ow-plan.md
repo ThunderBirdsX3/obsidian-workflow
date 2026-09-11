@@ -216,8 +216,11 @@ uses the new schema · a test paired with the same production change.
 
 ### 2.5.2 Size each phase against the executor's context budget (measure, never estimate by eye)
 
-A phase's **read set** = the files `/ow-implement` must open to run it: the code it changes, the tests it
-touches, the FN/FEAT docs it needs, the rules for its area — plus this plan file itself.
+A phase's **read set** = what `/ow-implement` must open to run it: the code it changes, the tests it touches,
+the FN/FEAT docs it needs, the rules for its area — plus **its own slice of this plan**, not the whole file.
+🔴 A phased plan is read selectively (`_shared/phases.md` §1.5: the shared header + this phase's section
+only), so charging the whole file here would price in 7 sections nobody opens — and charging a flat constant
+would under-price a plan whose phase count grew. Count the slice.
 
 ```bash
 . "$(git rev-parse --show-toplevel)/.ow/local/paths.env"
@@ -226,8 +229,10 @@ PHASE_BUDGET=120000   # 200K local model x 0.6 — leaves room for output, tool 
 FLOOR=15000           # below this a phase is not worth its own cold-context start
 MAX_PHASES=8
 # --phase-budget / --max-phases override PHASE_BUDGET / MAX_PHASES when given.
-# 🔴 A later phase runs in a FRESH SHELL, so Phase 1's est_read_set() is gone — re-define it here, then add
-#    the fixed overhead (system prompt + Phase 0 + rules + agent file + this plan file):
+# 🔴 A later phase runs in a FRESH SHELL, so Phase 1's est_read_set() is gone — re-define it here.
+#    SESSION_FIXED covers what every run pays regardless of the plan: system prompt + Phase 0 + rules +
+#    agent file. The plan's own cost is NOT in it — it is the slice, added per phase below.
+SESSION_FIXED=20000
 est_read_set() {                     # usage: est_read_set <file>...  — count WHOLE files
   local est=0 b f
   for f in "$@"; do
@@ -237,8 +242,9 @@ est_read_set() {                     # usage: est_read_set <file>...  — count 
       *)    est=$(( est + b * 2 / 7 )) ;;   # code — ~3.5 bytes/token
     esac
   done
-  echo $(( est + 25000 ))
+  echo $(( est + SESSION_FIXED ))
 }
+# phase total = est_read_set <this phase's code+doc files> + (shared header + this phase's section)/2 bytes
 ```
 
 - `est > PHASE_BUDGET` → break that phase further, then measure again
@@ -251,6 +257,24 @@ est_read_set() {                     # usage: est_read_set <file>...  — count 
 - 🔴 The byte→token ratios are a heuristic, not a tokenizer measurement — say so whenever you report a number
 
 Record the result as the `est tokens` column of each `## Phases` row.
+
+🔴 **Re-measure once the file exists.** Until Phase 3 writes it, the plan's own slices are an estimate of an
+unwritten document — the one place this phase would otherwise be guessing. After the file is written, take the
+real slice sizes and correct the column:
+
+```bash
+. "$(git rev-parse --show-toplevel)/.ow/local/paths.env"
+PLAN="$PLAN_DIR/<the file just written>"
+HDR=$(awk '/^### Phase /{exit} {print}' "$PLAN" | wc -c | tr -d ' ')   # shared header, read by every phase
+awk -v h="$HDR" '
+  /^### Phase /{ if (id) printf "%s\t%d tok\n", id, (h + n) / 2; id=$3; n=0 }
+  id { n += length($0) + 1 }
+  END { if (id) printf "%s\t%d tok\n", id, (h + n) / 2 }' "$PLAN"
+# → add each phase’s code/doc read set + SESSION_FIXED to these, then write the totals into the table
+```
+
+A corrected number that now exceeds `PHASE_BUDGET` → say so in the Phase 5 warning; never silently keep the
+optimistic figure.
 
 ### 2.5.3 Clarify a boundary (only when genuinely ambiguous — folded into the Phase 2 batch)
 

@@ -53,7 +53,7 @@ related_docs: [...]
 | `--revise <path>` | n/a | update plan in-place (ไม่สร้างไฟล์ใหม่) |
 | `fix:<slug>` / `--from-fix <path>` | n/a | escalate จาก fix-log — pre-fill + เขียน `source_fix:` (plan) ↔ `related_plan:` (fix-log); fix-log ปิด auto ตอน plan done (#30) |
 | `--budget <n>` | 40000 | เพดาน token ของ vault read-set ใน Phase 1 — เกินแล้วตัด conditional ก่อน → เสนอ `/ow-clarify` → สุดท้ายอ่านทีละ phase แล้วเขียน plan แบบแตก phase **ไม่เคยอ่าน doc แบบตัดครึ่ง** |
-| `--phase-budget <n>` | 120000 | เพดาน context ที่ **executor** ต้องอ่านต่อ 1 phase (Phase 2.5.2) — คนละตัวกับ `--budget` ซึ่งเป็นของ `/ow-plan` เอง |
+| `--phase-budget <n>` | 120000 | เพดาน context ที่ **executor** ต้องอ่านต่อ 1 phase (Phase 2.5.2) — นับจาก **สไลซ์ของ phase นั้น** (header ร่วม + section ตัวเอง) ไม่ใช่ทั้งไฟล์ · คนละตัวกับ `--budget` ซึ่งเป็นของ `/ow-plan` เอง |
 | `--max-phases <N>` | 8 | เกินแล้วยุบ phase เล็กที่สุดเข้าด้วยกัน (ยุบได้เฉพาะ phase ที่ area เดียวกัน) |
 | `--no-phases` | off | บังคับ plan แบน แม้ Phase 2.5 จะตัดสินว่าควรแตก |
 

@@ -20,7 +20,7 @@ Mode-gated detail lives in `_shared/` fragments. 🔴 **Read one the moment its 
 | Fragment | Read when |
 |---|---|
 | `.ow/commands/_shared/worktree.md` | `WT_MODE=on` — Phases 2.7 · 6.4 · 7 |
-| `.ow/commands/_shared/phases.md` | the plan carries `## Phases` — Phases 1.3 · 3.3 · 4 · 6.0 · 6.1 |
+| `.ow/commands/_shared/phases.md` | the plan carries `## Phases` — Phases 1 · 1.3 · 3.3 · 4 · 6.0 · 6.1 |
 | `.ow/commands/_shared/delegation.md` | the 3.0 judgment lands on a subagent — Phase 3.2 |
 | `.ow/commands/_shared/build-test.md` | always — Phase 5.0 |
 | `.ow/commands/_shared/fixlog-close.md` | the run is fix-escalated (`source_fix:` / `--from-fix`) — Phase 6.5 |
@@ -74,7 +74,7 @@ Empty → ask (render in `$PROJECT_LANG`) which plan, and list the 5 most recent
 
 ## Phase 1 — Validate
 
-1. Read the plan file
+1. Read the plan file — 🔴 phased (`## Phases`) → read it **selectively**, `_shared/phases.md` §1.5
 2. **Refuse** if `status != approved` → tell the user to set the status first
 3. **Refuse** if it is already `status: done` → tell the user
 4. Check that `Implementation Steps` is complete + `subagent_target` is set (it names the **area** whose rules/gates apply — not an order to spawn, see 3.0)

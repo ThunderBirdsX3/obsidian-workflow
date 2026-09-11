@@ -44,7 +44,7 @@ vault_path: docs/obsidian-vault
 # - `source`  = where /ow-sync pulls from
 # - `last_synced` = updated by /ow-sync Phase 6 + scripts/upgrade.sh
 ow:
-  version: "1.1.0"
+  version: "1.1.1"
   source: "https://github.com/ThunderBirdsX3/obsidian-workflow"
   last_synced: "2026-09-10"
 
