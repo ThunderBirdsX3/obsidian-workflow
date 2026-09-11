@@ -15,12 +15,12 @@ Obsidian behaviour this command must honour:
 
 Execute an approved plan file: do the work — **inline yourself or delegated to a subagent, your call** — and prove it with a real build/test run
 
-Mode-gated detail lives in `_shared/` fragments. 🔴 **Read a fragment the moment its phase says so** — it is
-authoritative for what it covers and this file never restates it:
+Mode-gated detail lives in `_shared/` fragments. 🔴 **Read one the moment its phase says so** — it is authoritative for what it covers and this file never restates it:
 
 | Fragment | Read when |
 |---|---|
 | `.ow/commands/_shared/worktree.md` | `WT_MODE=on` — Phases 2.7 · 6.4 · 7 |
+| `.ow/commands/_shared/phases.md` | the plan carries `## Phases` — Phases 1.3 · 3.3 · 4 · 6.0 · 6.1 |
 | `.ow/commands/_shared/delegation.md` | the 3.0 judgment lands on a subagent — Phase 3.2 |
 | `.ow/commands/_shared/build-test.md` | always — Phase 5.0 |
 | `.ow/commands/_shared/fixlog-close.md` | the run is fix-escalated (`source_fix:` / `--from-fix`) — Phase 6.5 |
@@ -60,6 +60,7 @@ FRESH SHELL — Phase 0's exports are gone — so it re-hydrates first, then ass
 ```
 /ow-implement <vault>/80-ImplementPlan/YYYY-MM-DD-HHmm-<slug>.md
 /ow-implement <slug>      # auto-locate by slug
+/ow-implement <plan> --phase P2      # run ONE phase of a phased plan (/ow-plan Phase 2.5) — no flag = every phase in order
 /ow-implement <plan> --worktree      # force the build into a separate git worktree (even when the plan frontmatter has no worktree:) (#31)
 /ow-implement <plan> --no-worktree   # force the build into the main tree (overrides a plan carrying worktree: true)
 /ow-implement --from-fix <vault>/85-FixLog/YYYY-MM-DD-HHMM-<slug>.md   # P2 minor + P3 polish — skips the plan; closes this fix-log itself when done (6.5)
@@ -114,6 +115,12 @@ Either section means an earlier run of this same target died before finishing:
 
 No such section → start normally
 
+### 1.3 Phase gate — a phased plan (`## Phases` present)
+
+The **phase is the unit of work**: 🔴 **read `.ow/commands/_shared/phases.md` and follow it** — §1 resolve ·
+§2 entry gate (`depends_on` + Shared Contract + the phase's `area`) · §3 read set + resume (it also scopes 1.2
+to this phase's lines) · §4 the 6.0 done-gate · §5 the 6.1 close-out. No `## Phases` → skip it, run unchanged.
+
 ## Phase 2 — Fix doc gaps (when present)
 
 🔴 **Read `.ow/commands/_shared/vault-doc-style.md` and follow it** before touching a doc — a
@@ -138,7 +145,7 @@ used by Phases 3-6.
 # in the main tree at this point — the worktree is not created yet), in case a separate bash block call
 # did not persist $ROOT.
 MAIN_ROOT="${ROOT:-$(git rev-parse --show-toplevel)}"
-PLAN_PATH=$(printf '%s' "$ARGUMENTS" | sed -E 's/[[:space:]]*--(no-)?worktree//g; s/^[[:space:]]+//; s/[[:space:]]+$//')
+PLAN_PATH=$(printf '%s' "$ARGUMENTS" | sed -E 's/[[:space:]]*--phase[[:space:]]+[A-Za-z0-9_-]+//g; s/[[:space:]]*--(no-)?worktree//g; s/^[[:space:]]+//; s/[[:space:]]+$//')
 WT_MODE=off
 grep -q '^worktree:[[:space:]]*true' "$PLAN_PATH" 2>/dev/null && WT_MODE=on   # plan frontmatter (from /ow-plan --worktree)
 case " $ARGUMENTS " in *" --worktree "*)    WT_MODE=on ;;  esac               # explicit flag beats frontmatter
@@ -157,7 +164,7 @@ WORK_ROOT="$MAIN_ROOT"                                # default = build in the m
 ### 3.0 Decide how to run it (your judgment — 🔴 no mandate either way)
 
 `subagent_target` names the **area** the work belongs to ⇒ which rules and gates apply. It is **not** an
-order to spawn:
+order to spawn. 🔴 Phased run → the running phase's `area` replaces it everywhere below (`phases.md` §2.6):
 
 | `subagent_target` | area rules — apply them inline, or spawn this agent |
 |---|---|
@@ -191,14 +198,15 @@ here forces either one: judge it as you would any other task, with the real trad
    `bash scripts/ow-paths.sh --rules-validate`)
 2. Read the plan's FN/FEAT docs, the existing code/tests it names, and the conditional refs the include-when
    table in `.ow/commands/_shared/context-refs.md` judges relevant (**uncertain ⇒ read it** — a wrong skip costs more)
-   🔴 The plan carries `context_closed: true` (a `/ow-split` sub-plan) → its `context_refs:` list **is** the
-   read set: skip the include-when resolution entirely, `/ow-split` already did it and measured the result
-   against the session's context budget. Reading something outside the list stays allowed — report
+   🔴 The plan carries `context_closed: true` → its `context_refs:` list **is** the read set, so skip the
+   include-when resolution: the running phase's list on a phased plan, the plan's own top-level list on one
+   without `## Phases` (a sub-plan from the retired `/ow-split` — still valid, read it as written).
+   It was already measured against the executor's budget. Reading outside the list stays allowed — report
    `context gap: <doc> — needed for <reason>` (the same escape hatch as `CONTEXT_SKIPPED`). No such field →
    unchanged: uncertain ⇒ read it
 3. Follow the implementation rules (3.1) yourself — they are not agent-specific
 4. Every gate in Phases 4/5/6 runs identically
-5. 🔴 **Never chunk an inline run** — you can compact and see your own context; chunking exists only for agents
+5. 🔴 **Never chunk an inline run** — chunking exists only for agents (you can compact and see your own context)
 6. 🔴 **Write the `## Step Progress` marker as you go (3.3)** — the only state that outlives a dead session
 
 ### 3.1 Implementation rules (apply inline · paste verbatim into a delegated prompt)
@@ -248,7 +256,7 @@ written:
 ```markdown
 ## Step Progress (written by /ow-implement — resume marker)
 - [x] steps 1-3 · 2026-08-07 14:20 · exit: `pnpm test src/api/cart` passes
-- [x] steps 4-6 · 2026-08-07 14:48 · exit: `tsc --noEmit` clean
+- [x] P2 steps 1-4 · 2026-08-07 14:48 · exit: `tsc --noEmit` clean
 ```
 
 | target | unit to anchor on | where `exit:` comes from |
@@ -268,7 +276,9 @@ written:
 
 ## Phase 4 — Design system gate (when present)
 
-If `<vault>/70-Reference/DesignSystem/` exists and `subagent_target` is `frontend` or `mobile`
+If `<vault>/70-Reference/DesignSystem/` exists and the run's area is `frontend` or `mobile` — the plan's
+`subagent_target`, or 🔴 on a phased run the **running phase's `area`** (`phases.md` §2.6), since a plan
+spanning areas carries `subagent_target: all` and would skip this gate on a UI phase
 (applies the same inline or delegated — the gate is on the work, not on who does it):
 
 Before any UI code is written — by you or by the agent:
@@ -323,6 +333,15 @@ If >0 → finish the outstanding items first (inline, or the `docs` agent under 
 
 🔴 **`status: done` must pass all of:** 5.0 build/test run + 5.2 coverage audit + 5.3 discipline audit + 6.0 open-checkbox = 0
 
+🔴 **A phase gates on its own section, not the whole file** (`_shared/phases.md` §4); 5.0/5.2/5.3 still apply to it.
+
+### 6.1 Close the phase (phased plan only)
+
+Tick that phase's row `done`, then decide whether the plan itself closes — `_shared/phases.md` §5 (the last
+phase re-runs 6.0 whole-file first). 🔴 Never flip the plan `status: done` while a phase row is not `done`.
+
+### 6.2 Close the plan
+
 1. Plan frontmatter: `status: done`, `completed_at: YYYY-MM-DD HH:mm`
 2. Append a section to the plan (its prose is in `$VAULT_LANG`; headings, frontmatter, IDs, and file paths stay English):
    ```markdown
@@ -355,6 +374,7 @@ Answer with **short bullets, quick to read**, in the configured language (`$PROJ
 
 - **What was done** — the main change + files/area + how it ran (inline, or subagent `<name>`)
 - **Verification** — the test/build actually run + its result (pass/fail count from stdout; cannot parse = `?/?` + `parse-failed: true`)
+- **Phase** — phased run only: which phase closed, which remain, the next command, and 🔴 `/clear` before it
 - **Risks / open / next** — only if any (e.g. "manual UAT not done yet"), plus any `context gap:` collected
 
 🔴 **Never fabricate** a count / path / sha — no real value = `pending verification`
@@ -372,6 +392,7 @@ Answer with **short bullets, quick to read**, in the configured language (`$PROJ
 - 🔴 Never `git checkout`/`git restore`/`git stash`/`git clean` on files the task did not create/change itself — it deletes a parallel task's uncommitted work (data loss, #29); revert churn = a surgical Edit on files the task owns only
 - Never fake a test/build result — the pass/fail count must parse from real stdout; cannot parse → `?/?` + `parse-failed: true`, never guess
 - 🔴 Never flip `status: done` unless all four pass: 5.0 build/test run · 5.2 coverage (`PROD>0 && TEST==0` = STOP, write a test or map to untestable 1–6 — "hard" is not one) · 5.3 discipline · 6.0 open-checkbox = 0
+- 🔴 Phased plan → every `Never` in `_shared/phases.md` applies in full: no phase runs on an unfinished `depends_on` or a `state: planned` contract row, no phase touches another phase's files, and the plan never flips `done` while a phase row is not
 - 🔴 Never flip a plan `done` while it has `source_fix:` but the source fix-log is not closed (6.5) — a `source_fix:` pointing at a missing file = **STOP**, never silent
 - Never deliver work without a verification map back to the success criteria · never touch a shared/production env without confirming
 - 🔴 Worktree mode → the orchestrator **must not merge** (that is `/ow-test`'s job) · **must not push** · the agent must not commit/merge itself · a create failure = **STOP**, never a silent fallback to the main tree

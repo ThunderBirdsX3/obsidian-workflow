@@ -30,11 +30,11 @@
 #      resolver call would live there forever; every command loads this block on every run, so a
 #      drifted copy is a per-command failure mode nothing else catches. Step 2 is exempt — its
 #      `--rules <area>` argument is legitimately per-command.
-#   9. The `context_closed` contract appears in ow-split.md, ow-implement.md and
-#      _shared/delegation.md. /ow-split emits the flag and the other two are its only readers;
-#      losing it on one side silently re-inflates a sub-plan's context to the full include-when set.
-#      Gated on ow-split.md being present — a project that has not adopted /ow-split has no
-#      emitter and so nothing to guard; it must never be aborted by this check.
+#   9. The `context_closed` contract appears in ow-plan.md, ow-implement.md and
+#      _shared/delegation.md. /ow-plan emits the flag on a phased plan and the other two are its
+#      only readers; losing it on one side silently re-inflates a phase's context to the full
+#      include-when set. Gated on ow-plan.md being present — no emitter, nothing to guard; a
+#      partial commands dir must never be aborted by this check.
 #  10. /ow-git --bump writes version files through scripts/ow-version.sh, the writer exists, and
 #      no spec calls the old undefined `bump_version_file` (#34). An improvised write is how a
 #      `v`-prefixed version reached a pubspec and shipped as a tagged, unbuildable release.
@@ -216,20 +216,20 @@ if [ -d "$CMDS" ]; then
 fi
 
 # ── check 9: the context_closed contract is present on both sides (#35) ──────
-# /ow-split emits `context_closed: true` in every sub-plan; /ow-implement Phase 3.0 and
+# /ow-plan emits `context_closed: true` on a phased plan (Phase 2.5); /ow-implement Phase 3.0 and
 # _shared/delegation.md §1 are the only readers. The contract is pure prose in three files —
-# drop it from one side and sub-plans silently fall back to full include-when resolution,
-# re-inflating exactly the context the split existed to bound. Nothing else catches that.
-# Gated on ow-split.md being installed: no emitter ⇒ nothing to guard. A project that has not
-# picked up /ow-split yet (or a fixture with a partial commands dir) must never be aborted by it.
-if [ -f "$CMDS/ow-split.md" ]; then
+# drop it from one side and a phased plan silently falls back to full include-when resolution,
+# re-inflating exactly the context the phase breakdown existed to bound. Nothing else catches that.
+# Gated on ow-plan.md being installed: no emitter ⇒ nothing to guard (a fixture with a partial
+# commands dir must never be aborted by it).
+if [ -f "$CMDS/ow-plan.md" ]; then
   _cc_missing=""
-  grep -q 'context_closed' "$CMDS/ow-split.md" || _cc_missing="$_cc_missing ow-split.md"
+  grep -q 'context_closed' "$CMDS/ow-plan.md" || _cc_missing="$_cc_missing ow-plan.md"
   for _cc_f in "$CMDS/ow-implement.md" "$FRAG/delegation.md"; do
     [ -f "$_cc_f" ] || { _cc_missing="$_cc_missing $(basename "$_cc_f")(absent)"; continue; }
     grep -q 'context_closed' "$_cc_f" || _cc_missing="$_cc_missing $(basename "$_cc_f")"
   done
-  [ -z "$_cc_missing" ] && okk "check 9: context_closed contract present in split/implement/delegation" \
+  [ -z "$_cc_missing" ] && okk "check 9: context_closed contract present in plan/implement/delegation" \
     || fail "check 9: context_closed contract missing in:$_cc_missing"
 fi
 
@@ -271,13 +271,13 @@ if [ -f "$CMDS/ow-implement.md" ]; then
     grep -Fq 'Write `- [x]` **only**' "$_sp_f" \
       || _sp_bad="$_sp_bad $(basename "$_sp_f")(no-[x]-only-rule)"
   done
-  # /ow-split Phase 5.5 regenerates sub-plans in place. /ow-implement goes approved → done and never
-  # stamps in-progress, so a sub-plan whose run died mid-way sits at `approved` with real work in the
-  # tree — a re-run that rewrites anything-not-done would destroy it AND its resume marker. Gated on
-  # ow-split.md, like check 9: a project that never adopted /ow-split has nothing to regenerate.
-  if [ -f "$CMDS/ow-split.md" ]; then
-    grep -q 'Step Progress' "$CMDS/ow-split.md" \
-      || _sp_bad="$_sp_bad ow-split.md(5.5-may-overwrite-a-resuming-sub-plan)"
+  # /ow-plan --revise rewrites a phased plan in place. /ow-implement goes approved → done and never
+  # stamps in-progress, so a phase whose run died mid-way sits at `approved` with real work in the
+  # tree — a revise that rewrites anything-not-done would destroy it AND its resume marker. Gated on
+  # ow-plan.md, like check 9: no emitter of phases ⇒ nothing to regenerate.
+  if [ -f "$CMDS/ow-plan.md" ]; then
+    grep -q 'Step Progress' "$CMDS/ow-plan.md" \
+      || _sp_bad="$_sp_bad ow-plan.md(revise-may-overwrite-a-resuming-phase)"
   fi
   [ -z "$_sp_bad" ] && okk "check 11: inline resume marker written (3.3) + verified on resume (1.2)" \
     || fail "check 11: resume-marker contract broken:$_sp_bad"

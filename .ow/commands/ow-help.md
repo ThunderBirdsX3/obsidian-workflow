@@ -103,7 +103,7 @@ Ask: does the project already have a .ow.yml?
     ├─ "new idea"                    → /ow-new
     ├─ "already have a PRD"          → /ow-new --import
     ├─ "plan a feature"              → /ow-plan <task>
-    ├─ "the plan is too big / small-context model" → /ow-split <plan-file>
+    ├─ "the plan is too big / small-context model" → /ow-plan lays it out in phases → /ow-implement <plan> --phase P1
     ├─ "work through a plan"         → /ow-implement <plan-file>
     ├─ "fix a bug"                   → /ow-fix <bug>
     ├─ "fix GitHub issues in bulk"   → /ow-triage-issues → /ow-fix-issue #NN → /ow-git --bump (auto ready-for-test)
@@ -244,7 +244,6 @@ Show a 1-page table (as short as possible):
 | /ow-new        | start a new project/feature           | PRD + SRS + Tech        |
 | /ow-clarify    | scan a spec for ambiguity             | clarified spec          |
 | /ow-plan       | plan work (before touching code)      | plan file in 80-...     |
-| /ow-split      | a plan too big for one session        | sub-plans + CONTRACT    |
 | /ow-checklist  | spec-quality gate per domain          | checklist file          |
 | /ow-implement  | execute a plan (the only code editor) | code + build/test + log |
 | /ow-fix        | diagnose a bug (no code change)       | fix-log in 85-FixLog    |

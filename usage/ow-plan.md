@@ -42,6 +42,9 @@ related_docs: [...]
 /ow-plan fix:<slug>                # plan ที่ escalate จาก fix-log (ingest + link สองทาง)
 /ow-plan --from-fix docs/obsidian-vault/85-FixLog/<file>.md   # เหมือน fix: แต่ระบุ path เต็ม
 /ow-plan <task> --budget <n>       # เพดาน token ของ vault read-set ใน Phase 1 (default 40000)
+/ow-plan <task> --phase-budget <n>  # เพดาน context ต่อ phase ที่ /ow-implement ต้องอ่าน (default 120000)
+/ow-plan <task> --max-phases <N>    # จำนวน phase สูงสุด (default 8)
+/ow-plan <task> --no-phases         # บังคับเขียน plan แบน ไม่แตก phase
 ```
 
 | Flag | Default | ใช้สำหรับ |
@@ -49,12 +52,16 @@ related_docs: [...]
 | `--worktree` | off | เขียน `worktree: true` ลง frontmatter → `/ow-implement`+`/ow-test` inherit: build ใน worktree แยก (กัน main tree), auto-merge ตอน test PASS (#31). `/ow-plan` ไม่สร้าง worktree เอง |
 | `--revise <path>` | n/a | update plan in-place (ไม่สร้างไฟล์ใหม่) |
 | `fix:<slug>` / `--from-fix <path>` | n/a | escalate จาก fix-log — pre-fill + เขียน `source_fix:` (plan) ↔ `related_plan:` (fix-log); fix-log ปิด auto ตอน plan done (#30) |
-| `--budget <n>` | 40000 | เพดาน token ของ vault read-set ใน Phase 1 — เกินแล้วตัด conditional ก่อน → เสนอ `/ow-clarify` → สุดท้ายเขียน `split_advised: true` **ไม่เคยอ่าน doc แบบตัดครึ่ง** (คนละตัวกับ `--budget` ของ `/ow-split` ซึ่งเป็น context ต่อ execution unit) |
+| `--budget <n>` | 40000 | เพดาน token ของ vault read-set ใน Phase 1 — เกินแล้วตัด conditional ก่อน → เสนอ `/ow-clarify` → สุดท้ายอ่านทีละ phase แล้วเขียน plan แบบแตก phase **ไม่เคยอ่าน doc แบบตัดครึ่ง** |
+| `--phase-budget <n>` | 120000 | เพดาน context ที่ **executor** ต้องอ่านต่อ 1 phase (Phase 2.5.2) — คนละตัวกับ `--budget` ซึ่งเป็นของ `/ow-plan` เอง |
+| `--max-phases <N>` | 8 | เกินแล้วยุบ phase เล็กที่สุดเข้าด้วยกัน (ยุบได้เฉพาะ phase ที่ area เดียวกัน) |
+| `--no-phases` | off | บังคับ plan แบน แม้ Phase 2.5 จะตัดสินว่าควรแตก |
 
 ## ขั้นตอนภายใน (Phase summary)
 
 1. **Phase 1** — อ่าน vault context (บังคับ แต่มี budget): `IMPLEMENTATION-STATUS` + **FR coverage check** (warn orphan/underspecified FR) → **เลือก read set ก่อนเปิด** (ALWAYS = PRD/FEAT/FN ที่ task ระบุ + code/test เดิม · CONDITIONAL = ตามตาราง include-when ใน `.ow/commands/_shared/context-refs.md` · DS docs ถ้าเป็น frontend/mobile) → วัดด้วย `est_read_set()` เทียบ `BUDGET` → doc ที่เข้า set อ่านเต็มเสมอ, doc ที่ถูกตัดต้อง list ไว้ใน plan พร้อมเหตุผล
 2. **Phase 2** — Clarifying questions **1 batch** (ถามที่ vault ไม่ตอบเท่านั้น)
+   - **Phase 2.5** — แตกงานเป็น **phase** เมื่อคุ้ม (หลาย area / ใหญ่เกิน 1 session): 1 phase = 1 area = 1 เรื่องที่จบในตัว → ดึงค่าที่ใช้ข้าม phase ออกมาเป็น `## Shared Contract` (producer/consumers) → เรียงลำดับตาม `depends_on` → วัด read set ต่อ phase เทียบ `PHASE_BUDGET` (เกิน = แตกต่อ, เล็กกว่า `FLOOR` = ยุบรวม) · งานเล็กพอ **ห้ามแตก**
 3. **Phase 3** — เขียน plan file ตาม template (Vault Context Read, Task, Goals, Non-goals, Affected Files, Steps, DS Compliance, Test Plan, Risks, Approvals)
    - **Phase 3.5** (fix-source mode เท่านั้น) — เขียน `related_plan: "[[<plan-slug>]]"` กลับลง fix-log (back-link สองทาง)
 4. **Phase 4** — Doc gap detection (จด ใน `Doc Gaps Found` — implement จะ fix ก่อน)
@@ -75,7 +82,7 @@ Frontmatter:
   subagent_target: backend | frontend | mobile | docs | design | all
   worktree: true                          ← เฉพาะ --worktree: implement+test ทำงานใน git worktree แยก (#31)
   source_fix: "[[fix-log-slug]]" | none   ← set เมื่อ fix:<slug> (/ow-implement ปิด fix-log นี้ตอน done)
-  split_advised: true                     ← เฉพาะตอน read-set เกิน budget: ให้รัน /ow-split ก่อน implement
+  context_closed: true                    ← เฉพาะ plan ที่แตก phase: ทุก phase มี context_refs ของตัวเอง → implement/delegation ใช้ list นั้นเป็น read set ทั้งหมด
   related_docs: [list]
   estimate_hours: <number>
   risk_level: low | medium | high
@@ -85,8 +92,11 @@ Body:
   ## Task                     ← clear one-paragraph
   ## Goals / Non-goals
   ## Doc Gaps Found           ← จะ fix ก่อน implement
-  ## Affected Files
-  ## Implementation Steps     ← 5-15 steps medium / 3-5 small
+  ## Shared Contract          ← เฉพาะ plan ที่แตก phase: ค่าที่ใช้ร่วมข้าม phase (R1/R2…) + producer/consumers + planned|actual
+  ## Phases                   ← เฉพาะ plan ที่แตก phase: ตาราง id · name · area · depends_on · est tokens · status
+  ### Phase P1 — <name>       ← context_refs + contract keys + owns docs แล้วตามด้วย 4 หัวข้อข้างล่างของ phase นั้น
+  ## Affected Files           ← plan ที่แตก phase: ย้ายไปอยู่ใต้ `### Phase Pn` (เป็น `#### Affected Files`)
+  ## Implementation Steps     ← 5-15 steps medium / 3-5 small · plan ที่แตก phase: 3-8 steps ต่อ phase
   ## Design System Compliance ← ถ้า frontend/mobile
   ## Design Additions          ← component ใหม่ที่ต้อง /ow-design ก่อน
   ## Test Plan

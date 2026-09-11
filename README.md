@@ -2,7 +2,7 @@
 
 **AI + Obsidian docs-driven development workflow** สำหรับทีมที่ใช้ AI ทำงาน — รวม spec-kit philosophy และ Obsidian vault patterns
 
-> 21 slash commands · 4 always-on + 5 on-demand AI subagents (per-agent + per-command AI model in `.ow.yml`) · 7 AI front-ends (Claude · Codex · Gemini · GPT · GLM · Cline · Kimi) · config-driven, works for any project (single-repo or submodule monorepo) · the vault stays text-only — command output is quoted into the doc, never stored as a file
+> 20 slash commands · 4 always-on + 5 on-demand AI subagents (per-agent + per-command AI model in `.ow.yml`) · 7 AI front-ends (Claude · Codex · Gemini · GPT · GLM · Cline · Kimi) · config-driven, works for any project (single-repo or submodule monorepo) · the vault stays text-only — command output is quoted into the doc, never stored as a file
 
 ---
 
@@ -65,12 +65,12 @@ ow doctor     # health check (also lists missing personal/gitignored files)
 
 ---
 
-## 🎯 21 Commands
+## 🎯 20 Commands
 
 | กลุ่ม | Commands |
 |---|---|
 | **ช่วยเหลือ + ตั้งค่า** | `/ow-help` `/ow-init` `/ow-reverse-engineer` `/ow-sync` `/ow-agent` |
-| **Spec-driven cycle** | `/ow-new` `/ow-clarify` `/ow-plan` `/ow-split` `/ow-checklist` `/ow-implement` `/ow-fix` |
+| **Spec-driven cycle** | `/ow-new` `/ow-clarify` `/ow-plan` `/ow-checklist` `/ow-implement` `/ow-fix` |
 | **GitHub issues** | `/ow-triage-issues` `/ow-fix-issue` |
 | **เอกสาร + ทดสอบ + ออกแบบ** | `/ow-doc` `/ow-test` `/ow-design` |
 | **ส่งมอบ** | `/ow-secure` `/ow-verify` `/ow-handoff` `/ow-git` |
@@ -102,8 +102,9 @@ cd my-app
 /ow-git --plan <path>                   ← commit + push
 ```
 
-> ✂️ **Plan ใหญ่เกินไป?** — `/ow-split <plan>` แตกเป็น sub-plan ที่จบในตัว + CONTRACT ร่วม 1 ไฟล์
-> รันทีละตัวคนละ session (`/clear` คั่น) → พอดี model context 200K และลด token สะสม · ปิดงานด้วย `/ow-verify <parent>`
+> ✂️ **Plan ใหญ่เกินไป?** — `/ow-plan` แตกงานเป็น **phase** ในไฟล์เดียว (`## Phases` + `## Shared Contract`)
+> รันทีละ phase คนละ session — `/ow-implement <plan> --phase P1` แล้ว `/clear` ก่อนไป P2 → พอดี model context 200K
+> และลด token สะสม · ไม่ระบุ `--phase` = รันทุก phase ตามลำดับ · ปิดงานด้วย `/ow-verify <plan>`
 
 > 🌳 **Worktree mode** (#31) — เติม `--worktree` ที่ `/ow-plan` → `/ow-implement` build ใน worktree แยก
 > (กัน main tree ไม่ถูกแตะ — งาน uncommitted คู่ขนานปลอดภัย), `/ow-test` **auto-merge กลับ branch ตอน smoke PASS**
@@ -346,7 +347,7 @@ bash scripts/install.sh --source $(pwd) --target /tmp/test-ow --dry-run
 ├── .ow/                         ← all obsidian-workflow machinery
 │   ├── templates/                     ← canonical templates
 │   ├── rules/                         ← project's own rules (never synced)
-│   └── commands/                      ← 21 source-of-truth verb specs (Phase descriptions)
+│   └── commands/                      ← 20 source-of-truth verb specs (Phase descriptions)
 │       └── _shared/                   ← fragments a verb spec reads on demand at the phase that needs them (coding-discipline · context-refs · vault-doc-style · worktree · worktree-merge · worktree-cleanup-gate · delegation · design-process · build-test · fixlog-close · fix-issue-fix-flow · fix-issue-ready-for-test · git-sync · git-post-push)
 ├── commands/                  ← OPTIONAL project override layer (lookup: root → .ow/commands/)
 ├── templates/                 ← OPTIONAL project override layer (lookup: root → .ow/templates/)

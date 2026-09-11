@@ -443,7 +443,7 @@ run "resolver exposes snapshot slot" 'bash scripts/ow-paths.sh --shell | grep -q
 # Test 13: Issue workflow commands + gh-issue agent
 # ════════════════════════════════════════════════════════════════════════════
 printf "\n${c_bold}Section 13 — Issue workflow (triage + fix-issue)${c_reset}\n"
-run "command count = 21"           '[ "$(find .ow/commands -name "ow-*.md" | wc -l | tr -d " ")" -eq 21 ]'
+run "command count = 20"           '[ "$(find .ow/commands -name "ow-*.md" | wc -l | tr -d " ")" -eq 20 ]'
 run "spec: ow-triage-issues"      '[ -f .ow/commands/ow-triage-issues.md ]'
 run "spec: ow-fix-issue"          '[ -f .ow/commands/ow-fix-issue.md ]'
 run "shim: ow-triage-issues"      '[ -f .claude/commands/ow-triage-issues.md ]'
@@ -1715,49 +1715,123 @@ run "lint: check 10 passes on this repo"      'bash scripts/conformance-lint.sh 
 run "lint: check 2 passes on this repo"       'bash scripts/conformance-lint.sh 2>&1 | grep -q "✓ check 2"'
 
 # ════════════════════════════════════════════════════════════════════════════
-# Section 33: /ow-split — plan splitting for small-context sessions
+# Section 33: phased plans — /ow-plan Phase 2.5 + /ow-implement --phase
 # ════════════════════════════════════════════════════════════════════════════
-printf "\n${c_bold}Section 33 — /ow-split (sub-plans + shared CONTRACT)${c_reset}\n"
-run "spec: ow-split"              '[ -f .ow/commands/ow-split.md ]'
-run "shim: ow-split"              '[ -f .claude/commands/ow-split.md ]'
-run "skill: ow-split"             '[ -f .agents/skills/ow-split/SKILL.md ]'
-run "split model pinned sonnet"    'grep -q "^model: sonnet" .claude/commands/ow-split.md'
-run "split emits context_closed"   'grep -q "context_closed: true" .ow/commands/ow-split.md'
-run "split emits contract file"    'grep -q "CONTRACT.md" .ow/commands/ow-split.md'
-run "split parent marker section"  'grep -q "## Sub-Plans (execution units)" .ow/commands/ow-split.md'
-run "split budget default 120000"  'grep -q "BUDGET=120000" .ow/commands/ow-split.md'
-run "split merge keys subagent"    'grep -q "same .subagent_target." .ow/commands/ow-split.md'
-run "split forces /clear"          'grep -q "/clear" .ow/commands/ow-split.md'
-run "split never approves"         'grep -q "Never set .status: approved." .ow/commands/ow-split.md'
-run "split no CHECKIN_DIR"         '! grep -q "CHECKIN_DIR" .ow/commands/ow-split.md'
-run "split refuses overwrite done" 'grep -q "status: done" .ow/commands/ow-split.md'
-# the context_closed contract — /ow-split emits it, implement + delegation are its only readers
+printf "\n${c_bold}Section 33 — phased plans (## Phases + ## Shared Contract)${c_reset}\n"
+PLAN=.ow/commands/ow-plan.md
+IMPL33=.ow/commands/ow-implement.md
+FRAG33=.ow/commands/_shared/phases.md
+run "frag: phases.md exists"        '[ -f .ow/commands/_shared/phases.md ]'
+run "frag: implement points at it"  'grep -q "_shared/phases.md" '"$IMPL33"
+run "frag: listed in _shared index" 'grep -q "phases.md" .ow/commands/_shared/README.md'
+# ── /ow-plan emits the structure ──
+run "plan has Phase 2.5"           'grep -q "^## Phase 2.5 " '"$PLAN"
+run "plan emits ## Phases"         'grep -q "^## Phases" '"$PLAN"
+run "plan emits Shared Contract"   'grep -q "^## Shared Contract" '"$PLAN"
+run "plan emits per-phase section" 'grep -q "^### Phase P1 " '"$PLAN"
+run "plan emits context_closed"    'grep -q "context_closed: true" '"$PLAN"
+run "plan emits context_refs"      'grep -q "context_refs:" '"$PLAN"
+run "plan phase budget 120000"     'grep -q "PHASE_BUDGET=120000" '"$PLAN"
+run "plan phase FLOOR + MAX"       'grep -q "FLOOR=15000" '"$PLAN"' && grep -q "MAX_PHASES=8" '"$PLAN"
+run "plan merge keys same area"    'grep -q "only between phases with the same area" '"$PLAN"
+run "plan forces /clear"           'grep -q "/clear" '"$PLAN"
+run "plan refuses to over-phase"   'grep -q "Never phase a plan that is already small enough" '"$PLAN"
+run "plan: one file, one phase"    'grep -q "Never assign the same Affected File to two phases" '"$PLAN"
+run "plan: no contract redefine"   'grep -q "Never redefine a Shared Contract value inside a phase" '"$PLAN"
+run "plan never approves"          'grep -q "Never set .status: approved. on the user.s behalf" '"$PLAN"
+run "plan --no-phases escape"      'grep -q -- "--no-phases" '"$PLAN"
+# ── --revise must not clobber a phase that is mid-implement (it sits at `approved`,
+#    not `in-progress` — /ow-implement never stamps that) nor one holding a resume marker
+run "revise rewrites planning only"  'grep -q "Rewrite .status: planning. phases and nothing else" '"$PLAN"
+run "revise names the stuck-run trap" 'grep -q "stamps a phase row .in-progress. before" '"$PLAN"' && grep -q "died mid-way" '"$PLAN"
+run "implement stamps in-progress"   'grep -q "Stamp the row .in-progress." '"$FRAG33"
+run "revise protects resume markers" 'grep -q "resume marker" '"$PLAN"' && grep -q "## Step Progress" '"$PLAN"
+run "plan Never: no blind rewrite"   'grep -q "unless it is .status: planning" '"$PLAN"
+# ── /ow-implement consumes it ──
+run "implement takes --phase"       'grep -q -- "--phase P2" '"$IMPL33"
+run "implement has 1.3 phase gate"  'grep -q "^### 1.3 Phase gate" '"$IMPL33"
+run "implement strips --phase"      'grep -q -- "s/\[\[:space:\]\]\*--phase" '"$IMPL33"
+run "phase gate blocks on depends"  'grep -q "depends_on" '"$IMPL33"
+run "phase gate blocks on planned"  'grep -q "Never proceed on .planned." '"$FRAG33"' && grep -q "state: actual" '"$FRAG33"
+run "no-flag runs every phase"      'grep -q "phase in .## Phases. order" '"$FRAG33"
+run "6.0 gates per phase section"   'grep -q "phase_section()" '"$FRAG33"
+# ── regressions found by adversarial trace: each gate must be able to FAIL ──
+run "6.0 block derives its own vars" 'sed -n "/^## 4\. The done-gate/,/^## 5\./p" '"$FRAG33"' | grep -q "PLAN_PATH=" && sed -n "/^## 4\. The done-gate/,/^## 5\./p" '"$FRAG33"' | grep -q "PHASE_ID="'
+run "6.0 refuses an empty PHASE_ID"  'grep -q "passes vacuously" '"$FRAG33"
+run "DS gate reads the phase area"   'sed -n "/^## Phase 4 /,/^## Phase 5 /p" '"$IMPL33"' | grep -q "running phase.s .area."'
+run "in-progress states the way out" 'grep -q "set its .status. cell back to .planning." '"$PLAN"
+# behavioral: the two snippets phases.md ships must actually work — a slug target must resolve
+# (`/ow-implement <slug>` is a documented trigger; a hard assert on a slug would STOP a valid run,
+# and the same assert sits in the 6.0 gate AFTER the code is written), and phase_section must cut
+# exactly one phase — an empty id matching nothing is how the done-gate passes vacuously.
+run "phases[behavioral]: slug resolves + phase_section cuts one phase" '
+  d=$(mktemp -d); PLAN_DIR="$d/plans"; mkdir -p "$PLAN_DIR"
+  { printf "## Phases\n| P1 | api |\n\n"; printf "### Phase P1 — api\n#### Success Criteria\n- [x] ok\n";
+    printf "### Phase P2 — web\n#### Success Criteria\n- [ ] open\n"; printf "## Approvals\n- [ ] plan box\n";
+  } > "$PLAN_DIR/2026-09-11-1430-checkout-flow.md"
+  # 🔴 run the REAL snippets out of the fragment — a copy here would keep passing after the spec drifts
+  sed -n "/^ow_resolve_plan() {/,/^}/p"  .ow/commands/_shared/phases.md >  "$d/fn.sh"
+  sed -n "/^phase_section() {/,/^}/p"    .ow/commands/_shared/phases.md >> "$d/fn.sh"
+  [ "$(grep -c "^}" "$d/fn.sh")" -eq 2 ] || { echo "could not extract both functions from phases.md"; rm -rf "$d"; exit 1; }
+  . "$d/fn.sh"
+  P=$(ow_resolve_plan checkout-flow)
+  [ -f "$P" ] || { echo "slug did not resolve"; rm -rf "$d"; exit 1; }
+  [ -n "$(ow_resolve_plan "$P")" ] || { echo "full path did not resolve"; rm -rf "$d"; exit 1; }
+  [ -z "$(ow_resolve_plan no-such-plan)" ] || { echo "bogus slug resolved"; rm -rf "$d"; exit 1; }
+  o2=$(phase_section "$P" P2 | grep -c "\- \[ \]"); o1=$(phase_section "$P" P1 | grep -c "\- \[ \]")
+  rm -rf "$d"
+  [ "$o2" -eq 1 ] || { echo "P2 open boxes = $o2, want 1"; exit 1; }
+  [ "$o1" -eq 0 ] || { echo "P1 open boxes = $o1, want 0 (it must not swallow P2 or ## Approvals)"; exit 1; }'
+run "6.1 closes one phase row"      'grep -q "^### 6.1 Close the phase" '"$IMPL33"
+run "6.2 closes the whole plan"     'grep -q "^### 6.2 Close the plan" '"$IMPL33"
+run "plan done needs all rows done" 'grep -q "Never flip the plan .status: done. while a phase row is not .done." '"$IMPL33"' && grep -q "Never flip the plan.s frontmatter .status: done." '"$FRAG33"
+run "marker carries the phase id"   'grep -q "carries its phase id" '"$FRAG33"
+# the context_closed contract — /ow-plan emits it, implement + delegation are its only readers
 run "implement honors context_closed"  'grep -q "context_closed" .ow/commands/ow-implement.md'
 run "delegation honors context_closed" 'grep -q "context_closed" .ow/commands/_shared/delegation.md'
+run "chunks never cross a phase"       'grep -q "a chunk never crosses a phase" .ow/commands/_shared/delegation.md'
 run "lint has check 9"                 'grep -q "check 9" scripts/conformance-lint.sh'
 run "check 9 guards context_closed"    'bash scripts/conformance-lint.sh 2>&1 | grep -q "check 9"'
-# check 9 must stay silent where /ow-split is not installed — otherwise every not-yet-upgraded
-# consumer project has its install/sync aborted by a command it does not have
-run "check 9[behavioral]: skipped without ow-split" '
+# check 9 must stay silent where the plan spec is not installed — otherwise a fixture with a
+# partial commands dir has its install/sync aborted by a command it does not have
+run "check 9[behavioral]: skipped without ow-plan" '
   d=$(mktemp -d); mkdir -p "$d/.ow/commands/_shared"; : > "$d/.ow.yml";
   bash scripts/conformance-lint.sh "$d" >/tmp/ow-lint-c9.$$ 2>&1; rc=$?; rm -rf "$d";
   { [ "$rc" -eq 0 ] && ! grep -q "check 9" /tmp/ow-lint-c9.$$; }; r=$?; rm -f /tmp/ow-lint-c9.$$; [ "$r" -eq 0 ]'
-run "check 9[behavioral]: fires once ow-split lands" '
+run "check 9[behavioral]: fires once ow-plan lands" '
   d=$(mktemp -d); mkdir -p "$d/.ow/commands/_shared"; : > "$d/.ow.yml";
-  printf "context_closed: true\n" > "$d/.ow/commands/ow-split.md";
+  printf "context_closed: true\n" > "$d/.ow/commands/ow-plan.md";
   printf "no flag here\n"        > "$d/.ow/commands/ow-implement.md";
   bash scripts/conformance-lint.sh "$d" >/tmp/ow-lint-c9b.$$ 2>&1; rc=$?; rm -rf "$d";
   { [ "$rc" -eq 1 ] && grep -q "check 9: context_closed contract missing" /tmp/ow-lint-c9b.$$; }; r=$?; rm -f /tmp/ow-lint-c9b.$$; [ "$r" -eq 0 ]'
-# /ow-verify closes out a split parent — grep sub-plan status, never open the files
-run "verify rollup mode"           'grep -q "## Sub-Plans" .ow/commands/ow-verify.md'
+# /ow-verify closes out a phased plan — read the phase table, never each phase body
+run "verify rollup mode"           'grep -q "## Phases" .ow/commands/ow-verify.md'
 run "verify rollup greps status"   'grep -q "grep -m1" .ow/commands/ow-verify.md'
-run "verify rollup stops if open"  'grep -qi "never flip the parent" .ow/commands/ow-verify.md'
-run "plan suggests split"          'grep -q "ow-split" .ow/commands/ow-plan.md'
-run "help lists split"             'grep -q "ow-split" .ow/commands/ow-help.md'
-run "CLAUDE.md says 21 commands"   'grep -q "คำสั่งทั้งหมด (21 ตัว)" CLAUDE.md'
-run "CLAUDE.md lists ow-split"    'grep -q "ow-split" CLAUDE.md'
-run "README lists ow-split"       'grep -q "ow-split" README.md'
-run "usage doc for ow-split"      '[ -f usage/ow-split.md ]'
+run "verify rollup stops if open"  'grep -qi "never flip the plan" .ow/commands/ow-verify.md'
+run "verify stops on planned row"  'grep -q "state: planned" .ow/commands/ow-verify.md'
+# ── /ow-split is retired: no spec, no shim, no skill, no usage doc, no mention ──
+run "split spec removed"           '[ ! -f .ow/commands/ow-split.md ]'
+run "split shim removed"           '[ ! -f .claude/commands/ow-split.md ]'
+run "split skill removed"          '[ ! -d .agents/skills/ow-split ]'
+run "split usage doc removed"      '[ ! -f usage/ow-split.md ]'
+# the only surviving mention is the migration clause in ow-implement 3.0 item 2 (a pre-phase
+# sub-plan still carries context_closed:) — nothing may ROUTE a user to the retired command
+run "nothing routes to ow-split"   '! grep -l "ow-split" .ow/commands/*.md .ow/commands/_shared/*.md CLAUDE.md README.md AI-README.md usage/README.md .ow.yml */prompts/router.md 2>/dev/null | grep -qv "ow-implement.md"'
+run "split mention is migration-only" 'grep -c "ow-split" .ow/commands/ow-implement.md | grep -qx 1 && grep -q "retired" .ow/commands/ow-implement.md'
+# every doc that states a command count must state the REAL one — a stale count outlives the
+# command that changed it, and four separate docs carried "21" after /ow-split was removed
+run "docs: no stale command count" '
+  n=$(ls .ow/commands/ow-*.md | wc -l | tr -d " ")
+  bad=$(grep -rn "[^0-9]$((n+1)) \(slash \)\?[Cc]ommands\|[^0-9]$((n+1)) verbs\|[^0-9]$((n+1)) คำสั่ง\|($((n+1)) ตัว)\|[^0-9]$((n+1)) source-of-truth" \
+        CLAUDE.md README.md AI-README.md usage/README.md 2>/dev/null)
+  [ -z "$bad" ] || { echo "stale count (real = $n):"; echo "$bad"; exit 1; }'
+run "docs: state the real count"   '
+  n=$(ls .ow/commands/ow-*.md | wc -l | tr -d " ")
+  grep -q "คำสั่งทั้งหมด ($n ตัว)" CLAUDE.md && grep -q "$n Commands" README.md && grep -q "$n slash commands" README.md'
+run "usage: one doc per command"   '
+  for f in .ow/commands/ow-*.md; do [ -f "usage/$(basename "$f")" ] || { echo "no usage doc for $(basename "$f")"; exit 1; }; done
+  for f in usage/ow-*.md; do [ -f ".ow/commands/$(basename "$f")" ] || { echo "orphan usage doc: $f"; exit 1; }; done'
+run "usage doc for ow-plan"        '[ -f usage/ow-plan.md ]'
 
 # ════════════════════════════════════════════════════════════════════════════
 # Section 34: inline resume marker — `## Step Progress` (dead-session recovery)
@@ -1823,14 +1897,10 @@ run "check 11[behavioral]: fires when the [x]-only rule is dropped" '
   printf "Write \140- [x]\140 **only**\n" > "$d/.ow/commands/_shared/delegation.md";
   bash scripts/conformance-lint.sh "$d" >/tmp/ow-c11d.$$ 2>&1; rm -rf "$d";
   grep -q "ow-implement.md(no-\[x\]-only-rule)" /tmp/ow-c11d.$$; r=$?; rm -f /tmp/ow-c11d.$$; [ "$r" -eq 0 ]'
-# /ow-split Phase 5.5 must not regenerate a sub-plan that is mid-implement (it sits at `approved`,
-# not `in-progress` — /ow-implement never stamps that) nor one holding a resume marker
-SPLIT=.ow/commands/ow-split.md
-run "5.5 rewrites planning only"     'grep -q "Rewrite .status: planning. units and nothing else" '"$SPLIT"
-run "5.5 names the approved trap"    'grep -q "never stamps .in-progress." '"$SPLIT"' && grep -q "died mid-way" '"$SPLIT"
-run "5.5 protects resume markers"    'grep -q "resume marker whatever its status" '"$SPLIT"' && grep -q "## Step Progress" '"$SPLIT"
-run "split Never: no blind rewrite"  'grep -q "unless it is .status: planning" '"$SPLIT"
-run "check 11[behavioral]: fires when split may clobber a resuming sub-plan" '
+# /ow-plan --revise must not regenerate a phase that is mid-implement (it sits at `approved`,
+# not `in-progress` — /ow-implement never stamps that) nor one holding a resume marker.
+# The prose guards live in Section 33; this is the lint's behavioral half.
+run "check 11[behavioral]: fires when revise may clobber a resuming phase" '
   d=$(mktemp -d); mkdir -p "$d/.ow/commands/_shared"; : > "$d/.ow.yml";
   { printf "### 1.2 Resume gate\n";
     printf "Step Progress -- re-run the exit: of the last ticked line\n";
@@ -1838,9 +1908,9 @@ run "check 11[behavioral]: fires when split may clobber a resuming sub-plan" '
     printf "### 3.3 Step Progress marker\n";
     printf "Write \140- [x]\140 **only**\n"; } > "$d/.ow/commands/ow-implement.md";
   printf "Write \140- [x]\140 **only**\n" > "$d/.ow/commands/_shared/delegation.md";
-  printf "rewrite every unit that is not done\n" > "$d/.ow/commands/ow-split.md";
+  printf "rewrite every phase that is not done\n" > "$d/.ow/commands/ow-plan.md";
   bash scripts/conformance-lint.sh "$d" >/tmp/ow-c11f.$$ 2>&1; rm -rf "$d";
-  grep -q "5.5-may-overwrite-a-resuming-sub-plan" /tmp/ow-c11f.$$; r=$?; rm -f /tmp/ow-c11f.$$; [ "$r" -eq 0 ]'
+  grep -q "revise-may-overwrite-a-resuming-phase" /tmp/ow-c11f.$$; r=$?; rm -f /tmp/ow-c11f.$$; [ "$r" -eq 0 ]'
 run "check 11[behavioral]: silent without ow-implement.md" '
   d=$(mktemp -d); mkdir -p "$d/.ow/commands/_shared"; : > "$d/.ow.yml";
   bash scripts/conformance-lint.sh "$d" >/tmp/ow-c11e.$$ 2>&1; rm -rf "$d";

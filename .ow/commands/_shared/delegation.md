@@ -18,10 +18,12 @@ Read the plan, classify each conditional ref against that table (**uncertain ⇒
 each agent's §3 — the plan file, the FN/FEAT docs the plan names, existing code+tests, and DS docs for UI
 agents are never skippable.
 
-🔴 The plan carries `context_closed: true` (a `/ow-split` sub-plan) → do not classify anything: set
-`CONTEXT_REFS` to its `context_refs:` list verbatim and `CONTEXT_SKIPPED=(closed by /ow-split)`. The split
-already resolved the read set and measured it against the agent's context budget; re-resolving would grow it
-back to the very size the split existed to bound. The `context gap:` escape hatch below is unchanged.
+🔴 The plan carries `context_closed: true` (a phased plan — `/ow-plan` Phase 2.5) → do not classify anything:
+set `CONTEXT_REFS` to the **running phase's** `context_refs:` list verbatim and
+`CONTEXT_SKIPPED=(closed by the phase breakdown)`. `/ow-plan` already resolved that read set and measured it
+against the agent's context budget; re-resolving would grow it back to the very size the breakdown existed to
+bound, and another phase's refs are outside what this phase was sized for. The `context gap:` escape hatch
+below is unchanged.
 
 Collect any `context gap:` line the agent reports into the Phase 7 output, so the table can be corrected.
 
@@ -36,6 +38,8 @@ rounds**: each round the agent starts with fresh context and passes on via a han
 3. No step of the next chunk is one this chunk depends on to make its own success criteria true
 
 **Algorithm:** walk `Implementation Steps` in order, close a chunk at the last step that satisfies all 3.
+🔴 Phased plan → walk **the running phase's** `#### Implementation Steps` only; a chunk never crosses a phase
+boundary (the phase already is one — and it carries its own area, contract gate and done-gate).
 
 **Size — target 3–6 steps/chunk** (splitting finer pays the cold-cache write again and again for no gain):
 - plan ≤6 steps → **1 chunk, emit no CHUNK block** (single-spawn)
@@ -57,6 +61,8 @@ range means the cut point is not a verifiable state
 ```bash
 RES="$(git rev-parse --show-toplevel)/scripts/ow-paths.sh"
 AREA="$subagent_target"                                   # backend|frontend|mobile|design|docs
+# 🔴 phased plan → AREA is the RUNNING PHASE's `area` (its `## Phases` row), never the plan's
+# `subagent_target` (which is `all` on a multi-area plan and resolves no agent, no rules) — `phases.md` §2
 SUBS=$(bash "$RES" --submodules | cut -f1 | paste -sd' ' -)
 RULES=$(bash "$RES" --rules "$AREA" | paste -sd' ' -)
 RULES_EXP=$(bash "$RES" --rules-expected "$AREA" | cut -f1)   # canonical file, named even when absent (#22)
@@ -190,8 +196,10 @@ The next chunk spawns **only after the previous one closes** (never parallel —
 ```markdown
 ## Chunk Progress (written by /ow-implement — resume marker)
 - [x] chunk 1/4 · steps 1-3 · 2026-07-21 14:20 · exit: `pnpm test src/api/cart` passes
-- [x] chunk 2/4 · steps 4-6 · 2026-07-21 14:48 · exit: `tsc --noEmit` clean
+- [x] P2 chunk 2/4 · steps 4-6 · 2026-07-21 14:48 · exit: `tsc --noEmit` clean
 ```
+🔴 Phased plan → the phase id leads the line (`P2 chunk 2/4 · …`): without it the 1.2 resume gate reads P1's
+chunks as P2's and skips real work, and `/ow-plan --revise` cannot tell which phase the marker protects
 🔴 Write `- [x]` **only**, never `- [ ]` → the Phase 6.0 gate (`grep -c "- [ ]"` must = 0) is unaffected
 🔴 Always write to the plan in `$VAULT_ABS` (MAIN_ROOT) — worktree mode must never write `docs/` inside the worktree
 🔴 Chunks do not commit — worktree mode commits once at Phase 6.4; scope isolation (rule 5) is enforced per chunk

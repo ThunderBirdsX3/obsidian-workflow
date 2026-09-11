@@ -24,7 +24,6 @@ When user says `ow-<verb>: <task>` or `<verb>: <task>`, read the corresponding s
 | `ow-plan` / `plan` | `.ow/commands/ow-plan.md` |
 | `ow-reverse-engineer` / `reverse-engineer` / `reverse` | `.ow/commands/ow-reverse-engineer.md` |
 | `ow-secure` / `secure` | `.ow/commands/ow-secure.md` |
-| `ow-split` / `split` | `.ow/commands/ow-split.md` |
 | `ow-sync` / `sync` | `.ow/commands/ow-sync.md` |
 | `ow-test` / `test` | `.ow/commands/ow-test.md` |
 | `ow-triage-issues` / `triage-issues` / `triage` | `.ow/commands/ow-triage-issues.md` |

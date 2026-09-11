@@ -21,13 +21,13 @@
 2. **Plan/Implement แยกกัน** — `/ow-plan` สร้าง plan ไม่แก้โค้ด · **`/ow-implement` เท่านั้นที่แก้โค้ด** · `/ow-fix` diagnose + fix-log แล้วถามก่อน
 3. **Log everything** — ทุก plan/fix มี log ใน vault บอกว่ารันอะไรจริง ผลออกมาอย่างไร
 
-## คำสั่งทั้งหมด (21 ตัว)
+## คำสั่งทั้งหมด (20 ตัว)
 
 ไม่รู้จะใช้ตัวไหน → `/ow-help` · spec ของแต่ละ verb อยู่ที่ `.ow/commands/<verb>.md` (โหมดย่อยอยู่ใน `_shared/` อ่านตอนโหมดนั้นยิง) · วิธีใช้อยู่ที่ `usage/`
 
 ```
 ตั้งค่า:       /ow-init  /ow-sync  /ow-agent
-spec-driven:  /ow-new  /ow-clarify  /ow-plan  /ow-split  /ow-checklist  /ow-implement  /ow-fix
+spec-driven:  /ow-new  /ow-clarify  /ow-plan  /ow-checklist  /ow-implement  /ow-fix
 GitHub:       /ow-triage-issues  /ow-fix-issue
 เอกสาร+ทดสอบ: /ow-doc  /ow-test  /ow-design
 ย้อนกลับ:      /ow-reverse-engineer   ← extract spec จาก code/db ที่มีอยู่

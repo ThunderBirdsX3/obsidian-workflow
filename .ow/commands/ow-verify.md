@@ -52,23 +52,26 @@ Read:
 - Files changed (`git diff`)
 - The vault docs it links to (Feature, Function, PRD)
 
-### 1.1 Rollup mode — the target plan carries `## Sub-Plans` (a `/ow-split` parent)
+### 1.1 Rollup mode — the target plan carries `## Phases` (a phased plan — `/ow-plan` Phase 2.5)
 
 ```bash
 . "$(git rev-parse --show-toplevel)/.ow/local/paths.env"
 [ -n "$PLAN_DIR" ] || { echo 'FATAL: Phase 0 not loaded'; exit 1; }
-# read each sub-plan's status with grep ONLY — never open the whole file; that cost is exactly
-# what the split existed to avoid
-grep -m1 '^status:' "$PLAN_DIR/<sub-plan-basename>.md"
+# the phase table is the status source — read it, never each phase's body; that cost is exactly
+# what the phase breakdown existed to avoid
+grep -m1 '^status:' "$PLAN_DIR/<plan-basename>.md"            # the plan's own status
+sed -n '/^## Phases/,/^### /p' "$PLAN_DIR/<plan-basename>.md" # the table = one status per phase
 ```
 
-1. Read the `## Sub-Plans` table → for every row, `grep -m1 '^status:'` that sub-plan
-2. Any unit not at `status: done` → report which units are still outstanding and **STOP**: do not verify, and
-   🔴 **never flip the parent** to `done`
-3. Every unit done → run Phases 2-6 normally, scoped to the **union of all sub-plans** — with particular
-   attention to the integration *between* units that no single sub-plan verified (does the web unit really
-   reach the api unit?)
-4. All phases pass → set the parent's `status: done` + `completed_at: YYYY-MM-DD HH:mm`
+1. Read the `## Phases` table → every row's `status` cell, plus the `## Shared Contract` table when present
+2. Any phase not at `status: done` → report which phases are still outstanding and **STOP**: do not verify, and
+   🔴 **never flip the plan** to `done`
+3. Any `## Shared Contract` row still `state: planned` → same **STOP**: its producer phase never wrote back,
+   so at least one consumer was built against an assumed value
+4. Every phase done → run Phases 2-6 normally, scoped to the **union of all phases** — with particular
+   attention to the integration *between* phases that no single phase verified (does the web phase really
+   reach the api phase?)
+5. All checks pass → set the plan's `status: done` + `completed_at: YYYY-MM-DD HH:mm`
 
 ## Phase 2 — Test verification
 

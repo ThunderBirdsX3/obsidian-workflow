@@ -44,7 +44,7 @@ vault_path: docs/obsidian-vault
 # - `source`  = where /ow-sync pulls from
 # - `last_synced` = updated by /ow-sync Phase 6 + scripts/upgrade.sh
 ow:
-  version: "1.0.0"
+  version: "1.1.0"
   source: "https://github.com/ThunderBirdsX3/obsidian-workflow"
   last_synced: "2026-09-10"
 
@@ -101,7 +101,6 @@ commands:
     ow-checklist: sonnet
     ow-new: sonnet
     ow-design: sonnet
-    ow-split: sonnet                   # deterministic split; the plan's hard thinking already happened
 
 # Submodules (used by /ow-git and /ow-implement)
 # Leave empty for monorepo / single-codebase projects

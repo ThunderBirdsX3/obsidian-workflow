@@ -32,10 +32,26 @@
 ```
 /ow-implement <plan-path>            # หรือ auto-locate
 /ow-implement <slug>                 # search by slug
+/ow-implement <plan> --phase P2      # รัน phase เดียวของ plan ที่แตก phase — ไม่ใส่ = รันทุก phase ตามลำดับ
 /ow-implement <plan> --worktree      # บังคับ build ใน git worktree แยก (#31)
 /ow-implement <plan> --no-worktree   # บังคับ build ใน main tree (override plan ที่มี worktree: true)
 /ow-implement --from-fix <fix-log>   # P2/P3 เท่านั้น (skip plan) — /ow-fix เรียกให้เอง
 ```
+
+## 📐 Phased plan (`--phase`)
+
+plan ที่ `/ow-plan` แตกเป็น phase จะมีตาราง `## Phases` (id · area · depends_on · est tokens · status)
+และ `## Shared Contract` สำหรับค่าที่ใช้ข้าม phase
+
+- `/ow-implement <plan> --phase P2` → รัน **เฉพาะ section ของ P2** — context_refs, Affected Files, Steps,
+  Test Plan, Success Criteria, doc ที่ P2 เป็นเจ้าของ · 🔴 ห้ามแตะไฟล์/doc ของ phase อื่น
+- **gate ก่อนเริ่ม** — `depends_on` ต้อง `done` ครบ และ Shared Contract row ที่ P2 เป็น consumer ต้อง
+  `state: actual` แล้ว (ยัง `planned` = producer ยังไม่รัน → **STOP** ไม่ implement ทับค่าที่ยังเดาอยู่)
+- **จบ phase** — gates ผ่าน → ติ๊ก `status: done` ให้ row นั้นในตาราง · plan frontmatter จะเป็น `done`
+  ก็ต่อเมื่อ **ทุก row** done เท่านั้น
+- **ไม่ใส่ `--phase`** → รันทุก phase ตามลำดับในหนึ่ง session · รวม est tokens เกิน ~120k จะ **เตือน** ให้แยก session
+- 🔴 ประหยัด token จริงต่อเมื่อ `/clear` คั่นระหว่าง phase
+- resume marker (`## Step Progress`) ของ plan แบบนี้ต้องมี phase id นำหน้า: `- [x] P2 steps 1-4 · …`
 
 ## 🌳 Worktree mode (#31)
 

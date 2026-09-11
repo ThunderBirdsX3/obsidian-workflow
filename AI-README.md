@@ -23,9 +23,8 @@ obsidian-workflow ทำงานกับ AI ตัวใดก็ได้ท�
 /ow-new
 /ow-clarify <doc>               ← spec-kit taxonomy ambiguity scan
 /ow-plan <task>
-/ow-split <plan-path>           ← แตก plan ใหญ่เป็น sub-plan ที่รันทีละ session ได้ + CONTRACT ร่วม
 /ow-checklist <domain>          ← unit tests for English (ux/api/security/perf)
-/ow-implement <plan-path>
+/ow-implement <plan-path>          ← plan ที่แตก phase: + --phase P1 เพื่อรันทีละ phase (ไม่ใส่ = ทุก phase)
 /ow-fix <bug>
 /ow-triage-issues               ← batch-triage GitHub issues → classify + label + comment
 /ow-fix-issue <issue>           ← แก้ GitHub issue แบบขนาน (worktree) → merge → handoff
@@ -90,7 +89,7 @@ Task: เพิ่ม search feature
 Project root: /path/to/project
 ```
 
-> **Paste mode + `_shared/`:** บาง spec (`ow-implement`, `ow-test`, `ow-fix`, `ow-fix-issue`, `ow-git`, `ow-design`, `ow-split`) เก็บรายละเอียด
+> **Paste mode + `_shared/`:** บาง spec (`ow-implement`, `ow-test`, `ow-fix`, `ow-fix-issue`, `ow-git`, `ow-design`) เก็บรายละเอียด
 > ของโหมด/phase นั้นๆ ไว้ที่ `.ow/commands/_shared/<file>.md` แล้วสั่งอ่านตอนถึงจุดที่ต้องใช้.
 > AI ที่มี file access อ่านเองได้ — ถ้า paste ล้วน ให้ paste fragment ที่ตรงกับโหมดที่จะใช้ตามไปด้วย
 > (ไม่ถึง phase นั้น = ไม่ต้อง); fragment ที่ตัวมันชี้ fragment อื่นต่อ ต้อง paste ตัวที่ถูกชี้ด้วย
@@ -154,7 +153,7 @@ AI ตัวที่ไม่ support sub-agents → main AI ทำเองท
 │   └── commands/                    ← source-of-truth verb specs (neutral)
 │       ├── ow-init.md
 │       ├── ow-new.md
-│       └── ... (21 verbs)
+│       └── ... (20 verbs)
 ├── .claude/
 │   ├── commands/          ← Claude Code slash shims (5-line each, @.ow/commands/…)
 │   ├── agents/            ← Claude sub-agents (always-on 4 + ที่ /ow-agent create ไว้)

@@ -1,6 +1,6 @@
 # obsidian-workflow Commands — Usage Guide
 
-คู่มือใช้งาน 21 คำสั่งของ obsidian-workflow แบบจริงจัง — 1 ไฟล์ต่อ command พร้อมตัวอย่าง, workflow, gotchas
+คู่มือใช้งาน 20 คำสั่งของ obsidian-workflow แบบจริงจัง — 1 ไฟล์ต่อ command พร้อมตัวอย่าง, workflow, gotchas
 
 > ใช้คู่กับ [`.ow/commands/ow-*.md`](../.ow/commands/) (source-of-truth พร้อม Phase รายละเอียดเต็ม)
 > ถ้าไม่รู้จะเริ่มจากไหน → อ่าน [/ow-help](./ow-help.md) ก่อน
@@ -25,7 +25,6 @@
 | [/ow-new](./ow-new.md) | brainstorm จาก idea หรือ import PRD ที่มีอยู่ |
 | [/ow-clarify](./ow-clarify.md) | scan ambiguity 9 หมวด ถามทีละข้อพร้อม recommended answer |
 | [/ow-plan](./ow-plan.md) | research vault แล้วสร้าง plan file (ไม่แตะโค้ด) |
-| [/ow-split](./ow-split.md) | แตก plan ใหญ่เป็น sub-plan ที่รันทีละ session ได้ + CONTRACT ร่วม |
 | [/ow-checklist](./ow-checklist.md) | "unit tests for English" per domain (ux/api/security/...) |
 | [/ow-implement](./ow-implement.md) | execute plan ที่ approve แล้ว — inline หรือ delegate ให้ subagent ตามงาน |
 | [/ow-fix](./ow-fix.md) | diagnose bug + สร้าง fix-log (ไม่แก้โค้ด) |
