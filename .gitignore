@@ -10,8 +10,7 @@
 # ─────────────────────────────────────────────────────────────
 
 # >>> obsidian-workflow managed (auto-updated by install/upgrade — do not edit inside) >>>
-# Personal / per-machine config — never commit
-.ow.local.yml
+# Per-machine runtime state (resolver env cache, install markers) — never commit
 .ow/local/
 .ow/cache/
 .ow.cache/

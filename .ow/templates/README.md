@@ -6,10 +6,8 @@
   and the **whole folder is overwritten** when `/ow-sync` runs
   ────────────────────────────────────────────────────────────────────────────
   Need to change something?
-    • Project-wide (commit + share with the team) → copy this file to `templates/<name>.md`
-      → edit it there → commit  (lookup priority higher than .ow/templates/)
-    • Personal-only (not committed)               → copy to `.ow/local/templates/<name>.md`
-      → edit it there (gitignored)                (highest lookup priority)
+    • Copy this file to `templates/<name>.md` → edit it there → commit
+      (lookup priority higher than .ow/templates/)
   ════════════════════════════════════════════════════════════════════════════
 -->
 
@@ -18,9 +16,8 @@
 The templates here are the canonical set every project using obsidian-workflow starts from
 
 Template lookup order:
-1. `.ow/local/templates/<name>.md` — personal override (gitignored)
-2. `templates/<name>.md` — project override (git-tracked)
-3. `.ow/templates/<name>.md` — shipped default (fallback)
+1. `templates/<name>.md` — project override (git-tracked)
+2. `.ow/templates/<name>.md` — shipped default (fallback)
 
 The highest-priority file that exists wins (a project can adapt a template to its own context)
 

@@ -3,6 +3,26 @@
 Format: [Keep a Changelog](https://keepachangelog.com). Versions: SemVer.
 Version marker: `ow.version` in `.ow.yml`.
 
+## [1.2.0] — 2026-09-14
+
+### Removed — per-machine config (`.ow.local.yml`) and personal overrides (BREAKING)
+
+Config is `.ow.yml` only. Nothing reads `.ow.local.yml` any more.
+
+- `.ow.local.yml.example` deleted; `upgrade` retires it on consumers (backed up,
+  `--rollback` restores it). A user's own `.ow.local.yml` is left in place — `upgrade`
+  and `ow doctor` warn that it is not read, so any value still in it can be moved into `.ow.yml`.
+- External vault: set `vault_path` in `.ow.yml` to the absolute path (installer option D
+  writes it there).
+- Template chain is 2-tier: `templates/` → `.ow/templates/`. `.ow/local/templates/` and
+  `.ow/local/rules/` are no longer looked up. Agent/command model overrides and
+  `submodules` are read from `.ow.yml` only.
+- Resolver output drops `TEMPLATES_LOCAL`, `EXTERNAL_VAULT`, `SECRETS_FILE` (and the JSON
+  `vault.external`, `paths.secrets_file`, `templates.local` keys).
+- `ow init --local` and `merge_local_config` removed. `upgrade` protects the
+  `test_credentials.env_file` path instead of `paths.secrets_file`.
+- `.ow/local/` stays gitignored as per-machine runtime state (`paths.env`, `adopt.marker`).
+
 ## [1.1.1] — 2026-09-11
 
 ### Fixed — a phased plan is read one phase at a time, and sized that way

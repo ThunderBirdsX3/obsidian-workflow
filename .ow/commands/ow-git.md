@@ -101,8 +101,7 @@ If `--status` or `--switch-only`: do branch ops only — no stage/commit/push
 ```bash
 # Status example — main repo (.) + every submodule. Submodules come from the
 # resolver TSV (path<TAB>read_only<TAB>branch), NOT jq: the config is YAML, so `jq` silently
-# no-ops and the loop would iterate nothing (#4). The resolver also honors any
-# .ow.local.yml override.
+# no-ops and the loop would iterate nothing (#4).
 RESOLVER="$(git rev-parse --show-toplevel)/scripts/ow-paths.sh"
 SYNC="$(git rev-parse --show-toplevel)/scripts/ow-git-sync.sh"
 for repo in . $(bash "$RESOLVER" --submodules | cut -f1); do

@@ -418,7 +418,7 @@ MODEL="$(bash "$ROOT/scripts/ow-paths.sh" --agent-model <name>)"   # default: so
 # set the agent's model: line to "$MODEL" (or `apply_agent_models` for the owned set)
 ```
 
-> **Model resolution** — `subagents.<name>.model` in `.ow.yml` (local override wins)
+> **Model resolution** — `subagents.<name>.model` in `.ow.yml`
 > beats the built-in default. Defaults: backend/frontend/mobile/security/design → `opus`,
 > docs/verifier/test-runner → `sonnet`, gh-issue → `haiku`. Values are family aliases
 > (no version pin) so each tracks the latest of its family. A new specialized agent that

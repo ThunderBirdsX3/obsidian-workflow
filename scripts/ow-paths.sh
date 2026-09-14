@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ow-paths — Single source of truth for config + vault paths
-# Resolves .ow.yml + .ow.local.yml override + sensible defaults
+# Resolves .ow.yml + sensible defaults
 # Used by all commands (instead of grep-yaml-inline)
 #
 # Output modes:
@@ -14,7 +14,7 @@
 #   --agent-models     TSV: name<TAB>model for every agent name obsidian-workflow knows a default for
 #   --command-model <verb>  resolved AI model for one slash command (inherit ⇒ no pin)
 #   --command-models   TSV: verb<TAB>model for every command spec
-#   --rules <area>     resolved rule file paths for <area> (local>project>org-floor)
+#   --rules <area>     resolved rule file paths for <area> (.ow/rules)
 #   --rules-expected <area>  canonical expected rule path for <area> + present|absent,
 #                            printed even when the file does not exist (TSV)
 #   --rules-validate   assert every rule in .ow.yml rules.files resolves to a real
@@ -49,7 +49,6 @@ resolve_root() {
 }
 ROOT="$(resolve_root)"
 SHARED="${ROOT}/.ow.yml"
-LOCAL="${ROOT}/.ow.local.yml"
 
 MODE="shell"
 CHECK_KEY=""
@@ -118,16 +117,11 @@ yget() {
   echo "$v"
 }
 
-# Override chain: local > shared > default
+# .ow.yml value, else default
 get() {
-  local key="$1" default="$2"
-  local local_val shared_val
-  local_val="$(yget "$LOCAL" "$key" 2>/dev/null || echo "")"
-  shared_val="$(yget "$SHARED" "$key" 2>/dev/null || echo "")"
-  if [ -n "$local_val" ]; then echo "$local_val"
-  elif [ -n "$shared_val" ]; then echo "$shared_val"
-  else echo "$default"
-  fi
+  local key="$1" default="$2" v
+  v="$(yget "$SHARED" "$key" 2>/dev/null || echo "")"
+  if [ -n "$v" ]; then echo "$v"; else echo "$default"; fi
 }
 
 # Portable lexical abspath (BSD has no `realpath -m`): resolve relative-to-ROOT,
@@ -153,15 +147,11 @@ PROJECT_TZ=$(get "project.timezone" "Asia/Bangkok")
 
 MODE_VAL=$(get "mode" "standalone")
 
+# vault_path may be relative to the repo root or absolute (a vault outside the repo)
 VAULT_PATH=$(get "vault_path" "docs/obsidian-vault")
-EXTERNAL_VAULT=$(yget "$LOCAL" "paths.external_vault")
-[ -n "$EXTERNAL_VAULT" ] && VAULT_PATH="$EXTERNAL_VAULT"
 
 # Absolute vault path
 if [[ "$VAULT_PATH" = /* ]]; then VAULT_ABS="$VAULT_PATH"; else VAULT_ABS="$ROOT/$VAULT_PATH"; fi
-
-# Personal paths
-SECRETS_FILE=$(yget "$LOCAL" "paths.secrets_file")
 
 # obsidian-workflow metadata (v0.4.1+: was under `standard.*`; legacy keys still readable via fallback)
 OW_VERSION=$(yget "$SHARED" "ow.version")
@@ -195,7 +185,6 @@ TODAY=$(date +%Y-%m-%d)
 # Templates lookup chain (v0.4+: the shipped snapshot lives under .ow/)
 # Backward-compat: if a legacy layout (root `standards/`) still exists, fall back to it
 # so projects installed before v0.4 keep working until they run migration
-TEMPLATES_LOCAL="$ROOT/.ow/local/templates"
 TEMPLATES_PROJECT="$ROOT/templates"
 # Resolve TEMPLATES_SNAPSHOT via fallback chain (newest layout first)
 if [ -d "$ROOT/.ow/templates" ]; then
@@ -243,7 +232,7 @@ TEST_ENV_FILE=$(get "test_credentials.env_file" "")
 CRED_REDACT=$(get "test_credentials.redact" "true")
 
 # ── template chain (#10): ordered, de-duplicated, legacy-path-normalized ──────
-# Built from template_lookup: when present, else the default 3-tier chain. The
+# Built from template_lookup: when present, else the default 2-tier chain. The
 # legacy `.ow/standards/templates` entry normalizes to `.ow/templates`
 # (newest flat layout). Colon-separated, highest priority first.
 _TC=""
@@ -259,7 +248,7 @@ if [ "${_tl_count:-0}" != "0" ]; then
     [ -n "$_entry" ] && _add_tc "$ROOT/$_entry"
   done < <(yq -r '.template_lookup[]?' "$SHARED" 2>/dev/null)
 else
-  _add_tc "$TEMPLATES_LOCAL"; _add_tc "$TEMPLATES_PROJECT"; _add_tc "$TEMPLATES_SNAPSHOT"
+  _add_tc "$TEMPLATES_PROJECT"; _add_tc "$TEMPLATES_SNAPSHOT"
 fi
 TEMPLATE_CHAIN="$_TC"
 
@@ -278,19 +267,11 @@ ENABLED_AGENTS="${ENABLED_AGENTS% }"
 # Emit `path<TAB>read_only<TAB>branch` TSV, one row per submodule. `branch` is the
 # submodule's own configured mainline (.ow.yml submodules[].branch, e.g.
 # develop/master) that worktree-mode merges + pushes target (#31); empty if unset.
-# List-level override:
-# a non-empty `submodules` in .ow.local.yml replaces the shared list.
 # Single-repo (submodules: []) emits nothing and exits 0 — so callers stop
 # parsing YAML inline with jq (which silently no-ops on YAML; see issue #4).
 emit_submodules() {
-  local src=""
-  if [ -f "$LOCAL" ] && [ "$(yq '(.submodules // []) | length' "$LOCAL" 2>/dev/null || echo 0)" != "0" ]; then
-    src="$LOCAL"
-  elif [ -f "$SHARED" ]; then
-    src="$SHARED"
-  fi
-  [ -z "$src" ] && return 0
-  yq -r '.submodules[]? | [.path, (.read_only // false), (.branch // "")] | @tsv' "$src" 2>/dev/null || true
+  [ -f "$SHARED" ] || return 0
+  yq -r '.submodules[]? | [.path, (.read_only // false), (.branch // "")] | @tsv' "$SHARED" 2>/dev/null || true
 }
 
 # ── selftest ─────────────────────────────────────────────────────────────────
@@ -317,8 +298,7 @@ run_selftest() {
 }
 
 # ── rules accessor (#10) ─────────────────────────────────────────────────────
-# Print rule file paths for <area> in precedence order (local override > project),
-# one per line. Binds both by filename (<area>.md) and by `applies_to`
+# Print rule file paths for <area> from .ow/rules/, one per line. Binds both by filename (<area>.md) and by `applies_to`
 # front-matter (area or '*'). Prints nothing + exits 0 when none exist (#17 builds
 # the full taxonomy on top of this accessor).
 _applies_to() {
@@ -331,19 +311,15 @@ _applies_to() {
 }
 emit_rules() {
   local area="$1"; [ -n "$area" ] || return 0
-  local d f
-  # 1) direct <area>.md, precedence: local > project
-  for d in "$ROOT/.ow/local/rules" "$ROOT/.ow/rules"; do
-    [ -f "$d/$area.md" ] && printf '%s\n' "$d/$area.md"
-  done
-  # 2) any rule file whose applies_to includes the area or '*' (tracked + personal)
-  for d in "$ROOT/.ow/local/rules" "$ROOT/.ow/rules"; do
-    [ -d "$d" ] || continue
-    for f in "$d"/*.md; do
-      [ -e "$f" ] || continue
-      [ "$f" = "$d/$area.md" ] && continue
-      _applies_to "$f" "$area" && printf '%s\n' "$f"
-    done
+  local d="$ROOT/.ow/rules" f
+  # 1) direct <area>.md
+  [ -f "$d/$area.md" ] && printf '%s\n' "$d/$area.md"
+  # 2) any other rule file whose applies_to includes the area or '*'
+  [ -d "$d" ] || return 0
+  for f in "$d"/*.md; do
+    [ -e "$f" ] || continue
+    [ "$f" = "$d/$area.md" ] && continue
+    _applies_to "$f" "$area" && printf '%s\n' "$f"
   done
   return 0
 }
@@ -391,8 +367,8 @@ emit_subagents() { local a; for a in $ENABLED_AGENTS; do printf '%s\n' "$a"; don
 # /ow-agent create writes per project. Any other name falls through to sonnet.
 # Values are FAMILY ALIASES
 # (opus|sonnet|haiku) — no version pin, so each tracks the latest of its family.
-# Override per agent in .ow.yml via the map form `subagents.<name>.model: <alias>`
-# (local .ow.local.yml wins). Built-in defaults: the security scanner → opus (a
+# Override per agent in .ow.yml via the map form `subagents.<name>.model: <alias>`.
+# Built-in defaults: the security scanner → opus (a
 # missed secret/PII leak costs more than the model does), every code/doc/verify/test
 # agent → sonnet, the read-only issue reader → haiku.
 _default_agent_model() {
@@ -414,12 +390,11 @@ _valid_model() {
   esac
 }
 
-# resolve_agent_model <name> — config override (local > shared) > built-in default.
+# resolve_agent_model <name> — .ow.yml override > built-in default.
 # An invalid configured value is ignored (default wins) with a stderr note.
 resolve_agent_model() {
   local name="$1" v
-  v="$(yget "$LOCAL" "subagents.$name.model")"
-  [ -n "$v" ] || v="$(yget "$SHARED" "subagents.$name.model")"
+  v="$(yget "$SHARED" "subagents.$name.model")"
   if [ -n "$v" ]; then
     if _valid_model "$v"; then echo "$v"; return; fi
     echo "WARN: subagents.$name.model='$v' is not a valid model (opus|sonnet|haiku|claude-*) — using default" >&2
@@ -439,18 +414,14 @@ emit_agent_models() {
 # The model each /<prefix>-* slash command runs on. Injected into the GENERATED shim
 # frontmatter (.claude/commands/<verb>.md) by generate_shims — NOT into the verb spec.
 # Default `commands.model` (inherit ⇒ emit no `model:` line, command follows the session
-# model) with per-command `commands.overrides.<verb>`. local .ow.local.yml wins.
+# model) with per-command `commands.overrides.<verb>`.
 # Valid values: the family aliases, a full claude-* id, or the literal `inherit`.
 _valid_command_model() { case "$1" in inherit) return 0 ;; *) _valid_model "$1" ;; esac; }
 
 resolve_command_model() {
   local verb="$1" v
-  v="$(yget "$LOCAL" "commands.overrides.$verb")"
-  [ -n "$v" ] || v="$(yget "$SHARED" "commands.overrides.$verb")"
-  if [ -z "$v" ]; then
-    v="$(yget "$LOCAL" "commands.model")"
-    [ -n "$v" ] || v="$(yget "$SHARED" "commands.model")"
-  fi
+  v="$(yget "$SHARED" "commands.overrides.$verb")"
+  [ -n "$v" ] || v="$(yget "$SHARED" "commands.model")"
   [ -n "$v" ] || v="inherit"          # built-in default: follow the session model
   if _valid_command_model "$v"; then echo "$v"; return; fi
   echo "WARN: command model '$v' for '$verb' invalid (opus|sonnet|haiku|claude-*|inherit) — using inherit" >&2
@@ -484,8 +455,6 @@ case "$MODE" in
     print_var MODE_VAL         "$MODE_VAL"
     print_var VAULT_PATH       "$VAULT_PATH"
     print_var VAULT_ABS        "$VAULT_ABS"
-    print_var EXTERNAL_VAULT   "$EXTERNAL_VAULT"
-    print_var SECRETS_FILE     "$SECRETS_FILE"
     print_var OW_VERSION    "$OW_VERSION"
     print_var OW_SOURCE     "$OW_SOURCE"
     print_var OW_LAST_SYNC  "$OW_LAST_SYNC"
@@ -502,7 +471,6 @@ case "$MODE" in
     print_var TEST_DIR         "$TEST_DIR"
     print_var HANDOFF_DIR      "$HANDOFF_DIR"
     print_var TODAY            "$TODAY"
-    print_var TEMPLATES_LOCAL  "$TEMPLATES_LOCAL"
     print_var TEMPLATES_PROJECT "$TEMPLATES_PROJECT"
     print_var TEMPLATES_SNAPSHOT "$TEMPLATES_SNAPSHOT"
     print_var COMMANDS_DIR_PRIMARY  "$COMMANDS_DIR_PRIMARY"
@@ -525,16 +493,15 @@ case "$MODE" in
   "root": "$ROOT",
   "project": {"name":"$PROJECT_NAME","slug":"$PROJECT_SLUG","language":"$PROJECT_LANG","vault_language":"$VAULT_LANG","timezone":"$PROJECT_TZ"},
   "mode": "$MODE_VAL",
-  "vault": {"path":"$VAULT_PATH","abs":"$VAULT_ABS","external":"$EXTERNAL_VAULT"},
+  "vault": {"path":"$VAULT_PATH","abs":"$VAULT_ABS"},
   "paths": {
-    "secrets_file":"$SECRETS_FILE",
     "impl_status":"$IMPL_STATUS",
     "prd":"$PRD_DIR","features":"$FEAT_DIR","functions":"$FN_DIR",
     "phases":"$PHASE_DIR","flows":"$FLOW_DIR","reference":"$REF_DIR",
     "design_system":"$DS_DIR",
     "plans":"$PLAN_DIR","fixes":"$FIX_DIR","tests":"$TEST_DIR","handoffs":"$HANDOFF_DIR"
   },
-  "templates": {"local":"$TEMPLATES_LOCAL","project":"$TEMPLATES_PROJECT","snapshot":"$TEMPLATES_SNAPSHOT"},
+  "templates": {"project":"$TEMPLATES_PROJECT","snapshot":"$TEMPLATES_SNAPSHOT"},
   "template_chain": "$TEMPLATE_CHAIN",
   "commands": {"primary":"$COMMANDS_DIR_PRIMARY","override":"$COMMANDS_DIR_OVERRIDE"},
   "command_prefix": "$COMMAND_PREFIX",

@@ -6,17 +6,7 @@ baked into the command and agent specs for that area — so project facts never 
 hardcoded into core (which would be lost on upgrade).
 
 > Core ships only this scaffold. **No project-specific rule content lives in core.**
-> Put yours here (tracked) or in `.ow/local/rules/` (personal, gitignored).
-
-## Locations & precedence (highest wins)
-
-| Layer | Path | Tracked? |
-|---|---|---|
-| personal override | `.ow/local/rules/<area>.md` | gitignored |
-| project rule | `.ow/rules/<area>.md` | git-tracked |
-
-Resolution order is **local > project**. The resolver returns every matching
-file, personal first, so a reader applies the highest-priority instruction last.
+> Put yours here, git-tracked: `.ow/rules/<area>.md`.
 
 ## Format
 

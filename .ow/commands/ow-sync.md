@@ -149,7 +149,7 @@ Update the .ow snapshot from obsidian-workflow 0.4.0 → 0.4.3?
 
 > ⚠️ **Scope guard** — `/ow-sync` touches `.ow/` only
 > Never overwrite `templates/`, `commands/`, `.claude/`, `docs/`, `.ow.yml`,
-> `.ow.local.yml`, `.ow/local/` under any circumstances
+> `.ow/local/` under any circumstances
 > `.ow/rules/` is the project's own — it is NOT part of the snapshot and is never replaced
 > If the template structure changes → only flag it for the user to review in Phase 7
 
@@ -174,7 +174,6 @@ PROTECTED=(
   bin
   scripts                         # ow-paths.sh + upgrade.sh
   .ow.yml
-  .ow.local.yml
   .ow/local
   CLAUDE.md
   AI-README.md
@@ -213,7 +212,7 @@ for sp in "${SNAPSHOT_PATHS[@]}"; do
   [ -e ".ow/$sp" ] && cp -R ".ow/$sp" "$backup_dir/"
 done
 
-# Replace per snapshot path (leaves .ow/local/ — the personal overrides — untouched)
+# Replace per snapshot path (leaves .ow/local/ — per-machine runtime state — untouched)
 for sp in "${SNAPSHOT_PATHS[@]}"; do
   src="$(snapshot_src "$sp")"
   [ -e "$STAGE/repo/$src" ] || continue
@@ -323,5 +322,5 @@ At the end of /ow-sync, answer in **short, quick-to-read bullets** in the config
 - Never put a project template into `.ow/templates/` — put it in `templates/` instead
 - **Never touch any other folder, under any circumstances** — if a sync overwrites root `templates/`, root `commands/` (override layers), `.claude/`, `docs/`, `scripts/`, or the user's config → abort + restore the backup immediately
 - Never touch `.ow/rules/` — those are the project's own rules, not part of the snapshot
-- Never edit `.ow.yml` or `.ow.local.yml` (only `ow.version` + `ow.last_synced` may change, via Phase 6)
+- Never edit `.ow.yml` (only `ow.version` + `ow.last_synced` may change, via Phase 6)
 - Never delete `.ow.backup-*` without telling the user — keep at least the 3 most recent backups

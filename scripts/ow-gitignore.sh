@@ -25,8 +25,7 @@ OW_GI_END='# <<< obsidian-workflow managed end <<<'
 ow_gitignore_block() {
   printf '%s\n' "$OW_GI_START"
   printf '%s\n' \
-    "# Personal / per-machine config — never commit" \
-    ".ow.local.yml" \
+    "# Per-machine runtime state (resolver env cache, install markers) — never commit" \
     ".ow/local/" \
     ".ow/cache/" \
     ".ow.cache/" \

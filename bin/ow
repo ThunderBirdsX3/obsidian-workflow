@@ -33,7 +33,7 @@ COMMANDS (in an installed project)
   upgrade                  Bump obsidian-workflow template (preserves templates/, docs/, config, custom scripts)
   doctor                   Diagnose project — check vault, configs, scripts, subagents
   lint                     Run the conformance lint (#14 — preamble/§0/no-vault-binary gate)
-  paths [--json]           Show resolved paths from .ow.yml + .ow.local.yml
+  paths [--json]           Show resolved paths from .ow.yml
   version                  Show version
   help                     Show this help
 
@@ -42,8 +42,6 @@ COMMANDS (source checkout only — bootstrap new projects from a obsidian-workfl
   init --here [--ai <list>]  Initialize in current directory
                              --ai accepts any name in scripts/ow-frontends.sh, or 'all'
                              (claude, codex, google, gpt, glm, cline, kimi; default: interactive)
-  init --local               Already-adopted repo: materialize only YOUR missing gitignored
-                             personal files (.ow.local.yml, .ow/local/, secrets env).
   init [...] --force         Re-run over an already-adopted project without prompting
                              (.ow.yml is protected — never overwritten)
   init [...] --no-sample     Skip the greenfield sample vault
@@ -72,7 +70,7 @@ EOF
 }
 
 cmd_init() {
-  local target="" here=0 ai_flag="" local_flag=""
+  local target="" here=0 ai_flag=""
   while [ "$#" -gt 0 ]; do
     case "$1" in
       --here) here=1; shift ;;
@@ -80,7 +78,6 @@ cmd_init() {
       --no-sample) NO_SAMPLE_FLAG="--no-sample"; shift ;;
       --ai) ai_flag="--ai $2"; shift 2 ;;
       --yes|-y) YES_FLAG="--yes"; shift ;;
-      --local) local_flag="--local"; shift ;;   # materialize only missing personal files (#23)
       -*) echo "Unknown flag: $1" >&2; exit 1 ;;
       *) target="$1"; shift ;;
     esac
@@ -97,7 +94,7 @@ cmd_init() {
   bash "$OW_HOME/scripts/install.sh" \
     "$target" \
     --source "$OW_HOME" \
-    ${ai_flag:-} ${FORCE_FLAG:-} ${NO_SAMPLE_FLAG:-} ${YES_FLAG:-} ${local_flag:-}
+    ${ai_flag:-} ${FORCE_FLAG:-} ${NO_SAMPLE_FLAG:-} ${YES_FLAG:-}
 }
 
 cmd_update() {
@@ -155,18 +152,7 @@ cmd_doctor() {
   echo "  scripts/:         $([ -z "$miss" ] && echo "OK ($n runtime helpers)" || echo "(missing:$miss)")"
   echo "  bin/ow:     $([ -f bin/ow ] && echo OK || echo "(missing — run upgrade)")"
   echo "  yq (hard prereq): $(command -v yq >/dev/null 2>&1 && echo OK || echo "MISSING — brew install yq")"
-  # Personal/gitignored files (#23) — a teammate who cloned an adopted repo has none of these.
-  # Report which are missing + the one command that materializes them.
-  echo "  Personal files (gitignored — run 'ow init --local' to create any missing):"
-  echo "    .ow.local.yml:  $([ -f .ow.local.yml ] && echo OK || echo "missing — run: ow init --local")"
-  echo "    .ow/local/:      $([ -d .ow/local ] && echo OK || echo "missing — run: ow init --local")"
-  pf_miss=0
-  for ex in .env.example .ow/test-credentials.env.example test-credentials.env.example; do
-    [ -f "$ex" ] || continue
-    dest="${ex%.example}"
-    [ -e "$dest" ] || { echo "    $dest:  missing — run: ow init --local (from $ex)"; pf_miss=1; }
-  done
-  [ "$pf_miss" -eq 0 ] && echo "    secrets/env:          $([ -f .env ] || [ -f test-credentials.env ] && echo OK || echo "(none expected)")"
+  [ -f .ow.local.yml ] && echo "  ⚠ .ow.local.yml:  not read — move any value you still need into .ow.yml, then delete it"
   local vault
   vault="$(grep -E '^vault_path:' .ow.yml 2>/dev/null | awk '{print $2}' | tr -d '"')"
   vault="${vault:-docs/obsidian-vault}"

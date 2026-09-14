@@ -42,7 +42,7 @@ Specialist in curating the project's Obsidian vault — keeping the vault under 
 **ALWAYS — before every task:**
 1. `<vault>/00-Index/IMPLEMENTATION-STATUS.md` (single source of status truth) — this agent's primary work product; always read + rewrite, every task
 2. All `<vault>/00-Index/MOC-*.md` (link graph hub) — primary work product; always read + rewrite, every task
-3. The template to be used — chain: `.ow/local/templates/<name>.md` → `templates/<name>.md` → `standards/templates/<name>.md`
+3. The template to be used — chain: `templates/<name>.md` → `.ow/templates/<name>.md` (resolved as `$TEMPLATE_CHAIN`)
 4. Never write before reading — if a file does not exist, report `pending verification` in the hand-back
 
 **CONDITIONAL — read only what `CONTEXT_REFS` (§0 block) names:**
@@ -70,7 +70,7 @@ Specialist in curating the project's Obsidian vault — keeping the vault under 
 **MUST NOT touch:**
 - Source code of any kind (`src/`, `lib/`, `app/`, `api/`, `web/`, `mobile/`)
 - `standards/**` (read-only org snapshot — sync overwrites it)
-- `.ow.yml`, `.ow.local.yml` (config — caller-managed)
+- `.ow.yml` (config — caller-managed)
 - User-authored prose (Markdown body) in an existing doc — frontmatter + structure (heading/order) may be edited, but never edit user content without confirming
 - Plan file with `status: done` — append only (e.g. an Implementation Result section); never edit Implementation Steps retroactively
 

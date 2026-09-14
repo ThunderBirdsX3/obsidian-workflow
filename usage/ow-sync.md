@@ -84,7 +84,7 @@ Update the .ow snapshot from 0.4.1 → 0.4.3?
 - 🚫 **ห้ามแตะ folder อื่นเด็ดขาด** — sync แค่ `.ow/` เท่านั้น ถ้าเจอ path นอก scope → abort + restore backup
 - 🚫 ห้ามแก้ `.ow/` ด้วยมือ — sync ทับทุกครั้ง; ส่งการแก้เข้า `obsidian-workflow` repo แทน
 - 🚫 ห้ามใส่ template ของ project เข้า `.ow/templates/` — ใส่ `templates/` แทน
-- ⚠️ `.ow.yml` `.ow.local.yml` ไม่ถูกแตะ — sync แค่ bump `ow.version` + `ow.last_synced` ของไฟล์เดียว
+- ⚠️ `.ow.yml` ไม่ถูกแตะ — sync แค่ bump `ow.version` + `ow.last_synced` ของไฟล์เดียว
 - 💡 เก็บ backup อย่างน้อย 3 อันล่าสุด — `rm -rf .ow.backup-*` ทีหลังถ้าเก่าเกิน
 - 💡 source repo เป็น private → `gh auth login` หรือ `GITHUB_TOKEN` (scope `repo`) — ไม่มี auth `raw.githubusercontent.com` ตอบ **404** ไม่ใช่ 403 sync จึง STOP แทนที่จะรายงาน "up to date" จากการอ่านที่ล้มเหลว
 
@@ -92,13 +92,12 @@ Update the .ow snapshot from 0.4.1 → 0.4.3?
 
 - ก่อน `/ow-sync`: ดู [`CHANGELOG.md`](https://github.com/ThunderBirdsX3/obsidian-workflow/blob/main/CHANGELOG.md) ของ obsidian-workflow repo
 - หลัง `/ow-sync`: ตรวจ `templates/` overrides แล้ว run `/ow-test` smoke test
-- Override personal: ใส่ใน `.ow/local/templates/<name>.md` (priority สูงสุด — sync ไม่ทับ)
-- Override team: ใส่ใน `templates/<name>.md` (gitTracked — sync ไม่ทับ)
+- Override template: ใส่ใน `templates/<name>.md` (gitTracked — sync ไม่ทับ)
 
 ## FAQ
 
 **Q: ถ้า sync ทับ template ของผมล่ะ?**
-A: ไม่ทับ — sync แตะแค่ `.ow/templates/` ของ project lookup chain: `.ow/local/templates/` > `templates/` > `.ow/templates/` — สองตัวแรกไม่ถูก sync
+A: ไม่ทับ — sync แตะแค่ `.ow/templates/` ของ project lookup chain: `templates/` > `.ow/templates/` — ตัวแรกไม่ถูก sync
 
 **Q: rollback ยังไง?**
 A: `rm -rf .ow && mv .ow.backup-<ts> .ow && yq -i '.ow.version = "<old>"' .ow.yml`

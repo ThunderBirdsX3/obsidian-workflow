@@ -38,7 +38,6 @@ MODE="auto"
 AI_AGENTS=""                       # "" = ask interactively; "all" = all 5
 YES=0
 DRY_RUN=0
-LOCAL_ONLY=0                       # --local: materialize only the gitignored personal files (#23)
 NO_SAMPLE=0                        # --no-sample: never copy the sample vault (greenfield only)
 FORCE=0                            # --force: re-run install over an already-adopted project
 TARGET=""
@@ -75,7 +74,6 @@ while [[ $# -gt 0 ]]; do
     --force) FORCE=1; YES=1; shift ;;
     --no-sample) NO_SAMPLE=1; shift ;;
     --dry-run) DRY_RUN=1; shift ;;
-    --local) LOCAL_ONLY=1; shift ;;
     -h|--help)
       grep '^#' "$0" | head -35; exit 0 ;;
     --*)
@@ -207,76 +205,6 @@ fi
 [[ -d "$TARGET" ]] || { err "Target folder ไม่พบ: $TARGET"; exit 1; }
 cd "$TARGET"
 
-# ---------- --local: materialize ONLY the gitignored personal files (#23) ----------
-# For a teammate who cloned an already-adopted project: their gitignored personal files
-# (.ow.local.yml, .ow/local/, secrets env) are absent. This mode creates just
-# the MISSING ones from their committed *.example templates — touching NO shared/tracked
-# file (.ow.yml, .ow/rules/, core, .claude). Idempotent: re-running is a no-op.
-materialize_local_only() {
-  if [[ ! -f "$TARGET/.ow.yml" ]]; then
-    err "--local needs an already-adopted project (no .ow.yml here)."
-    err "  Run a full 'ow init' first, then '--local' for additional teammates."
-    exit 1
-  fi
-  log "Local-only materialization (personal/gitignored files; no shared file touched)"
-  local created=0
-
-  # 1) .ow.local.yml ← committed example (only when absent)
-  if [[ -f "$TARGET/.ow.local.yml" ]]; then
-    log "  ok (exists): .ow.local.yml"
-  elif [[ -f "$TARGET/.ow.local.yml.example" ]]; then
-    run "cp '$TARGET/.ow.local.yml.example' '$TARGET/.ow.local.yml'"
-    log "  created: .ow.local.yml (from .example — edit to override paths)"; created=$((created+1))
-  else
-    warn "  skip: .ow.local.yml.example not found (cannot materialize .ow.local.yml)"
-  fi
-
-  # 2) .ow/local/ personal dir (+ minimal README) — gitignored, absent on a fresh clone
-  if [[ -d "$TARGET/.ow/local" ]]; then
-    log "  ok (exists): .ow/local/"
-  else
-    run "mkdir -p '$TARGET/.ow/local'"
-    if [[ $DRY_RUN -eq 0 ]]; then
-      cat > "$TARGET/.ow/local/README.md" <<'LOCALREADME'
-# `.ow/local/` — personal, gitignored
-
-Per-machine overrides that never get committed. Highest precedence in the resolver.
-
-- `rules/<area>.md` — personal rule overrides (win over `.ow/rules/<area>.md`)
-- `adopt.marker` — records your install-time keep/remove choice (written by the installer)
-
-Created by `ow init --local`. Safe to delete; re-run `init --local` to recreate.
-LOCALREADME
-    fi
-    log "  created: .ow/local/ (+ README — personal overrides)"; created=$((created+1))
-  fi
-
-  # 3) secrets/test-credentials env files ← committed *.example (only when absent)
-  local ex dest
-  for ex in .env.example .ow/test-credentials.env.example test-credentials.env.example; do
-    [[ -f "$TARGET/$ex" ]] || continue
-    dest="${ex%.example}"
-    if [[ -e "$TARGET/$dest" ]]; then
-      log "  ok (exists): $dest"
-    else
-      run "cp '$TARGET/$ex' '$TARGET/$dest'"
-      log "  created: $dest (from $ex — fill in your secrets; gitignored)"; created=$((created+1))
-    fi
-  done
-
-  log ""
-  if [[ $created -eq 0 ]]; then
-    log "✅ Nothing to do — all personal files already present (no-op)."
-  else
-    log "✅ Materialized $created personal file(s). No shared/tracked file was modified."
-  fi
-}
-
-if [[ $LOCAL_ONLY -eq 1 ]]; then
-  materialize_local_only
-  exit 0
-fi
-
 # Detect mode (interactive if indicators present + not --yes)
 MODE=$(ask_mode)
 log "Mode: $MODE"
@@ -292,8 +220,6 @@ fi
 # Detect existing obsidian-workflow
 if [[ -f .ow.yml ]]; then
   warn ".ow.yml already exists — this project looks already adopted."
-  warn "  Just need YOUR personal files (new teammate on a cloned repo)? → re-run with --local"
-  warn "  (materializes only the missing gitignored files; touches no shared/tracked file)"
   if [[ $FORCE -eq 1 ]]; then
     log "  --force: re-running install over it (.ow.yml is protected — kept as is)."
   else
@@ -510,7 +436,6 @@ SAFE_ITEMS=(
   ".ow/templates"
   ".ow/rules"        # project-rules layer (#17) — dir + README so scaffolds (#22) have a home
   ".ow.yml"
-  ".ow.local.yml.example"
   # NOTE: .gitignore is intentionally NOT here. It is MERGED (managed-block only)
   # further down via ow_gitignore_merge — never wholesale-copied, so a brownfield
   # install can no longer clobber the host project's existing .gitignore.
@@ -1194,9 +1119,9 @@ case "$vault_choice" in
     ext_path=$(ask "Absolute path ของ external vault" "")
     [[ -z "$ext_path" ]] && { err "External vault path ห้ามว่าง"; exit 1; }
     EXTERNAL_VAULT="$ext_path"
-    VAULT_PATH="external"
+    VAULT_PATH="$ext_path"
     log "External vault: $EXTERNAL_VAULT"
-    log "(จะบันทึกใน .ow.local.yml — gitignored)"
+    log "(บันทึกเป็น vault_path ใน .ow.yml)"
     ;;
   *)
     err "ตัวเลือกไม่ถูกต้อง: $vault_choice"
@@ -1205,7 +1130,7 @@ case "$vault_choice" in
 esac
 
 # Create vault skeleton (skip if external — assumes user has it set up)
-if [[ "$VAULT_PATH" != "external" ]]; then
+if [[ -z "$EXTERNAL_VAULT" ]]; then
   full_vault="$TARGET/$VAULT_PATH"
   if [[ ! -d "$full_vault" ]]; then
     log "สร้าง vault ที่ $VAULT_PATH/"
@@ -1227,31 +1152,10 @@ if [[ "$VAULT_PATH" != "external" ]]; then
   fi
 fi
 
-# Save external_vault to .ow.local.yml if chosen
-if [[ -n "$EXTERNAL_VAULT" ]]; then
-  if [[ ! -f "$TARGET/.ow.local.yml" ]]; then
-    if [[ -f "$TMP_DIR/.ow.local.yml.example" ]]; then
-      run "cp '$TMP_DIR/.ow.local.yml.example' '$TARGET/.ow.local.yml'"
-    else
-      run "touch '$TARGET/.ow.local.yml'"
-    fi
-  fi
-  # Set external_vault — use sed for cross-platform compatibility
-  if grep -q "external_vault:" "$TARGET/.ow.local.yml" 2>/dev/null; then
-    if [[ $DRY_RUN -eq 0 ]]; then
-      sed -i.bak "s|external_vault:.*|external_vault: \"$EXTERNAL_VAULT\"|" "$TARGET/.ow.local.yml" && rm "$TARGET/.ow.local.yml.bak" 2>/dev/null || true
-    fi
-  else
-    if [[ $DRY_RUN -eq 0 ]]; then
-      printf '\npaths:\n  external_vault: "%s"\n' "$EXTERNAL_VAULT" >> "$TARGET/.ow.local.yml"
-    fi
-  fi
-  log "  → .ow.local.yml saved (gitignored)"
-fi
-
-# Persist VAULT_PATH to .ow.yml (replace default vault_path: docs)
+# Persist VAULT_PATH to .ow.yml (replace default vault_path: docs) — relative or absolute
 if [[ -f "$TARGET/.ow.yml" && "$VAULT_PATH" != "docs" && $DRY_RUN -eq 0 ]]; then
-  sed -i.bak "s|^vault_path:.*|vault_path: $VAULT_PATH|" "$TARGET/.ow.yml" && rm "$TARGET/.ow.yml.bak" 2>/dev/null || true
+  vp_esc="$(printf '%s' "$VAULT_PATH" | sed 's/[\\&|]/\\&/g')"
+  sed -i.bak "s|^vault_path:.*|vault_path: \"$vp_esc\"|" "$TARGET/.ow.yml" && rm "$TARGET/.ow.yml.bak" 2>/dev/null || true
 fi
 
 # ---------- Project identity (project.name / project.slug) ----------
@@ -1309,24 +1213,6 @@ if [[ $DRY_RUN -eq 0 ]] && [[ -f "$TMP_DIR/scripts/ow-gitignore.sh" ]]; then
   fi
 elif [[ $DRY_RUN -eq 1 ]]; then
   log "  would merge: .gitignore (obsidian-workflow managed block — existing user lines preserved)"
-fi
-
-# ---------- copy .ow.local.yml.example (always) + .ow.local.yml (if missing) ----------
-# `.example` = checked-in reference template (always present after install)
-# `.local.yml` = personal/per-machine config (gitignored) — ow-paths.sh อ่านเป็น override layer
-# Both files coexist by design — separation:
-#   .ow.yml       → project-wide config (vault_path, subagents baseline, ow version)
-#   .ow.local.yml → machine-specific (external_vault, mirror paths, user.name)
-if [[ ! -f "$TARGET/.ow.local.yml.example" && -f "$TMP_DIR/.ow.local.yml.example" ]]; then
-  run "cp '$TMP_DIR/.ow.local.yml.example' '$TARGET/'"
-  log "  installed: .ow.local.yml.example (reference template)"
-fi
-
-# Materialize .ow.local.yml from the example so user has a ready-to-edit file
-# (skip if user already created one — never overwrite personal config)
-if [[ ! -f "$TARGET/.ow.local.yml" && -f "$TMP_DIR/.ow.local.yml.example" && $DRY_RUN -eq 0 ]]; then
-  run "cp '$TMP_DIR/.ow.local.yml.example' '$TARGET/.ow.local.yml'"
-  log "  installed: .ow.local.yml (personal/per-machine — gitignored, edit เพื่อ override paths)"
 fi
 
 # ---------- starter rule scaffolds (#22 — for enabled areas; idempotent) ----------
@@ -1424,15 +1310,15 @@ if [[ "$MODE" == "brownfield" ]]; then
 fi
 
 log ""
-log "Config files (อ่านโดย scripts/ow-paths.sh — precedence: local > shared > default):"
-log "  Shared:   $TARGET/.ow.yml            (git-tracked, ทีมเดียวกัน)"
+log "Config (อ่านโดย scripts/ow-paths.sh — .ow.yml > default):"
+log "  $TARGET/.ow.yml   (git-tracked)"
 log "            └─ project, vault_path, subagents baseline, guardrails"
-log "  Personal: $TARGET/.ow.local.yml      (gitignored, ของเครื่องคุณเอง)"
-log "            └─ paths.external_vault, user.name"
-log "  Template: $TARGET/.ow.local.yml.example  (reference สำหรับ key ทั้งหมดที่ override ได้)"
 log ""
 log "Other:"
 log "  Docs:           $TARGET/CLAUDE.md"
-log "  Vault:          $TARGET/$VAULT_PATH/"
-[[ -n "$EXTERNAL_VAULT" ]] && log "  External vault: $EXTERNAL_VAULT (recorded in .ow.local.yml)"
-log "  Design preview: $TARGET/$VAULT_PATH/70-Reference/DesignSystem/preview.html (เปิดด้วย browser)"
+if [[ -n "$EXTERNAL_VAULT" ]]; then
+  log "  Vault:          $EXTERNAL_VAULT/ (external — vault_path in .ow.yml)"
+else
+  log "  Vault:          $TARGET/$VAULT_PATH/"
+  log "  Design preview: $TARGET/$VAULT_PATH/70-Reference/DesignSystem/preview.html (เปิดด้วย browser)"
+fi

@@ -56,14 +56,13 @@
 4. **Phase 3** — Brownfield adoption (stack scan + import README + suggest first task)
 5. **Phase 4** — Verify the obsidian-workflow snapshot (`.ow/commands`, `.ow/templates`)
 6. **Phase 5** — Subagents: ติดตั้ง always-on 4 ตัว (docs/verifier/security/gh-issue); ตัวเฉพาะทางสร้างทีหลังด้วย `/ow-agent suggest` → `/ow-agent create <name>` เมื่อรู้ stack + มี PRD แล้ว
-7. **Phase 6** — เขียน `.ow.yml` (shared) + `.ow.local.yml` (personal)
+7. **Phase 6** — เขียน `.ow.yml`
 8. **Phase 7** — Verification + แสดง summary
 
 ## Output ที่ได้
 
 - `<vault_path>/` (12 folders ครบ — `00-Index/`, `10-PRD/`, …, `95-Handoff/`)
 - `.ow.yml` (gitTracked — shared กับ team)
-- `.ow.local.yml` (gitignored — personal paths)
 - `.claude/commands/`, `.claude/agents/` (จาก installer)
 - (brownfield) PRD draft จาก README ใน `docs/obsidian-vault/10-PRD/PRD-<slug>.md`
 
@@ -76,7 +75,7 @@
 | C) custom in-repo | path ที่ user ระบุ | brownfield + มี vault อยู่ |
 | D) external | absolute path นอก repo | shared org vault, iCloud sync |
 
-ถ้าเลือก D → path ไป `.ow.local.yml` `paths.external_vault:` (personal)
+ทุกตัวเลือกบันทึกที่ `vault_path:` ใน `.ow.yml` — D ใส่เป็น absolute path
 
 ## Workflow ที่นิยม
 
@@ -105,7 +104,6 @@
 - 🚫 ห้ามแตะ code เดิมใน brownfield — `/ow-init` เพิ่มเฉพาะ `docs/`, `.claude/`, `.ow/`, `templates/`, `.ow.yml`
 - 🚫 ห้ามแต่ง dependencies/framework version ที่ไม่ได้เห็นจริงในไฟล์
 - 💡 มี `CLAUDE.md` อยู่แล้ว → installer **merge เฉพาะ block ที่ marker `<!-- OW START: workflow -->` ครอบ** (มี block เดิม = refresh · ไม่มี = append ต่อท้าย) — prose ของคุณนอก marker ไม่ถูกแตะ · ถ้ามี START แต่ไม่มี END = หยุด ไม่เดา span
-- 💡 `.ow.local.yml` gitignored แล้ว — เก็บ external vault path / secrets file ที่นี่
 - 💡 มี `.claude/agents|commands` เดิมของคุณ (ไม่ใช่ของ obsidian-workflow)? installer ถาม **keep-all / remove-all (backup) / select per item** — non-interactive default = keep + warn; user agent ที่ไม่มี `§0` จะไม่ทำให้ install ล้ม (เป็น note)
 - 💡 `/ow-init` สร้าง scaffold `.ow/rules/<area>.md` ให้ทุก area ที่ enable (เช่น `docs.md`, `security.md`) — เติม convention ของ project ตรงนั้น (override generic guidance) หรือลบทิ้งถ้าไม่ใช้
 
@@ -123,11 +121,11 @@
 A: Greenfield — `.git` ว่างไม่นับเป็น indicator init จะถามให้ confirm
 
 **Q: External vault (option D) ใส่ตรงไหน?**
-A: `.ow.local.yml` ที่ `paths.external_vault: "<absolute path>"` — gitignored
+A: `.ow.yml` ที่ `vault_path: "<absolute path>"`
 
 **Q: ถ้าอยากได้ subagent เฉพาะทาง (backend/frontend/...) ทีหลัง?**
 A: มันไม่ได้ ship มา — รัน [/ow-agent suggest](./ow-agent.md) เพื่อดูว่า stack นี้ควรมีตัวไหน แล้ว
 `/ow-agent create &lt;name&gt;` เขียน body ให้ตรง stack จริง (`enable` ใช้เปิดตัวที่ create ไว้แล้วเท่านั้น)
 
 **Q: ผม clone repo ที่ทีมงาน adopt obsidian-workflow ไว้แล้ว ต้องรัน init ใหม่ทั้งหมดไหม?**
-A: ไม่ต้อง — ไฟล์ shared มีครบใน repo แล้ว สิ่งที่ขาดคือไฟล์ส่วนตัว (gitignored) ของคุณเอง รัน `ow init --local` จะสร้างเฉพาะที่ขาด (`.ow.local.yml`, `.ow/local/`) โดยไม่แตะไฟล์ shared (idempotent — รันซ้ำ no-op) ดูว่าขาดอะไรด้วย `ow doctor`
+A: ไม่ต้อง — config มีแค่ `.ow.yml` ซึ่งอยู่ใน repo แล้ว (`.ow/local/` สร้างเองตอนรันคำสั่งแรก) ที่ต้องเติมเองมีแค่ไฟล์ env ของ test credentials (gitignored)

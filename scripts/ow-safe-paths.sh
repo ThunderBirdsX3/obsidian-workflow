@@ -4,15 +4,15 @@
 # Sourced by scripts/upgrade.sh + scripts/install.sh (+ any future sync path) so
 # the entry points cannot drift. Nothing that IS — or is nested under — one of
 # these may ever be deleted or overwritten by upgrade/sync/install. Encodes epic
-# constraint (b): local config, project/personal rules, override layers, the host
-# project's own root VERSION, and the secrets env file are sacrosanct.
+# constraint (b): config, project rules, override layers, the host project's own
+# root VERSION, and the test-credentials env file are sacrosanct.
 #
 # Portable: bash 3.2 (no mapfile/readarray) + BSD userland (no `realpath -m`).
 # Path comparison is lexical (entries are simple repo-relative paths), so it needs
 # no filesystem access and works before a project is fully installed.
 #
 # API:
-#   ow_safe_paths [secrets_file]      → print the protected set, one path per line
+#   ow_safe_paths [env_file]          → print the protected set, one path per line
 #   ow_path_is_safe <cand> <safe...>  → exit 0 if <cand> must NOT be wholesale-replaced
 #   ow_nested_safe_subpaths <cand> <safe...> → print safe paths strictly nested under <cand>
 
@@ -24,8 +24,8 @@ _bsp_norm() {
   printf '%s' "${p%/}"
 }
 
-# Canonical protected set. Optional arg = resolved secrets-file path (from
-# ow-paths.sh SECRETS_FILE); when non-empty it joins the set so a project can
+# Canonical protected set. Optional arg = the test-credentials env file (from
+# ow-paths.sh TEST_ENV_FILE); when non-empty it joins the set so a project can
 # relocate its credentials env file without losing protection.
 ow_safe_paths() {
   local secrets="${1:-}"
@@ -35,7 +35,6 @@ ow_safe_paths() {
   # (scripts/ow-claude-md.sh) while every line the host wrote outside the markers stays.
   printf '%s\n' \
     ".ow.yml" \
-    ".ow.local.yml" \
     ".ow/rules" \
     ".ow/local" \
     "commands" \

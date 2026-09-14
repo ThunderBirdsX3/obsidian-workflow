@@ -17,11 +17,10 @@
 
 You will run a one-line installer that drops a small set of **additive** files into the project
 (config templates, a path resolver script, command/agent definitions, a docs vault skeleton),
-then fill in two config files, then verify. The installer is **non-destructive**: it never
+then fill in the config file, then verify. The installer is **non-destructive**: it never
 deletes the project's source, never wipes existing AI settings, and skips files that already
 exist unless you explicitly force overwrite. Everything project-specific is expressed through
-config (`.ow.yml`), personal/per-machine config (`.ow.local.yml`), and project rule
-files (`.ow/rules/`).
+config (`.ow.yml`) and project rule files (`.ow/rules/`).
 
 ## 1. Preconditions check (run first, STOP on failure)
 
@@ -61,7 +60,6 @@ bash <(curl -fsSL <obsidian-workflow-installer-url>) --mode auto   # <obsidian-w
 ### What it WILL add (additive only)
 
 - [ ] `.ow.yml` — shared project config (git-tracked).
-- [ ] `.ow.local.yml` + `.ow.local.yml.example` — personal/per-machine config (the `.local.yml` is gitignored).
 - [ ] `scripts/` + `bin/` — only the obsidian-workflow-owned helper files (path resolver, upgrade,
       rollup, conformance lint, `bin/ow`). These are **mixed-ownership** dirs: install
       copies only the owned files and upgrade refreshes only those **per-file** — any custom script
@@ -70,8 +68,8 @@ bash <(curl -fsSL <obsidian-workflow-installer-url>) --mode auto   # <obsidian-w
 - [ ] `.ow/` — core machinery (commands, templates, policies, version pin) **and `.ow/rules/` with starter `<area>.md` scaffolds for the enabled areas** (git-tracked; idempotent, never overwrites yours).
 - [ ] AI front-end shims (command shims + a baseline set of always-on agent docs).
 - [ ] A docs vault skeleton (numbered folders) — only created if absent; sample content only for greenfield.
-- [ ] `.gitignore` — a **marker-delimited managed block** (obsidian-workflow-internal paths only: local
-      config, worktrees, sync backups). install/upgrade MERGE this block and **never touch your
+- [ ] `.gitignore` — a **marker-delimited managed block** (obsidian-workflow-internal paths only: per-machine
+      runtime state, worktrees, sync backups). install/upgrade MERGE this block and **never touch your
       existing lines** — a brownfield `.gitignore` is preserved in full. Stack/OS/editor ignores
       (`node_modules`, `dist`, `.env`, `.DS_Store`, …) stay yours to manage, outside the markers.
 
@@ -96,8 +94,8 @@ The installer/upgrade/sync must treat these as **protected** and never overwrite
 - [ ] Project **source code** and existing manifests.
 - [ ] The project's root **VERSION** file (if any) — preserved, not deleted (backed up before any migration).
 - [ ] Existing **AI settings** (never wipe the whole settings dir; never touch the per-machine local settings file, hooks, MCP perms, or project-enabled agents).
-- [ ] `.ow.yml`, `.ow.local.yml` — existing config is never overwritten. Upgrade may **additively backfill** newly-shipped blocks/knobs (e.g. `paths.vault_publish_dest`) — append-only, every existing value/comment preserved, backed up pristine for `--rollback`.
-- [ ] `.ow/rules/`, `.ow/local/` — project + personal rule overrides.
+- [ ] `.ow.yml` — existing config is never overwritten. Upgrade may **additively backfill** newly-shipped blocks/knobs (e.g. `paths.vault_publish_dest`) — append-only, every existing value/comment preserved, backed up pristine for `--rollback`.
+- [ ] `.ow/rules/` — project rules. `.ow/local/` — per-machine runtime state.
 - [ ] Project-level `commands/` and `templates/` **override layers**.
 - [ ] The **secrets env file** (the gitignored test-credentials env file) and any `*.local.*` config.
 
@@ -131,19 +129,15 @@ vault_dirs: {}
 #   phases: "50-Phases"
 ```
 
-## 4. Configure: `.ow.local.yml` (personal, gitignored)
+## 4. Vault outside the repo + secrets
 
 ```yaml
-paths:
-  external_vault: ""           # absolute path if the vault lives outside this repo
-  secrets_file: ".env.test"    # path to the gitignored credentials env file
+# .ow.yml
+vault_path: "/Volumes/shared/MyVault"   # absolute path when the vault lives outside this repo
 
 test_credentials:
-  env_file: ".env.test"        # gitignored credentials env file (schema lives in .ow.yml)
+  env_file: ".env.test"                 # gitignored credentials env file
 ```
-
-> The full set of overridable personal keys lives in `.ow.local.yml.example`
-> (the shipped reference).
 
 > Keep secrets out of source. Test credentials go in the env file referenced by
 > `test_credentials.env_file`, never in YAML or notes.
@@ -172,12 +166,12 @@ find "$VAULT_ABS" -type f \( -name '*.png' -o -name '*.jpg' -o -name '*.har' \
       lines and PII-masked. No base64-embedded images.
 
 ### 5.4 Seed project rules instead of editing core
-- [ ] `init` already scaffolds `.ow/rules/<area>.md` for each enabled area (the canonical file per area is `<area>.md` — `backend`→`backend.md`, `test-runner`→`testing.md`, etc.). Fill the scaffold with this project's conventions (front-matter `applies_to: [<areas>]`) — a resolved rule **overrides** the generic command/agent guidance for that area. Personal overrides go in `.ow/local/rules/<area>.md`.
+- [ ] `init` already scaffolds `.ow/rules/<area>.md` for each enabled area (the canonical file per area is `<area>.md` — `backend`→`backend.md`, `test-runner`→`testing.md`, etc.). Fill the scaffold with this project's conventions (front-matter `applies_to: [<areas>]`) — a resolved rule **overrides** the generic command/agent guidance for that area.
 - [ ] Name the file, don't guess: `bash scripts/ow-paths.sh --rules-expected <area>` prints the exact path (even when absent). Any rule listed in `.ow.yml` `rules.files` **must resolve** — `--rules-validate` (and `--selftest`) fail loud on a registered rule that doesn't, so a load-bearing convention can never be silently dropped.
 - [ ] **Never edit core command/agent/template files** to encode project facts — they refresh on upgrade and your edits would be lost.
 
 ### 5.6 Additional teammates on an already-adopted repo
-- [ ] A new teammate who clones the repo has every **shared** file but none of the **gitignored personal** ones. They should NOT re-run a full init — instead run `ow init --local` to materialize only the missing personal files (`.ow.local.yml`, `.ow/local/`, any secrets env from its `*.example`). It is idempotent (re-running is a no-op) and touches no shared/tracked file. `ow doctor` lists exactly which personal files are missing.
+- [ ] A new teammate who clones the repo already has everything obsidian-workflow reads — config is `.ow.yml` only. They should NOT re-run init; `.ow/local/` is recreated on the first command run. Only the test-credentials env file (gitignored) has to be filled in by hand.
 
 ### 5.5 Gitignore hygiene
 - [ ] Remove any leftover artifact-store ignore rules (e.g. `test-artifacts/`) that no longer correspond to anything obsidian-workflow writes.
@@ -222,8 +216,8 @@ else echo "OK: vault is text-only"; fi
 
 - **Rollback the last upgrade:** `bash scripts/upgrade.sh --rollback` (restores from the most recent automatic backup).
 - **Preview an upgrade:** `bash scripts/upgrade.sh --dry-run`.
-- **Guarantee:** upgrade/sync/install **preserve** your local config and rules. The following
-  survive upgrades untouched: `.ow.yml`, `.ow.local.yml`, `.ow/rules/`,
+- **Guarantee:** upgrade/sync/install **preserve** your config and rules. The following
+  survive upgrades untouched: `.ow.yml`, `.ow/rules/`,
   `.ow/local/`, project `commands/` + `templates/` override layers, the root `VERSION`,
   and the secrets env file. If an upgrade ever modifies one of these, treat it as a
   release-blocking bug.
@@ -237,8 +231,8 @@ diff -q /tmp/before.yml .ow.yml && echo "OK: shared config preserved"
 ## 8. TL;DR (for humans)
 
 1. Install `yq`, be in a git repo. Run `--dry-run` first, then the installer.
-2. It only **adds** files. It never deletes your code, your VERSION, your AI settings, or your local config/rules.
-3. Fill `.ow.yml` (shared) + `.ow.local.yml` (personal, gitignored). Most blocks are optional.
+2. It only **adds** files. It never deletes your code, your VERSION, your AI settings, or your config/rules.
+3. Fill `.ow.yml`. Most blocks are optional.
 4. Brownfield: map any oddly-named notes folder via `vault_dirs`; get any images/logs out of the vault (it is text-only); put project conventions in `.ow/rules/` (never edit core).
 5. Verify: `doctor`, resolver `--selftest`, conformance lint, and "no binaries in the vault".
 6. Upgrades are reversible (`--rollback`) and never clobber your config/rules.

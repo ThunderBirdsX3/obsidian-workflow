@@ -6,10 +6,8 @@
   and the **whole folder is overwritten** when `/ow-sync` runs
   ────────────────────────────────────────────────────────────────────────────
   Need to change something?
-    • Project-wide (commit + share with the team) → copy this file to `templates/<name>.md`
-      → edit it there → commit  (lookup priority higher than .ow/templates/)
-    • Personal-only (not committed)               → copy to `.ow/local/templates/<name>.md`
-      → edit it there (gitignored)                (highest lookup priority)
+    • Copy this file to `templates/<name>.md` → edit it there → commit
+      (lookup priority higher than .ow/templates/)
   ════════════════════════════════════════════════════════════════════════════
 -->
 

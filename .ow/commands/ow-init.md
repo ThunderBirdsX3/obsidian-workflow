@@ -142,14 +142,8 @@ What each mode means:
    | **C) Use an existing vault in this repo** | `<project>/<path>` the user names | brownfield with a vault already present |
    | **D) Use an external vault (path outside the repo)** | an absolute path, e.g. `/Volumes/.../MyVault` | shared org vault, iCloud sync, multi-project vault |
 
-   If **D** (external) is chosen:
-   - Record the path in **`.ow.local.yml`** under `paths.external_vault:` (gitignored — this machine only)
-   - **`.ow.yml`** sets `vault_path: external`
-   - Every command reads the local config first, falling back to `vault_path`
-
-   If **A/B/C** (in-repo) is chosen:
-   - Record the path in `.ow.yml` under `vault_path:` (git-tracked — the whole team shares one path)
-   - `.ow.local.yml` `paths.external_vault:` = empty
+   Record the choice in `.ow.yml` under `vault_path:` (git-tracked — the whole team shares one path):
+   A/B/C → the in-repo relative path · D → the absolute path
 
 ### 1.3 Brownfield-specific (added when a code indicator is present):
 
@@ -157,8 +151,6 @@ What each mode means:
    - `yes` → analyse the README + propose a PRD draft in Phase 3
    - `no` → skip; use /ow-new later
 8. **Submodules** — list what exists (auto-detected from `.gitmodules`, confirmed by the user, plus each submodule's branch)
-
-### 1.4 Personal paths (stored in .ow.local.yml — asked, but skippable):
 
 ## Phase 2 — Create the vault skeleton
 
@@ -287,33 +279,18 @@ Specialized agents for <stack from Phase 1> — not created yet:
 Use the values the user gave:
 - `project.name`, `project.slug`
 - `mode` (standalone / submodule)
-- `vault_path`: for A/B/C in Phase 1.2 → the in-repo relative path; for D (external) → the special value `external`
+- `vault_path`: for A/B/C in Phase 1.2 → the in-repo relative path; for D (external) → the absolute path
 - `subagents.*`
 - `submodules` (auto-filled from `.gitmodules` when present)
 - `ow.version` + `ow.source` + `ow.last_synced`
 
-### 6.2 `.ow.local.yml` (gitignored — this user's machine only)
-
-Create/update it when the user supplied personal paths in Phase 1.2 D or 1.4:
-
-```yaml
-paths:
-  external_vault: "<absolute path>"      # when the user chose D in Phase 1.2
-user:
-  name: "<git config user.name fallback>"
-  timezone: "Asia/Bangkok"
-```
-
-If the user skips every personal path → copy `.ow.local.yml.example` → `.ow.local.yml` as an empty template to fill in later
-
-### 6.3 Check `.gitignore`
+### 6.2 Check `.gitignore`
 
 ```bash
 test -f .gitignore || cp .gitignore.template .gitignore
-grep -q "^.ow.local.yml" .gitignore || echo "" >> .gitignore && cat >> .gitignore <<'EOF'
+grep -q "^.ow/local/" .gitignore || echo "" >> .gitignore && cat >> .gitignore <<'EOF'
 
-# obsidian-workflow local config (machine-specific)
-.ow.local.yml
+# obsidian-workflow per-machine runtime state
 .ow/local/
 EOF
 ```
@@ -353,7 +330,7 @@ Next steps:
 Close /ow-init with **short, quickly readable bullets** in the configured language (`$PROJECT_LANG` from Phase 0). Only:
 
 - **What was done** — the mode (greenfield/brownfield/adopt), the vault created, the always-on subagents installed
-- **Files** — `.ow.yml` + `.ow.local.yml` + the vault skeleton
+- **Files** — `.ow.yml` + the vault skeleton
 - **Checks** — the verification result (Phase 7)
 - **Risks/next** — a brownfield PRD draft needs stakeholder review; obsidian-workflow may have updates → `/ow-sync`; then `/ow-new`
 

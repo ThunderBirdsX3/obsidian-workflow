@@ -58,7 +58,7 @@ bash <(curl -fsSL https://raw.githubusercontent.com/ThunderBirdsX3/obsidian-work
 ### 3. ทดสอบ install สำเร็จ
 
 ```bash
-ow doctor     # health check (also lists missing personal/gitignored files)
+ow doctor     # health check
 ```
 
 > `ow test` (smoke tests) เป็นคำสั่งของ **source checkout** เท่านั้น — ไม่ได้ติดตั้งในโปรเจกต์ของคุณ ใช้ `ow doctor` เพื่อ verify install
@@ -158,27 +158,18 @@ bash <(curl -fsSL .../install.sh)
 /ow-plan <first task>                   ← เริ่ม workflow ปกติ
 ```
 
-> **เพื่อนร่วมทีม clone repo ที่ adopt แล้ว?** ไฟล์ส่วนตัว (gitignored) จะยังไม่มี —
-> รัน `ow init --local` เพื่อสร้างเฉพาะไฟล์ที่ขาด (`.ow.local.yml`, `.ow/local/`)
-> โดยไม่แตะไฟล์ shared เลย (idempotent — รันซ้ำได้ no-op)
-
 ---
 
 ## ⚙️ Configuration
 
 | ไฟล์ | gitTracked? | ใช้สำหรับ |
 |---|---|---|
-| `.ow.yml` | ✅ | shared — project name, vault path, subagents, submodules, AI agents, `git:` sync (ทีมหลายคน) |
-| `.ow.local.yml` | ❌ | personal — external vault, GDrive folder, secrets path |
-| `.ow/local/commands/` | ❌ | personal slash commands |
-| `.ow/local/templates/` | ❌ | personal template overrides |
+| `.ow.yml` | ✅ | project name, vault path (relative หรือ absolute ถ้า vault อยู่นอก repo), subagents, submodules, AI agents, `git:` sync (ทีมหลายคน) |
+| `.ow/local/` | ❌ | สถานะรันไทม์ของเครื่อง (resolver cache, install marker) — สร้างอัตโนมัติ ไม่ต้องแก้ |
 
 **Template lookup chain (สูง → ต่ำ):**
-1. `.ow/local/templates/<name>.md` (personal)
-2. `templates/<name>.md` (project — แก้ + commit ได้)
-3. `.ow/templates/<name>.md` (org canonical — read-only, sync override)
-
-ดูตัวอย่างใน [`.ow.local.yml.example`](./.ow.local.yml.example)
+1. `templates/<name>.md` (project — แก้ + commit ได้)
+2. `.ow/templates/<name>.md` (org canonical — read-only, sync override)
 
 ---
 
@@ -302,7 +293,7 @@ bash scripts/install.sh --source $(pwd) --target /tmp/test-ow --dry-run
 | `ow-version.sh` | canonical version-file writer ของ `/ow-git --bump` — tag = `v<X.Y.Z>` แต่ **ไฟล์เป็น bare `<X.Y.Z>`** (pubspec/package.json ไม่รับ `v`). **ตัวเดียวที่หายแล้ว `--bump` ต้อง STOP** ไม่ใช่ degrade |
 | `ow-claude-manifest.sh` | `.claude` ownership + `generate_shims` (override-first) + `apply_agent_models` |
 | `ow-shims.sh` · `ow-frontends.sh` | สร้าง shim · จัดการ AI frontend dir ที่เปิดใช้ |
-| `ow-config-merge.sh` | additive block merge ของ `.ow.yml` + `.ow.local.yml` — backfill block ใหม่ ไม่ทับค่าที่ user กรอกไว้ ไม่ใช้ `yq -i` (คอมเมนต์รอด) |
+| `ow-config-merge.sh` | additive block merge ของ `.ow.yml` — backfill block ใหม่ ไม่ทับค่าที่ user กรอกไว้ ไม่ใช้ `yq -i` (คอมเมนต์รอด) |
 | `conformance-lint.sh` | 12-check hard gate — รันโดย sync/install/upgrade |
 | `ow-verify-vault-lang.sh` | gate ภาษา vault (#33) — เรียกจาก `/ow-secure` Phase 2.5 |
 | `ow-verify-vault-style.sh` | gate "vault เขียนสถานะปัจจุบัน" — เรียกจาก `/ow-secure` Phase 2.6 |
@@ -313,7 +304,7 @@ bash scripts/install.sh --source $(pwd) --target /tmp/test-ow --dry-run
 
 > **hard prerequisite:** ต้องมี `yq` — resolver + installer fail-closed ถ้าไม่มี
 
-> **install:** `.claude` agents/commands ของ user ที่มีอยู่ก่อน จะถูกถามว่า keep-all / remove-all / select (non-interactive default = keep + warn, บันทึกที่ `.ow/local/adopt.marker`) · `init` scaffold `.ow/rules/<area>.md` ตาม area ที่เปิด · `ow init --local` สร้างเฉพาะไฟล์ส่วนตัวที่ขาด สำหรับเพื่อนร่วมทีมบน repo ที่ clone มา
+> **install:** `.claude` agents/commands ของ user ที่มีอยู่ก่อน จะถูกถามว่า keep-all / remove-all / select (non-interactive default = keep + warn, บันทึกที่ `.ow/local/adopt.marker`) · `init` scaffold `.ow/rules/<area>.md` ตาม area ที่เปิด
 
 ---
 
@@ -325,8 +316,7 @@ bash scripts/install.sh --source $(pwd) --target /tmp/test-ow --dry-run
 ├── AI-README.md               ← Multi-AI usage
 ├── CLAUDE.md                  ← Claude project entry
 ├── CHANGELOG.md               ← version history
-├── .ow.yml              ← shared config (gitTracked)
-├── .ow.local.yml.example← personal config template
+├── .ow.yml              ← config (gitTracked)
 ├── .gitignore
 │
 ├── usage/                     ← 20+1 user-facing usage docs (Quick start, FAQ, gotchas)

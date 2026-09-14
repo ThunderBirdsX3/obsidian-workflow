@@ -52,21 +52,3 @@ merge_config_blocks() {
   printf '%s' "$additions" >> "$target"
   printf '%s\n' "$additions" | grep -oE '^[a-z_][a-z0-9_]*:' | sed 's/:$//' | sed 's/^/  + /'
 }
-
-# merge_local_config <target_local_yml> <template_local_example>
-#   Additive backfill for the user's gitignored .ow.local.yml on upgrade — so newly
-#   shipped per-machine knobs surface without a hand edit, while NEVER overriding the user's
-#   existing values / comments. Two passes, both append-only:
-#     1) BLOCK-LEVEL — missing top-level blocks (reuses merge_config_blocks).
-#     2) LEAF-LEVEL — a small registry of OPTIONAL nested knobs that live under a block the
-#        user already has (block-merge can't reach them). Inserts "  <child>: <default>" right
-#        after the parent header line ONLY when the child key is absent anywhere in the file.
-#   No `yq -i` (keeps comments). Idempotent. Both files must exist or it's a no-op.
-merge_local_config() {
-  local target="$1" template="$2"
-  [ -f "$target" ] && [ -f "$template" ] || return 0
-
-  merge_config_blocks "$target" "$template"   # pass 1: top-level blocks
-  # pass 2 (nested optional-knob backfill) intentionally empty — no leaf knobs registered.
-  # Re-introduce a "parent|child|default" loop here if a future release ships one.
-}

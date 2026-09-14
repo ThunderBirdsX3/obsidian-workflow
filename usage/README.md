@@ -100,8 +100,6 @@
 7. /ow-plan <first task>                    ← เริ่ม workflow ปกติ
 ```
 
-> เพื่อนร่วมทีม clone repo ที่ adopt แล้ว → `ow init --local` (สร้างเฉพาะไฟล์ส่วนตัวที่ขาด, idempotent)
-
 ---
 
 ## หลักการที่ทุก command บังคับ

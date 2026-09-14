@@ -134,7 +134,7 @@ ow upgrade --dry-run
 ow upgrade --rollback
 ```
 
-`upgrade` **ห้ามแตะ**: `templates/`, `docs/`, `.ow.yml`, `.ow.local.yml`, `.ow/local/`, `CLAUDE.md`, `AI-README.md`, `README.md`
+`upgrade` **ห้ามแตะ**: `templates/`, `docs/`, `.ow.yml`, `.ow/local/`, `CLAUDE.md`, `AI-README.md`, `README.md`
 **แทนที่ทั้ง dir**: `.ow/commands/`, `.ow/templates/`, `codex/`, `gemini/`, `gpt/`, `glm/`, `prompts/`
 **merge ทีละไฟล์ (ไม่เคย `rm -rf` ทั้ง dir)**:
 - `.claude/commands/` — regenerate shim + prune shim ของ command ที่ถูกลบ
@@ -263,7 +263,7 @@ obsidian-workflow ใช้ **Semantic Versioning** (`MAJOR.MINOR.PATCH`):
 | Version pinning | `--from git+...@tag` | `--version v0.2.0` |
 | Greenfield/Brownfield | `init` vs `init --here` | auto-detect via indicators + ถาม user |
 | AI selection | `--ai claude\|copilot\|gemini\|...` | `--ai claude,codex,google,gpt,glm,cline,kimi` |
-| Template override | 4-tier override stack | 3-tier (local → project → standards) |
+| Template override | 4-tier override stack | 2-tier (project → .ow/templates) |
 | Update | re-run installer | `ow upgrade` (preserves user content) |
 
 ---

@@ -56,7 +56,7 @@
 | `TestPlan` | `90-TestPlan/TP-<slug>.md` | `test-plan.md` |
 | `Reference` | `70-Reference/REF-<slug>.md` | `tech-spec.md` (ไม่มี `reference.md` ในชุดที่ ship) |
 
-Template lookup: `.ow/local/templates/<n>.md` > `templates/<n>.md` > `.ow/templates/<n>.md`
+Template lookup: `templates/<n>.md` > `.ow/templates/<n>.md`
 
 ## ขั้นตอนภายใน (Phase summary)
 

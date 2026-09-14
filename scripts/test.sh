@@ -64,7 +64,6 @@ run() {
 # ════════════════════════════════════════════════════════════════════════════
 printf "${c_bold}Section 1 — Core files${c_reset}\n"
 run ".ow.yml exists"         '[ -f .ow.yml ]'
-run ".ow.local.yml.example"  '[ -f .ow.local.yml.example ]'
 run ".gitignore exists"            '[ -f .gitignore ]'
 run "CLAUDE.md exists"             '[ -f CLAUDE.md ]'
 run "AGENTS.md exists"             '[ -f AGENTS.md ]'
@@ -131,7 +130,7 @@ run "no UPDATE-POLICY.md"          '[ ! -e .ow/UPDATE-POLICY.md ]'
 run "no .ow/VERSION"         '[ ! -e .ow/VERSION ]'
 run "no policies/ dir"             '[ ! -d .ow/policies ]'
 run "no checklists/ dir"           '[ ! -d .ow/checklists ]'
-# .ow/local/ is gitignored personal scratch; test.sh names the pattern itself
+# .ow/local/ is gitignored per-machine runtime state; test.sh names the pattern itself
 run "no upstream standard refs"    '! grep -rqE "OW AI Dev Standard|ow-ai-dev-standard" --exclude=test.sh .ow/commands .ow/templates .ow/rules scripts bin .claude'
 for tpl in .ow/templates/*.md; do
   tn=$(basename "$tpl" .md)
@@ -518,10 +517,7 @@ run "lint user agent → note not fail" '
 # #21 — installer prompts/keeps user-owned .claude
 run "install: adopt prompt fn"     'grep -q "adopt_existing_claude()" scripts/install.sh'
 run "install: rules in SAFE_ITEMS" 'grep -q "\.ow/rules\"" scripts/install.sh'
-# #23 — --local materialization + doctor
-run "install: --local flag"        'grep -q "LOCAL_ONLY=1" scripts/install.sh'
-run "bin: init --local passthrough" 'grep -q "local_flag" bin/ow'
-run "bin: doctor personal files"   'grep -q "Personal files" bin/ow'
+run "install: no --local mode"     '! grep -q "LOCAL_ONLY" scripts/install.sh && ! grep -q -- "--local)" bin/ow'
 # v0.7.4 — bin shipped to consumers: source-only subcommands must fail gracefully
 run "bin: source-only guard fn"        'grep -q "_require_source_script" bin/ow'
 run "bin: init/update/test guarded"    'grep -q "_require_source_script install.sh init" bin/ow && grep -q "_require_source_script install.sh update" bin/ow && grep -q "_require_source_script test.sh test" bin/ow'
@@ -822,28 +818,11 @@ run "cfgmerge: existing block is never duplicated" '
   N=$(grep -c "^commands:" "$TD/user.yml")
   rm -rf "$TD"; [ "$N" -eq 1 ]'
 
-# local.yml additive backfill (merge_local_config) — new block, no override
-run "localmerge: fn defined"          'grep -q "^merge_local_config()" scripts/ow-config-merge.sh'
-run "localmerge: upgrade calls it"    'grep -q "merge_local_config \"\.ow.local.yml\"" scripts/upgrade.sh'
-run "localmerge: local.yml backed up + rollback" 'grep -q "cp .ow.local.yml \"\$BACKUP_DIR" scripts/upgrade.sh && grep -qE "^  \.ow.local.yml( |\$)" scripts/upgrade.sh'
-run "localmerge: adds block + keeps values" '
-  TD=$(mktemp -d)
-  printf "paths:\n  external_vault: \"/x\"\n\nuser:\n  name: \"Me\"\n" > "$TD/u.yml"
-  printf "paths:\n  external_vault: \"\"\n\nuser:\n  name: \"\"\n\nnewblk:\n  k: v\n" > "$TD/e.yml"
-  ( . scripts/ow-config-merge.sh; merge_local_config "$TD/u.yml" "$TD/e.yml" ) >/dev/null
-  OK=1
-  grep -q "/x" "$TD/u.yml" || OK=0                                  # user value preserved
-  grep -q "Me"  "$TD/u.yml" || OK=0
-  grep -q "^newblk:" "$TD/u.yml" || OK=0                            # new top-level block added
-  rm -rf "$TD"; [ "$OK" -eq 1 ]'
-run "localmerge: idempotent (no dup block)" '
-  TD=$(mktemp -d)
-  printf "paths:\n  external_vault: \"/x\"\n" > "$TD/u.yml"
-  printf "paths:\n  external_vault: \"\"\n\nnewblk:\n  k: v\n" > "$TD/e.yml"
-  ( . scripts/ow-config-merge.sh; merge_local_config "$TD/u.yml" "$TD/e.yml" ) >/dev/null
-  ( . scripts/ow-config-merge.sh; merge_local_config "$TD/u.yml" "$TD/e.yml" ) >/dev/null
-  N=$(grep -cE "^newblk:" "$TD/u.yml")
-  rm -rf "$TD"; [ "$N" -eq 1 ]'
+# config is .ow.yml only — no per-machine layer anywhere
+run "noLocal: example retired"        '[ ! -e .ow.local.yml.example ]'
+run "noLocal: resolver has no local layer" '! grep -qE "\.ow\.local\.yml|TEMPLATES_LOCAL|\.ow/local/(rules|templates)" scripts/ow-paths.sh'
+run "noLocal: merge_local_config gone" '! grep -q "merge_local_config" scripts/ow-config-merge.sh scripts/upgrade.sh'
+run "noLocal: upgrade retires example" 'grep -q "rm -f .ow.local.yml.example" scripts/upgrade.sh'
 
 # ════════════════════════════════════════════════════════════════════════════
 # Section 21 — re-exec handoff (one-pass upgrade; no "run upgrade twice")
