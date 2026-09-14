@@ -43,6 +43,7 @@ The highest-priority file that exists wins (a project can adapt a template to it
 - prd.md
 - role.md
 - srs.md
+- srs-module.md
 - tech-spec.md
 - test-plan.md
 - test-scenario-report.md

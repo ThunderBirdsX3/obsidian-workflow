@@ -3,6 +3,29 @@
 Format: [Keep a Changelog](https://keepachangelog.com). Versions: SemVer.
 Version marker: `ow.version` in `.ow.yml`.
 
+## [1.3.0] — 2026-09-14
+
+### Added — an SRS can split into a hub + one file per module
+
+A project-wide SRS grows with every functional area, and `/ow-plan` loads it whole inside a
+40,000-token vault budget even when the task touches one area. A small SRS stays one file.
+
+- `_shared/srs-layout.md` (new fragment) — the layout contract: `single` (one `SRS-<project>.md`)
+  or `split` (hub `SRS-<project>.md` + `SRS-<project>-<module>.md`). Split when the FRs cover
+  ≥ 2 areas **and** the SRS passes ~10,000 tokens. The hub keeps overview / NFR / data model /
+  integrations and a `## 3. Modules` table; each module owns its FRs inside an FR range the hub
+  assigns, so FR IDs stay unique project-wide. Ships a duplicate-FR-id check.
+- `templates/srs-module.md` (new) · `templates/srs.md` gains `srs_layout:` + `modules:` ·
+  `feature.md` / `plan.md` link the module of a split SRS.
+- Writers: `/ow-new` 1.3, `/ow-doc` (new type `SRS-module`), `/ow-reverse-engineer` (new
+  Phase 4.5 — one draft FR per endpoint, grouped by feature cluster; acceptance and NFRs left
+  TODO, never inferred from code; an existing SRS is extended, never overwritten or split unasked).
+- Readers: `/ow-plan` 1.2–1.3 reads the hub + only the modules the task touches; `/ow-clarify`
+  scans a module with its hub sections and writes each answer to the file holding the ambiguous
+  text; `/ow-verify` Phase 4 warns on a duplicate FR id, an FR outside its module range, an FR
+  in the hub, or a broken hub ↔ module link.
+- `docs` agent knows the `SRS-<slug>-<module>` name and defers SRS splitting to the fragment.
+
 ## [1.2.0] — 2026-09-14
 
 ### Removed — per-machine config (`.ow.local.yml`) and personal overrides (BREAKING)

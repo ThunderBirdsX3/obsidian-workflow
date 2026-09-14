@@ -25,6 +25,7 @@
 ✅ Phase 3 Vault text — vault text-only OK, PII masked, ทุกผลอ้างคำสั่งจริง
 ✅ Phase 4 Vault      — links OK, IMPLEMENTATION-STATUS updated
    ⚠️  Spec audit     — FR-003 no task ID (orphan) — warn only
+   ⚠️  SRS layout     — FR-105 outside SRS-<project>-checkout fr_range (split SRS only) — warn only
 ✅ Phase 5 Security   — no secrets, no PII
 ✅ Phase 6 DS Audit   — 0 violations
 

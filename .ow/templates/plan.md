@@ -22,7 +22,7 @@ source_fix: <"[[fix-log-slug]]" or none>   # set when escalated from /ow-fix (/o
 related_feature: "[[FEAT-<slug>]]"
 related_docs:
   - "[[PRD-<slug>]]"
-  - "[[SRS-<slug>]]"
+  - "[[SRS-<slug>]]"                # split SRS → the module(s) this plan covers: "[[SRS-<slug>-<module>]]"
   - "[[FN-Web-<slug>]]"
   - "[[FN-API-<slug>]]"
   - "[[REF-TechStack]]"

@@ -8,7 +8,7 @@ Conditional blocks lifted out of a verb spec so the always-loaded file stays sma
   `🔴 Read .ow/commands/_shared/<file>.md` at the exact phase that needs it.
   (`@` would paste the body back into every run and defeat the split.)
 - A fragment holds work that is **mode-gated** (worktree mode, delegated mode), pure boilerplate, or a
-  **contract shared by ≥2 verbs** (`context-refs.md`, `coding-discipline.md`, `vault-doc-style.md`) — one home so the verbs
+  **contract shared by ≥2 verbs** (`context-refs.md`, `coding-discipline.md`, `vault-doc-style.md`, `srs-layout.md`) — one home so the verbs
   cannot drift apart. A single-verb rule that fires on every run of that verb stays in its verb spec.
 - A fragment is authoritative for what it covers: the verb spec must not restate its rules
   (a second copy drifts silently — same reason as `context-refs.md` in this directory).
@@ -32,6 +32,7 @@ recursively (`cp -R`), so this subdir reaches consumer projects with no extra pl
 | `coding-discipline.md` | at the code-editing phase — always, for any verb that writes code | `/ow-implement` 5.2 · 5.3 · `/ow-fix` 3 · `fix-issue-fix-flow.md` 4 · 6 |
 | `context-refs.md` | a conditional vault read set is being selected | `/ow-plan` 1.3 · `/ow-implement` 3.1 · `/ow-fix-issue` 4.0 · `delegation.md` 1 |
 | `vault-doc-style.md` | a vault doc OUTSIDE `$PLAN_DIR`/`$FIX_DIR`/`$TEST_DIR`/`$HANDOFF_DIR` is written | `/ow-init` 2 · `/ow-new` 1 · `/ow-clarify` 3 · `/ow-doc` 3 · `/ow-reverse-engineer` 6 · `/ow-implement` 2 · 6.2 · `design-process.md` |
+| `srs-layout.md` | an SRS is written (single file vs hub + modules, FR-id uniqueness) or read for requirements | `/ow-new` 1.3 · `/ow-doc` 3 · `/ow-reverse-engineer` 4.5 · 6 · `/ow-plan` 1.2 · 1.3 · `/ow-clarify` 0 · `/ow-verify` 4 · `docs` agent |
 | `design-process.md` | any design-system work runs — the DS gates + per-action process | `/ow-design` 1 · 2 · 3 · 4 · 5 |
 | `build-test.md` | always, at the build/test run | `/ow-implement` 5.0 |
 | `fixlog-close.md` | the run is fix-escalated (`source_fix:` / `--from-fix`) | `/ow-implement` 6.5 |

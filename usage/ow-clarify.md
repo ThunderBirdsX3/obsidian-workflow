@@ -55,7 +55,7 @@ Your answer: [A/B/C/D หรือ ข้อความอื่น]
 
 ## ขั้นตอนภายใน (Phase summary)
 
-1. **Phase 0** — Resolve target (latest plan หรือ explicit path)
+1. **Phase 0** — Resolve target (latest plan หรือ explicit path) · SRS ที่แยกไฟล์: สั่งกับโมดูล ⇒ อ่านโมดูล + ส่วนของ hub ที่ลิงก์ถึง · สั่งกับ hub ⇒ อ่าน hub อย่างเดียว · คำตอบลง `## Clarifications` ของไฟล์ที่ข้อความกำกวมอยู่จริง
 2. **Phase 1** — Taxonomy scan ตาม 9 หมวด (Functional Scope, Domain & Data, UX, NFR, Integration, Edge Cases, Constraints, Terminology, Completion/DoD) → filter เหลือ max 5
 3. **Phase 2** — Ask 1-at-a-time พร้อม **Recommended answer** + cite reasoning จาก vault
 4. **Phase 3** — Write back: `## Clarifications` ใน source doc — 1 คำถาม = 1 entry เก็บคำตอบล่าสุด (คำถามที่ถูกตอบใหม่ = ทับ entry เดิม + restamp วันที่)

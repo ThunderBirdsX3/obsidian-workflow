@@ -59,7 +59,7 @@ related_docs: [...]
 
 ## ขั้นตอนภายใน (Phase summary)
 
-1. **Phase 1** — อ่าน vault context (บังคับ แต่มี budget): `IMPLEMENTATION-STATUS` + **FR coverage check** (warn orphan/underspecified FR) → **เลือก read set ก่อนเปิด** (ALWAYS = PRD/FEAT/FN ที่ task ระบุ + code/test เดิม · CONDITIONAL = ตามตาราง include-when ใน `.ow/commands/_shared/context-refs.md` · DS docs ถ้าเป็น frontend/mobile) → วัดด้วย `est_read_set()` เทียบ `BUDGET` → doc ที่เข้า set อ่านเต็มเสมอ, doc ที่ถูกตัดต้อง list ไว้ใน plan พร้อมเหตุผล
+1. **Phase 1** — อ่าน vault context (บังคับ แต่มี budget): `IMPLEMENTATION-STATUS` + **FR coverage check** (warn orphan/underspecified FR) → **เลือก read set ก่อนเปิด** (ALWAYS = PRD/FEAT/FN ที่ task ระบุ + code/test เดิม · SRS ที่แยกไฟล์ ⇒ hub + เฉพาะโมดูลที่งานแตะ · CONDITIONAL = ตามตาราง include-when ใน `.ow/commands/_shared/context-refs.md` · DS docs ถ้าเป็น frontend/mobile) → วัดด้วย `est_read_set()` เทียบ `BUDGET` → doc ที่เข้า set อ่านเต็มเสมอ, doc ที่ถูกตัดต้อง list ไว้ใน plan พร้อมเหตุผล
 2. **Phase 2** — Clarifying questions **1 batch** (ถามที่ vault ไม่ตอบเท่านั้น)
    - **Phase 2.5** — แตกงานเป็น **phase** เมื่อคุ้ม (หลาย area / ใหญ่เกิน 1 session): 1 phase = 1 area = 1 เรื่องที่จบในตัว → ดึงค่าที่ใช้ข้าม phase ออกมาเป็น `## Shared Contract` (producer/consumers) → เรียงลำดับตาม `depends_on` → วัด read set ต่อ phase เทียบ `PHASE_BUDGET` (เกิน = แตกต่อ, เล็กกว่า `FLOOR` = ยุบรวม) · งานเล็กพอ **ห้ามแตก**
 3. **Phase 3** — เขียน plan file ตาม template (Vault Context Read, Task, Goals, Non-goals, Affected Files, Steps, DS Compliance, Test Plan, Risks, Approvals)

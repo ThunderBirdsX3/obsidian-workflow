@@ -58,6 +58,7 @@ FRESH SHELL — Phase 0's exports are gone — so it re-hydrates first, then ass
 |---|---|---|
 | `PRD` | `10-PRD/PRD-<slug>.md` | `prd.md` |
 | `SRS` | `10-PRD/SRS-<slug>.md` | `srs.md` |
+| `SRS-module` | `10-PRD/SRS-<slug>-<module>.md` | `srs-module.md` |
 | `Tech` | `70-Reference/REF-Architecture.md` | `tech-spec.md` |
 | `ADR` | `70-Reference/ADR/ADR-NNNN-<slug>.md` | `adr.md` |
 | `Feature` | `20-Features/FEAT-<slug>.md` | `feature.md` |
@@ -96,6 +97,10 @@ Prose written into the file is in `$VAULT_LANG` (Phase 0); headings, frontmatter
 "was X, now Y" / "changed from … to …" sentence belongs in the plan or fix-log of the run that
 made the change, never in the doc.
 
+🔴 **SRS / SRS-module** → read `.ow/commands/_shared/srs-layout.md` first: it decides which file an
+FR goes in, when a `single` SRS should split (ask the user before moving content), and the
+duplicate-FR-id check to run after the write.
+
 ### Create mode:
 1. Copy template → target path
 2. Fill frontmatter (`status: draft`, `date`, `version`, `authors`)
@@ -123,6 +128,7 @@ After create/edit:
 3. Update outgoing/incoming wiki links — verify every `[[link]]` points at a real file
 4. For a Function → update the related Feature and Role
 5. For a PRD/SRS update → flag dependent Features that may need review
+6. For an SRS-module create/rename → update the hub's `modules:` frontmatter + its `## 3. Modules` row (link + FR range)
 
 ## Phase 5 — Design system bind (when the doc is a Function/Feature with UI)
 

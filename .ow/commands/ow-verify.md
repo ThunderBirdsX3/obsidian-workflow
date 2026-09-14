@@ -120,6 +120,7 @@ If an inconsistency is found → list it for the user → propose `/ow-doc` to f
 - Is every FR implemented in this scope bound to a task ID?
 - Is the terminology consistent with the PRD? (e.g. "member" vs "patron")
 - Orphan FR found → flag a warning; does not block but is stated in the output
+- The SRS is `srs_layout: split` → also run `.ow/commands/_shared/srs-layout.md` § Auditing a `split` SRS (read that fragment); each finding is a warning listed like an orphan FR
 
 ## Phase 5 — Security pre-flight
 

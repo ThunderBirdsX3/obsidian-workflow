@@ -17,6 +17,8 @@ status: draft                 # draft | review | approved | superseded
 version: 0.1.0
 date: <YYYY-MM-DD>
 prd: "[[PRD-<slug>]]"
+srs_layout: single            # single | split — rules: .ow/commands/_shared/srs-layout.md
+modules: []                   # split only: ["[[SRS-<slug>-<module>]]", ...]
 related_features:
   - "[[FEAT-<slug>]]"
 related_functions:
@@ -27,6 +29,16 @@ related_functions:
 # SRS-<slug> — <Product / Feature Name>
 
 <!-- Tip: the SRS is the "system contract" — the detail the PRD does not carry (FR/NFR/data/integration); leave user-facing prose in the PRD only -->
+<!-- Layout: `single` keeps everything in this file. `split` makes this file the hub — § 3 becomes the Modules table below and every FR lives in an SRS-<slug>-<module> file (template `srs-module.md`). When to split: .ow/commands/_shared/srs-layout.md -->
+<!-- split hub — replace § 3 with:
+## 3. Modules
+
+| Module | FR range | Purpose |
+|---|---|---|
+| [[SRS-<slug>-checkout]] | FR-100..FR-199 | loan checkout + return |
+| [[SRS-<slug>-catalog]] | FR-200..FR-299 | book search + catalog read |
+| [[SRS-<slug>-auth]] | FR-900..FR-999 | authentication + RBAC (cross-cutting) |
+-->
 
 ## 1. System Overview
 
@@ -147,6 +159,7 @@ Library Book Tracker is a web application (Next.js + REST API) for a university 
 ---
 
 <!-- Add FR-### to match the number of user stories + functional areas; use blocks of 10 (FR-001..009 = user stories; FR-010..019 = cross-cutting auth/security; FR-020..029 = catalog; FR-030..039 = reporting) -->
+<!-- Once the FRs span ≥ 2 areas and this file passes ~10,000 tokens → switch to `srs_layout: split` (.ow/commands/_shared/srs-layout.md) -->
 
 ## 4. Non-functional Requirements (NFR-###)
 

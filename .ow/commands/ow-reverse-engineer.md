@@ -1,5 +1,5 @@
 ---
-description: Read existing code and build vault docs in reverse — TechStack, API, Features, Functions (draft)
+description: Read existing code and build vault docs in reverse — TechStack, API, Features, Functions, SRS (draft)
 ---
 
 # /ow-reverse-engineer — Code → Vault Docs
@@ -185,6 +185,31 @@ Data to include:
 - Related domain models (from Phase 3)
 - The parts that are **unknown** (left blank for a human to fill in): business rules, acceptance criteria, non-goals
 
+## Phase 4.5 — SRS draft (from the clusters)
+
+Runs when Phase 2 found endpoints (`--area api` or `all`); otherwise skip and say so in Phase 5.
+
+🔴 **Read `.ow/commands/_shared/srs-layout.md` first** — it owns the layout decision, the file
+names, the FR ranges and the duplicate-FR-id check. This phase only maps what the scan found onto it.
+
+1. **Draft one FR per endpoint found**, grouped by the Phase 4 cluster that owns it:
+   - title from method + path (`FR-### — GET /api/orders/:id`), inputs/outputs from what Phase 2 saw
+   - **Acceptance** = `<!-- TODO: fill in -->` — never infer Given/When/Then from code; `/ow-plan`
+     flags the FR as underspecified, `/ow-clarify` gets the answers, `/ow-doc --edit` writes them into the FR
+   - pre/post-conditions only when a guard/validation is visible in the code, citing the file
+2. **Layout** — existing SRS decides first:
+
+| `$PRD_DIR` has | Action |
+|---|---|
+| no `SRS-<project>.md` | apply the split trigger: ≥ 2 clusters **and** more than ~10 draft FRs ⇒ `split` (hub + `SRS-<project>-<cluster-slug>.md` per cluster); otherwise `single` |
+| `SRS-<project>.md` with `srs_layout: split` | a cluster with no module file ⇒ new module in the next free FR range + a row in the hub's `## 3. Modules`; a cluster that already has one ⇒ propose only the endpoints its FRs do not cover yet |
+| `SRS-<project>.md`, `single` (or no key) | propose the new FRs for that file; if the split trigger now fires, offer the split as a separate choice at Phase 5 — never split on your own |
+
+3. **Hub content from the scan** — § 5 Data Model lists the Phase 3 entities (link the `FN-*`);
+   § 6 External Integrations lists only clients/SDKs seen in the manifest or code; § 4 NFRs =
+   `<!-- TODO: fill in -->` (a threshold is never visible in code)
+4. Module frontmatter `related_features:` links the cluster's `FEAT-*`
+
 ## Phase 5 — Review checkpoint (mandatory)
 
 Show the whole mapping before writing anything (render in `$PROJECT_LANG`):
@@ -207,6 +232,13 @@ Feature clusters detected: 4
   → FEAT-Catalog.md    (src/catalog/, /api/products/*, Product model)
   → FEAT-Reviews.md    (src/reviews/, /api/reviews/*, Review model)
 
+SRS: split — 4 clusters, 23 draft FRs (acceptance left TODO)
+  → SRS-<project>.md            (hub: data model 6 entities, NFR TODO)
+  → SRS-<project>-auth.md       FR-100..FR-104
+  → SRS-<project>-checkout.md   FR-200..FR-208
+  → SRS-<project>-catalog.md    FR-300..FR-306
+  → SRS-<project>-reviews.md    FR-400..FR-402
+
 ⚠️  Uncertain (needs input from the user):
   - src/utils/ → unclear which feature it belongs to
   - /api/admin/* → endpoints found but no matching source folder
@@ -228,6 +260,7 @@ made the change, never in the doc.
 - Every file's frontmatter must carry `status: draft` and `source: reverse-engineered`
 - Content that is not known yet gets `<!-- TODO: fill in -->`
 - Do not overwrite an existing file — ask first
+- SRS files: after writing, run the duplicate-FR-id check from `_shared/srs-layout.md`; a duplicate ⇒ renumber before Phase 7
 
 ```yaml
 ---
@@ -251,14 +284,16 @@ Created:
   1 × REF-APIIntegration.md
   6 × FN-*.md (domain models)
   4 × FEAT-*.md (feature clusters)
+  1 × SRS hub + 4 × SRS modules (23 FRs, acceptance TODO)
 
 ⚠️  All drafts — must be reviewed and filled in before use in plan/implement
 
 Next steps (recommended order):
   1. Review FEAT-*.md — delete the wrong clusters, add business rules
-  2. /ow-clarify <FEAT-*.md> — scan the drafts for ambiguity
-  3. /ow-new --import-prd — if an existing PRD/spec exists → merge it into the vault
-  4. /ow-plan <task> — start planning the first feature
+  2. /ow-clarify <SRS module or FEAT-*.md> — resolve ambiguity in the drafts (answers land in ## Clarifications)
+  3. /ow-doc --edit <SRS module> — write the FR acceptance from those answers
+  4. /ow-new --import-prd — if an existing PRD/spec exists → merge it into the vault
+  5. /ow-plan <task> — start planning the first feature
 ```
 
 ## Output (short bullets, in `$PROJECT_LANG`)

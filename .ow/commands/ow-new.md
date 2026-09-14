@@ -97,6 +97,10 @@ If detail on business rules, scale, or integration is still missing → ask **on
 
 Section: System overview, User stories, Functional requirements (FR-001, FR-002, ...), Non-functional requirements, Acceptance criteria
 
+🔴 **Read `.ow/commands/_shared/srs-layout.md` before writing** — it decides `single` (one file) or
+`split` (hub `SRS-<project-slug>.md` + one `SRS-<project-slug>-<module>.md` per functional area,
+template `srs-module.md`), and it holds the duplicate-FR-id check to run once the files are written.
+
 ### 1.4 Create the Tech spec
 
 `<vault>/70-Reference/REF-TechStack.md` + `<vault>/70-Reference/REF-Architecture.md` following `templates/tech-spec.md`

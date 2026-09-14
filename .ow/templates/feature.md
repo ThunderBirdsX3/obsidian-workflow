@@ -18,7 +18,7 @@ priority: P1                  # P1 | P2 | P3 (for the feature overall; user stor
 version: 0.1.0
 date: <YYYY-MM-DD>
 prd: "[[PRD-<slug>]]"
-srs: "[[SRS-<slug>]]"
+srs: "[[SRS-<slug>]]"          # split SRS → the module: "[[SRS-<slug>-<module>]]"
 phase: "[[PHASE-1-MVP]]"
 related_frs:                  # FR-### this feature implements
   - FR-001

@@ -63,9 +63,13 @@ test -f "$TARGET" || echo "target not found"
 
 Show the user (render in `$PROJECT_LANG`):
 > Will scan: `<TARGET>`
-> Type: PRD / SRS / Feature / Plan / Function / Fix-log
+> Type: PRD / SRS (hub · module) / Feature / Plan / Function / Fix-log
 > Existing clarifications: <N> session(s)
 > Continue?
+
+🔴 Target is an SRS with `srs_layout: split` (the hub, or a file with `srs_hub:`) → read
+`.ow/commands/_shared/srs-layout.md` § Clarifying a `split` SRS — it sets which files Phase 1 scans
+and which file each answer is written to in Phase 3.
 
 ## Phase 1 — Taxonomy scan (read-only)
 
@@ -160,7 +164,7 @@ If an answer affects:
 - **Data model** → flag in the plan: "data-model.md needs update (Q4)"
 - **API contract** → flag in REF-APIIntegration.md
 - **DS component** → flag if new variant needed
-- **FR list** → suggest FR-### addition/refinement
+- **FR list** → suggest FR-### addition/refinement (a split SRS → name the module + an ID inside its FR range)
 
 Do not edit the other docs yourself — only **flag** them so the user runs `/ow-doc` or `/ow-plan --revise`
 

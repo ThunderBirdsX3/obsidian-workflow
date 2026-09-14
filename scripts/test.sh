@@ -428,7 +428,7 @@ run "DS preview.html"              '[ -f docs/obsidian-vault/70-Reference/Design
 # Test 12: Template lookup chain integrity
 # ════════════════════════════════════════════════════════════════════════════
 printf "\n${c_bold}Section 12 — Template lookup chain${c_reset}\n"
-for tpl in prd srs tech-spec adr feature function role flow phase plan fix-log handoff test-plan test-scenario-report checklist; do
+for tpl in prd srs srs-module tech-spec adr feature function role flow phase plan fix-log handoff test-plan test-scenario-report checklist; do
   # at least one of: project / shipped snapshot (local is optional)
   run "template available: $tpl"    "[ -f templates/${tpl}.md ] || [ -f .ow/templates/${tpl}.md ]"
 done
@@ -1147,6 +1147,21 @@ run "ctxrefs: both spawn commands cite the fragment" \
 # drift guard: the include-when table lives in exactly ONE file (duplicate tables rot silently)
 run "ctxrefs: include-when table appears once" \
   "[ \"\$(grep -rlF 'include when the task' .ow/commands/ | wc -l | tr -d ' ')\" -eq 1 ]"
+
+# SRS layout — single file or hub + modules; one fragment cited by the writers and the reader
+run "srs-layout: fragment file exists"   '[ -f .ow/commands/_shared/srs-layout.md ]'
+run "srs-layout: every SRS writer + reader cites the fragment" \
+  "grep -qF '_shared/srs-layout.md' .ow/commands/ow-new.md && grep -qF '_shared/srs-layout.md' .ow/commands/ow-doc.md && grep -qF '_shared/srs-layout.md' .ow/commands/ow-plan.md && grep -qF '_shared/srs-layout.md' .ow/commands/ow-reverse-engineer.md && grep -qF '_shared/srs-layout.md' .ow/commands/ow-clarify.md && grep -qF '_shared/srs-layout.md' .ow/commands/ow-verify.md"
+run "srs-layout: srs.md records the layout key" \
+  "grep -qE '^srs_layout: single' .ow/templates/srs.md"
+run "srs-layout: module template links its hub + range" \
+  "grep -qE '^srs_hub: ' .ow/templates/srs-module.md && grep -qE '^fr_range: ' .ow/templates/srs-module.md"
+# the duplicate-FR pipeline in the fragment must actually catch a duplicate across hub + module
+run "srs-layout: duplicate FR id is detected across files" \
+  "_t=\$(mktemp -d) && printf '### FR-100 — a\n' > \"\$_t/SRS-p.md\" && printf '### FR-100 — b\n### FR-101 — c\n' > \"\$_t/SRS-p-m.md\" \
+   && _pipe=\$(grep -F \"grep -oE '^#{2,4} FR-[0-9]+'\" .ow/commands/_shared/srs-layout.md) && [ -n \"\$_pipe\" ] \
+   && _out=\$(cat \"\$_t\"/SRS-p.md \"\$_t\"/SRS-p-m.md | grep -oE '^#{2,4} FR-[0-9]+' | grep -oE 'FR-[0-9]+' | sort | uniq -d) \
+   && rm -rf \"\$_t\" && [ \"\$_out\" = 'FR-100' ]"
 
 # ════════════════════════════════════════════════════════════════════════════
 # Section 25 — /ow-fix auto-fix gate (P2/P3 inline, P0/P1 → plan)

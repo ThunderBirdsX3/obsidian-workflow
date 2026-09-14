@@ -46,6 +46,7 @@
 |---|---|---|
 | `PRD` | `10-PRD/PRD-<slug>.md` | `prd.md` |
 | `SRS` | `10-PRD/SRS-<slug>.md` | `srs.md` |
+| `SRS-module` | `10-PRD/SRS-<slug>-<module>.md` | `srs-module.md` |
 | `Tech` | `70-Reference/REF-Architecture.md` | `tech-spec.md` |
 | `ADR` | `70-Reference/ADR/ADR-NNNN-<slug>.md` | `adr.md` |
 | `Feature` | `20-Features/FEAT-<slug>.md` | `feature.md` |

@@ -50,7 +50,7 @@
 ## Output ที่ได้
 
 - `docs/obsidian-vault/10-PRD/PRD-<slug>.md` — Product Requirements (status: draft)
-- `docs/obsidian-vault/10-PRD/SRS-<slug>.md` — Software Requirements (FR-001, FR-002, …)
+- `docs/obsidian-vault/10-PRD/SRS-<slug>.md` — Software Requirements (FR-001, FR-002, …) · ถ้า FR ครอบคลุม ≥ 2 โมดูลและยาวเกิน ~10k token จะแยกเป็น hub + `SRS-<slug>-<module>.md` ต่อโมดูล เพื่อให้ `/ow-plan` อ่านเฉพาะโมดูลที่งานแตะ
 - `docs/obsidian-vault/70-Reference/REF-TechStack.md` — tech stack list
 - `docs/obsidian-vault/70-Reference/REF-Architecture.md` — Mermaid diagram + data model + API contracts
 - `docs/obsidian-vault/50-Phases/PHASE-1-MVP.md` — Phase 1 breakdown
@@ -98,7 +98,7 @@
 - ก่อน `/ow-new`: [/ow-init](./ow-init.md) (config + vault skeleton)
 - หลัง `/ow-new`: [/ow-clarify](./ow-clarify.md) → [/ow-plan](./ow-plan.md) → [/ow-implement](./ow-implement.md)
 - Doc editing: [/ow-doc](./ow-doc.md) — เติม section ที่ขาด
-- Template: `templates/prd.md`, `templates/srs.md`, `templates/tech-spec.md`
+- Template: `templates/prd.md`, `templates/srs.md`, `templates/srs-module.md`, `templates/tech-spec.md`
 
 ## FAQ
 

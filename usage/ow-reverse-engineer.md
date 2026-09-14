@@ -1,6 +1,6 @@
 # /ow-reverse-engineer
 
-> **อ่านโค้ดที่มีอยู่ → สร้าง vault docs draft** — TechStack, API, domain models, feature clusters (brownfield)
+> **อ่านโค้ดที่มีอยู่ → สร้าง vault docs draft** — TechStack, API, domain models, feature clusters, SRS (brownfield)
 
 [← กลับ usage/README](./README.md) · [Full spec: `.ow/commands/ow-reverse-engineer.md`](../.ow/commands/ow-reverse-engineer.md)
 
@@ -48,9 +48,10 @@ Depth: deep
 3. **Phase 2** — API/Routes scan → draft `REF-APIIntegration.md`
 4. **Phase 3** — Domain model scan → draft `FN-*.md` per entity
 5. **Phase 4** — Feature cluster detection (group by folder/prefix/route) → draft `FEAT-*.md` per cluster
-6. **Phase 5** — **Review checkpoint** (บังคับ) — แสดง mapping รอ user confirm ก่อนเขียนจริง
-7. **Phase 6** — Write vault docs (เฉพาะที่ confirm)
-8. **Phase 7** — สรุป + next steps
+6. **Phase 4.5** — SRS draft — 1 FR ต่อ endpoint แบ่งตาม cluster · cluster ≥ 2 และ FR เกิน ~10 ⇒ แยกเป็น hub + `SRS-<project>-<cluster>.md` · acceptance เว้น TODO ไว้ (ไม่เดาจากโค้ด) → `/ow-clarify` หาคำตอบ → `/ow-doc --edit` เขียนลง FR
+7. **Phase 5** — **Review checkpoint** (บังคับ) — แสดง mapping รอ user confirm ก่อนเขียนจริง
+8. **Phase 6** — Write vault docs (เฉพาะที่ confirm) + ตรวจเลข FR ซ้ำ
+9. **Phase 7** — สรุป + next steps
 
 ## Output ที่ได้
 
@@ -60,6 +61,7 @@ Depth: deep
 | `docs/obsidian-vault/70-Reference/REF-APIIntegration.md` | routes.*, *.controller.*, @app.get() ฯลฯ |
 | `docs/obsidian-vault/40-Functions/FN-<Entity>.md` | *.model.*, *.schema.*, *.entity.*, schema.prisma ฯลฯ |
 | `docs/obsidian-vault/20-Features/FEAT-<Area>.md` | folder clusters (src/checkout/, /api/auth/ ฯลฯ) |
+| `docs/obsidian-vault/10-PRD/SRS-<project>.md` (+ `SRS-<project>-<cluster>.md` เมื่อแยก) | endpoints ของแต่ละ cluster + entities จาก Phase 3 · มี SRS อยู่แล้ว ⇒ เสนอเพิ่มเฉพาะส่วนที่ยังไม่มี ไม่เขียนทับ |
 
 ทุกไฟล์มี frontmatter:
 ```yaml
@@ -84,6 +86,8 @@ Feature clusters: 4
   → FEAT-Checkout.md   (src/checkout/, /api/orders/*)
   → FEAT-Catalog.md    (src/catalog/, /api/products/*)
   → FEAT-Reviews.md    (src/reviews/, /api/reviews/*)
+SRS: split — 4 clusters, 23 draft FRs (acceptance TODO)
+  → SRS-<project>.md + auth / checkout / catalog / reviews modules
 
 ⚠️  ไม่แน่ใจ:
   - src/utils/ → ไม่ชัดว่า belong feature ไหน
@@ -98,8 +102,9 @@ Feature clusters: 4
 1. /ow-init --brownfield           ← config + vault skeleton
 2. /ow-reverse-engineer            ← คุณอยู่ที่นี่ — scan → draft docs
 3. [ตรวจ FEAT-*.md — ลบ cluster ผิด เติม business rules]
-4. /ow-clarify FEAT-Checkout       ← scan ambiguity ใน draft
-5. /ow-plan <first task>           ← เริ่ม workflow ปกติ
+4. /ow-clarify SRS-<project>-checkout ← scan ambiguity ใน draft (คำตอบลง ## Clarifications)
+5. /ow-doc --edit SRS-<project>-checkout ← เขียน acceptance ของ FR จากคำตอบ
+6. /ow-plan <first task>           ← เริ่ม workflow ปกติ
 ```
 
 ## Gotchas / ข้อควรระวัง

@@ -115,12 +115,12 @@ When a plan is escalated from `/ow-fix` → build the plan from the fix-log + bi
 ## Phase 1 — Read vault context (mandatory, budgeted)
 
 1. Read `<vault>/00-Index/IMPLEMENTATION-STATUS.md`
-2. **FR coverage check** — grep `FR-[0-9]+` from the relevant PRD/SRS, then check which FRs are:
+2. **FR coverage check** — grep `FR-[0-9]+` from the relevant PRD/SRS (an SRS with `srs_layout: split` → the hub + only the module files in the read set — 🔴 read `.ow/commands/_shared/srs-layout.md`), then check which FRs are:
    - **orphan** — no plan step or task ID bound to it → warn the user in the output
    - **underspecified** — no acceptance criteria → suggest `/ow-clarify` before planning
    - Never block on this — just surface it to the user before the plan is written
 3. **Build the read set — select before opening anything**
-   - **ALWAYS** — the PRD/FEAT/FN the task names, plus the existing code + tests the plan will mirror
+   - **ALWAYS** — the PRD/FEAT/FN the task names, plus the existing code + tests the plan will mirror; a `split` SRS → its hub + the module(s) the task touches, never every module
    - **CONDITIONAL** — apply the include-when table in `.ow/commands/_shared/context-refs.md`
      (`REF-APIIntegration` · `REF-AuthorizationMatrix` · `REF-TechStack` · `FLOW-*` · `30-Roles/<platform>/<role>/`).
      🔴 That file is the **single source of truth** — never copy the table here (a duplicated table = silent drift)
