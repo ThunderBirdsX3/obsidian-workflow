@@ -3,6 +3,24 @@
 Format: [Keep a Changelog](https://keepachangelog.com). Versions: SemVer.
 Version marker: `ow.version` in `.ow.yml`.
 
+## [1.3.1] — 2026-09-15
+
+### Fixed — project rules for multi-area commands load again
+
+- `ow-paths.sh --rules` accepts a comma-separated area list. `/ow-fix` asks for
+  `--rules coding,testing`, which returned no files and exited 0, so its project rules were never
+  read. Each rule file prints once even when it matches several areas.
+- `--rules` resolves under `rules.dir` from `.ow.yml` (default `.ow/rules`), like
+  `--rules-expected` and `--rules-validate`.
+- `.ow/rules/README.md` no longer claims the resolver expands vault links inside a rule file;
+  it does not.
+
+### Changed — the AI entry files say where a rule goes
+
+- `CLAUDE.md` and `AGENTS.md` point to `.ow/rules/<area>.md` with front-matter
+  `applies_to: [<area>]`, and to `.ow/rules/README.md` for the full format. A rule file with
+  neither a matching name nor `applies_to` is never loaded.
+
 ## [1.3.0] — 2026-09-14
 
 ### Added — an SRS can split into a hub + one file per module

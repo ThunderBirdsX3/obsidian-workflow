@@ -23,9 +23,6 @@ applies_to: [backend, security]
   would otherwise apply for this area.
 ```
 
-A rule file may reference vault notes; the resolver expands those against the resolved
-vault path.
-
 ## Area taxonomy
 
 Areas are derived at runtime from the **enabled subagents** (`ow-paths.sh --subagents`)

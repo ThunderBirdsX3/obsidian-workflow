@@ -59,7 +59,7 @@ GitHub:       /ow-triage-issues  /ow-fix-issue
 
 - `.ow.yml` ที่ root — คอมเมนต์ในไฟล์อธิบายทุก key ไว้แล้ว อ่านที่ไฟล์จริง · 🔴 **ห้าม `yq -i` กับไฟล์นี้** (ลบคอมเมนต์ทิ้ง) แก้แบบ surgical เท่านั้น
 - `subagents` — ship มา 4 ตัว: `docs` `verifier` `security` `gh-issue` · ที่เหลือเป็น **ชื่อ ไม่ใช่ไฟล์** จนกว่า `/ow-agent create <name>` จะเขียน body ให้ตรง stack (`/ow-agent suggest` บอกว่าควรมีตัวไหน) · enabled แต่ไม่มีไฟล์ = install/upgrade รายงาน ไม่เติมให้เงียบๆ
-- `.ow/` = snapshot (`commands/` `templates/`) อัปเดตด้วย `/ow-sync` · `.ow/rules/` เป็นของ project นี้เอง sync ไม่แตะ · `templates/` ที่ root override `.ow/templates/`
+- `.ow/` = snapshot (`commands/` `templates/`) อัปเดตด้วย `/ow-sync` · `.ow/rules/` เป็นของ project นี้เอง sync ไม่แตะ — rule ใหม่เขียนที่ `.ow/rules/<area>.md` + frontmatter `applies_to: [<area>]` (format เต็ม `.ow/rules/README.md`) · `templates/` ที่ root override `.ow/templates/`
 - `scripts/` + `bin/` = mixed-ownership — upgrade refresh ทีละไฟล์ตาม manifest (`ow-owned.sh`) ไม่เคย `rm -rf` ทั้ง dir · รายละเอียดของแต่ละสคริปต์อยู่ใน header comment ของสคริปต์เอง · hard prerequisite: ต้องมี `yq`
 
 ## ภาษา

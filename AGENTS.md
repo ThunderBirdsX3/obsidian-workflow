@@ -106,6 +106,9 @@ Read `.ow.yml` at the start of every session: `mode`, `vault_path` (default
 `docs/obsidian-vault`), `project.language` / `project.vault_language`, `subagents.*`,
 `submodules`, `ow.version`.
 
+Project rules live in `.ow/rules/<area>.md` with front-matter `applies_to: [<area>]`
+(format: `.ow/rules/README.md`). Write new rules there, never into `.ow/commands/`.
+
 ## Personas
 
 These tools have no user-definable subagents, so use persona switching: when the work

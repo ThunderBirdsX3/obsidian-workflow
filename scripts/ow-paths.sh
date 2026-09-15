@@ -309,18 +309,24 @@ _applies_to() {
   printf '%s\n' "$fm" | yq -r '[.applies_to] | flatten | .[]' 2>/dev/null | grep -qxF '*' && return 0
   return 1
 }
+# <area> may be a comma-separated list (e.g. `coding,testing`); each file prints once.
 emit_rules() {
-  local area="$1"; [ -n "$area" ] || return 0
-  local d="$ROOT/.ow/rules" f
-  # 1) direct <area>.md
-  [ -f "$d/$area.md" ] && printf '%s\n' "$d/$area.md"
-  # 2) any other rule file whose applies_to includes the area or '*'
+  local areas="$1"; [ -n "$areas" ] || return 0
+  local rdir; rdir=$(yget "$SHARED" "rules.dir"); rdir="${rdir:-.ow/rules}"
+  local d="$ROOT/$rdir" f area
   [ -d "$d" ] || return 0
-  for f in "$d"/*.md; do
-    [ -e "$f" ] || continue
-    [ "$f" = "$d/$area.md" ] && continue
-    _applies_to "$f" "$area" && printf '%s\n' "$f"
-  done
+  {
+    for area in $(printf '%s' "$areas" | tr ',' ' '); do
+      # 1) direct <area>.md
+      [ -f "$d/$area.md" ] && printf '%s\n' "$d/$area.md"
+      # 2) any other rule file whose applies_to includes the area or '*'
+      for f in "$d"/*.md; do
+        [ -e "$f" ] || continue
+        [ "$f" = "$d/$area.md" ] && continue
+        _applies_to "$f" "$area" && printf '%s\n' "$f"
+      done
+    done
+  } | awk '!seen[$0]++'
   return 0
 }
 

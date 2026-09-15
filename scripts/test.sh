@@ -504,6 +504,12 @@ run "rules-expected names file"    'bash scripts/ow-paths.sh --rules-expected ba
 run "rules-expected present/absent" 'bash scripts/ow-paths.sh --rules-expected backend | grep -qE "absent|present"'
 run "rules-validate clean files:[]" 'bash scripts/ow-paths.sh --rules-validate'
 run "selftest covers rules"        'bash scripts/ow-paths.sh --selftest | grep -q "rules-registry"'
+run "rules: comma areas + dedupe"  '
+  d=$(mktemp -d); printf "rules: { dir: \"r\", files: [] }\n" > "$d/.ow.yml"; mkdir -p "$d/r";
+  printf -- "---\napplies_to: [coding]\n---\n" > "$d/r/coding.md";
+  printf -- "---\napplies_to: [coding, testing]\n---\n" > "$d/r/shared.md";
+  out=$( cd "$d" && OW_ROOT=. bash '"$PWD"'/scripts/ow-paths.sh --rules coding,testing ); rm -rf "$d";
+  [ "$(printf "%s\n" "$out" | grep -c .)" -eq 2 ]'
 run "rules-validate fails on bogus" '
   d=$(mktemp -d); printf "rules: { dir: \".ow/rules\", files: [\"nope.md\"] }\n" > "$d/.ow.yml"; mkdir -p "$d/.ow/rules";
   ( cd "$d" && OW_ROOT=. bash '"$PWD"'/scripts/ow-paths.sh --rules-validate ) >/dev/null 2>&1; rc=$?; rm -rf "$d"; [ "$rc" -ne 0 ]'
