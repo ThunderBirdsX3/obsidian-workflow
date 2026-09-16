@@ -144,7 +144,10 @@ everything you started. Kill only the PIDs/udids you tracked — **never a broad
 test **the worktree's new code**, not the main tree. A main-tree server still running → **kill the old one first** (remember its PID)
 then start from the worktree — do not leave them stacked.
 
-If servers need credentials/secrets that are unavailable → blocker → STOP + tell the user
+If servers need credentials/secrets that are unavailable → blocker → STOP + tell the user.
+A missing/incomplete **test user** specifically (login for a role, not a server secret) →
+🔴 **read `.ow/commands/_shared/test-credentials.md` and follow it** — `$TEST_ENV_FILE` is the
+source, and a blank role there means ask the user, never invent one to unblock the run.
 
 ## Phase 3 — Run the smoke tests (inline or via test-runner)
 

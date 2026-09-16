@@ -293,7 +293,15 @@ grep -q "^.ow/local/" .gitignore || echo "" >> .gitignore && cat >> .gitignore <
 # obsidian-workflow per-machine runtime state
 .ow/local/
 EOF
+[ -n "$TEST_ENV_FILE" ] && { grep -qxF "$TEST_ENV_FILE" .gitignore || echo "$TEST_ENV_FILE" >> .gitignore; }
 ```
+
+### 6.3 Scaffold the test-credentials example file (only when `test_credentials.env_file` is set)
+
+🔴 **Read `.ow/commands/_shared/test-credentials.md` and follow it** — it owns the schema, the
+scaffold format, and the "never invent a credential" rule. Derive `$EXAMPLE_FILE`/`$ROLES` as it
+describes and write `$EXAMPLE_FILE` with blank values, one block per role; never create
+`$TEST_ENV_FILE` itself here — that file holds real credentials the user supplies.
 
 ## Phase 7 — Verification
 

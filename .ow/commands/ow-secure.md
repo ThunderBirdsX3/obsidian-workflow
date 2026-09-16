@@ -176,6 +176,14 @@ git ls-files | grep -E '\.env\.prod|production\.config|deploy-prod' | head -10
 
 Report if found → require an explicit user confirm
 
+🔴 **`$TEST_ENV_FILE` tracked by git is the same severity** — read
+`.ow/commands/_shared/test-credentials.md` for the schema, then:
+
+```bash
+[ -n "$TEST_ENV_FILE" ] && git ls-files | grep -qxF "$TEST_ENV_FILE" && \
+  echo "BLOCKED: $TEST_ENV_FILE is committed — real test credentials in source"
+```
+
 ## Phase 7 — Report + decision
 
 Show the report:

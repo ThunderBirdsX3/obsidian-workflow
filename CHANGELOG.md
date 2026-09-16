@@ -3,6 +3,25 @@
 Format: [Keep a Changelog](https://keepachangelog.com). Versions: SemVer.
 Version marker: `ow.version` in `.ow.yml`.
 
+## [1.4.0] — 2026-09-16
+
+### Added — a test-credentials protocol so a test user is never invented
+
+`test_credentials` in `.ow.yml` (`env_file`, `example_file`, `roles`, `redact`) was resolved by
+`ow-paths.sh` into `$TEST_ENV_FILE` / `$TEST_CREDENTIALS_JSON` / `$CRED_REDACT`, but no command
+spec ever read those vars — asked to fill `.env.test`, the AI had no protocol and no ban on
+guessing a username/password for it.
+
+- `_shared/test-credentials.md` (new fragment) — the schema, deriving `$EXAMPLE_FILE`/`$ROLES`
+  from `$TEST_CREDENTIALS_JSON`, and the rule: a role with no value is asked of the user, never
+  invented.
+- `/ow-init` Phase 6.2/6.3 — adds `$TEST_ENV_FILE` to `.gitignore`, scaffolds
+  `$EXAMPLE_FILE` (blank values) from `roles[]`.
+- `/ow-test` Phase 2 — a missing test-user credential (vs. a server secret) points at the
+  fragment instead of a generic blocker.
+- `/ow-secure` Phase 6 — `$TEST_ENV_FILE` committed to git is flagged at the same severity as a
+  committed `.env.production`.
+
 ## [1.3.1] — 2026-09-15
 
 ### Fixed — project rules for multi-area commands load again
