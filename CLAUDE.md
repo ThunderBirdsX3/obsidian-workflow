@@ -13,66 +13,67 @@
 <!-- OW START: workflow -->
 # CLAUDE.md — obsidian-workflow
 
-โปรเจกต์นี้ใช้ **obsidian-workflow** — AI + Obsidian docs-driven development ตาม spec-kit philosophy
+This project uses **obsidian-workflow** — AI + Obsidian docs-driven development, following spec-kit philosophy
 
-## หัวใจ 3 ข้อ
+## The three core rules
 
-1. **Vault-first** — อ่าน doc ใน `docs/` ที่เกี่ยวกับ task ก่อนถามหรือก่อนเขียนโค้ด (เฉพาะที่เกี่ยว ไม่ใช่ทั้ง vault)
-2. **Plan/Implement แยกกัน** — `/ow-plan` สร้าง plan ไม่แก้โค้ด · **`/ow-implement` เท่านั้นที่แก้โค้ด** · `/ow-fix` diagnose + fix-log แล้วถามก่อน
-3. **Log everything** — ทุก plan/fix มี log ใน vault บอกว่ารันอะไรจริง ผลออกมาอย่างไร
+1. **Vault-first** — read the docs in `docs/` relevant to the task before asking questions or writing code (only what's relevant, not the whole vault)
+   - UI/web work, even asked for directly in chat without going through `/ow-implement` — if `70-Reference/DesignSystem/` exists, always read `DS-Tokens.md`, `DS-Components.md`, `DS-Patterns.md`, `DS-Accessibility.md` before writing code. A needed component missing from the DS ⇒ tell the user to run `/ow-design component <name>` first, never guess it. `70-Reference/DesignSystem/` absent (no DS set up yet) ⇒ skip this, proceed as normal — do not suggest creating a DS first.
+2. **Plan and implement are separate** — `/ow-plan` produces a plan, never touches code · **`/ow-implement` is the only command that edits code** · `/ow-fix` diagnoses + writes a fix-log, then asks before acting
+3. **Log everything** — every plan/fix leaves a log in the vault stating what actually ran and what it produced
 
-## คำสั่งทั้งหมด (20 ตัว)
+## All commands (20)
 
-ไม่รู้จะใช้ตัวไหน → `/ow-help` · spec ของแต่ละ verb อยู่ที่ `.ow/commands/<verb>.md` (โหมดย่อยอยู่ใน `_shared/` อ่านตอนโหมดนั้นยิง) · วิธีใช้อยู่ที่ `usage/`
+Not sure which one → `/ow-help` · the spec for each verb lives at `.ow/commands/<verb>.md` (sub-modes live in `_shared/`, read when that mode fires) · usage docs at `usage/`
 
 ```
-ตั้งค่า:       /ow-init  /ow-sync  /ow-agent
-spec-driven:  /ow-new  /ow-clarify  /ow-plan  /ow-checklist  /ow-implement  /ow-fix
-GitHub:       /ow-triage-issues  /ow-fix-issue
-เอกสาร+ทดสอบ: /ow-doc  /ow-test  /ow-design
-ย้อนกลับ:      /ow-reverse-engineer   ← extract spec จาก code/db ที่มีอยู่
-ส่งมอบ:        /ow-secure  /ow-verify  /ow-git  /ow-handoff
-ช่วยเหลือ:     /ow-help
+Setup:         /ow-init  /ow-sync  /ow-agent
+Spec-driven:   /ow-new  /ow-clarify  /ow-plan  /ow-checklist  /ow-implement  /ow-fix
+GitHub:        /ow-triage-issues  /ow-fix-issue
+Docs + tests:  /ow-doc  /ow-test  /ow-design
+Reverse:       /ow-reverse-engineer   ← extract a spec from existing code/db
+Delivery:      /ow-secure  /ow-verify  /ow-git  /ow-handoff
+Help:          /ow-help
 ```
 
-## คุยกับ user
+## Talking to the user
 
-ภาษาตาม `project.language` (`$PROJECT_LANG`, th default) — เขียนให้คนที่ไม่ได้อยู่ในโค้ดอ่านแล้วเข้าใจ ศัพท์เทคนิคใช้เท่าที่เลี่ยงไม่ได้ (ครั้งแรกวงเล็บอธิบายสั้น ๆ)
+Language follows `project.language` (`$PROJECT_LANG`, default `th`) — write so someone who is not in the code understands it. Use jargon only where it cannot be avoided (gloss it in brackets the first time).
 
-**สรุป / ตอบ** — ≤7 bullets · bullet ละ 1 บรรทัด ห้ามซ้อนย่อย · ผลลัพธ์ขึ้นก่อน เหตุผลตามหลังเฉพาะที่จำเป็น: ทำอะไร · หลักฐานที่รันจริง · เสี่ยง/ค้าง (มีค่อยเขียน)
-- ห้าม: เกริ่นนำ · ทวนคำถาม user · เล่าสิ่งที่ไม่ได้ทำ · ตาราง (เว้นแต่เทียบ ≥3 อย่างจริง ๆ)
-- ยาวได้เมื่อ user ขอรายละเอียด หรือต้องยก output ของ test/error มาตรง ๆ
+**Answers / summaries** — ≤7 bullets · one line each, never nested · result first, reasoning after and only where needed: what was done · evidence actually run · risks/open items (only when they exist)
+- Never: preamble · restating the user's question · narrating what was not done · a table (unless it really compares 3+ things)
+- Go longer only when the user asks for detail, or test/error output must be quoted verbatim
 
-**ถาม** — ถามเฉพาะที่ "ตอบต่างกัน ⇒ งานออกมาต่างกัน" ที่เหลือเลือกเองแล้วบอกว่าเลือกอะไร
-- 1 คำถามต่อครั้ง (เว้นแต่ spec ของคำสั่งนั้นระบุให้ถามรวด) · ≤2 บรรทัด · ตัวเลือก ≤4 พร้อมผลที่ตามมา 1 วลี
-- มี **แนะนำ: <ตัวเลือก>** + เหตุผล 1 บรรทัดเสมอ ⇒ user ตอบ "เอาตามนั้น" แล้วจบได้
+**Questions** — ask only what changes the work if answered differently; decide the rest yourself and say what you decided
+- One question at a time (unless the command's own spec says to batch) · ≤2 lines · at most 4 options each with a one-phrase consequence
+- Always carry a **Recommended: <option>** plus a one-line reason, so "go with that" ends it
 
-**ห้ามเด็ดขาด:** อ้าง test ผ่านโดยไม่ได้รัน · แต่ง commit hash / URL / token count · แก้ shared repo หรือ production โดยไม่ confirm scope — ยังไม่ได้ตรวจให้เขียน `pending verification`
+**Absolutely never:** claim a test passed without running it · invent a commit hash / URL / token count · modify a shared repo or production without confirming scope — not verified yet? write `pending verification`
 
 ## Vault (`docs/`)
 
 `00-Index` MOC + IMPLEMENTATION-STATUS · `10-PRD` · `20-Features` FEAT-* · `30-Roles` · `40-Functions` FN-* · `50-Phases` PHASE-* · `60-Flows` · `70-Reference` ADR / TechStack / AuthorizationMatrix · `80-ImplementPlan` `YYYY-MM-DD-HHmm-<slug>.md` · `85-FixLog` `YYYY-MM-DD-HHMM-<slug>.md` · `90-TestPlan` · `95-Handoff` HOR-*
 
-🔴 **เอกสารใน vault บอกสถานะ "ปัจจุบัน" เท่านั้น** — ห้ามเขียน "เดิม X → ใหม่ Y" / `## Changelog` ในเอกสาร spec · before/after อยู่ใน `80-ImplementPlan` `85-FixLog` `90-TestPlan` `95-Handoff` เท่านั้น (สัญญาเต็ม `.ow/commands/_shared/vault-doc-style.md` · gate `/ow-secure` Phase 2.6)
+🔴 **A vault doc states the "present" only** — never write "was X, now Y" / a `## Changelog` in a spec doc · before/after belongs only in `80-ImplementPlan`, `85-FixLog`, `90-TestPlan`, `95-Handoff` (full contract: `.ow/commands/_shared/vault-doc-style.md` · gate: `/ow-secure` Phase 2.6)
 
 ## Config + snapshot
 
-- `.ow.yml` ที่ root — คอมเมนต์ในไฟล์อธิบายทุก key ไว้แล้ว อ่านที่ไฟล์จริง · 🔴 **ห้าม `yq -i` กับไฟล์นี้** (ลบคอมเมนต์ทิ้ง) แก้แบบ surgical เท่านั้น
-- `subagents` — ship มา 4 ตัว: `docs` `verifier` `security` `gh-issue` · ที่เหลือเป็น **ชื่อ ไม่ใช่ไฟล์** จนกว่า `/ow-agent create <name>` จะเขียน body ให้ตรง stack (`/ow-agent suggest` บอกว่าควรมีตัวไหน) · enabled แต่ไม่มีไฟล์ = install/upgrade รายงาน ไม่เติมให้เงียบๆ
-- `.ow/` = snapshot (`commands/` `templates/`) อัปเดตด้วย `/ow-sync` · `.ow/rules/` เป็นของ project นี้เอง sync ไม่แตะ — rule ใหม่เขียนที่ `.ow/rules/<area>.md` + frontmatter `applies_to: [<area>]` (format เต็ม `.ow/rules/README.md`) · `templates/` ที่ root override `.ow/templates/`
-- `scripts/` + `bin/` = mixed-ownership — upgrade refresh ทีละไฟล์ตาม manifest (`ow-owned.sh`) ไม่เคย `rm -rf` ทั้ง dir · รายละเอียดของแต่ละสคริปต์อยู่ใน header comment ของสคริปต์เอง · hard prerequisite: ต้องมี `yq`
+- `.ow.yml` at root — comments in the file already explain every key, read the real file · 🔴 **never `yq -i` this file** (strips comments) — edit surgically only
+- `subagents` — 4 ship by default: `docs` `verifier` `security` `gh-issue` · the rest are **names, not files**, until `/ow-agent create <name>` writes a body matching the stack (`/ow-agent suggest` tells you which ones you should have) · enabled but no file = install/upgrade reports it, never fills it in silently
+- `.ow/` = the snapshot (`commands/` `templates/`), updated by `/ow-sync` · `.ow/rules/` belongs to this project — sync never touches it — write new rules at `.ow/rules/<area>.md` + frontmatter `applies_to: [<area>]` (full format: `.ow/rules/README.md`) · root `templates/` overrides `.ow/templates/`
+- `scripts/` + `bin/` = mixed-ownership — upgrade refreshes owned files one by one per manifest (`ow-owned.sh`), never `rm -rf` the whole dir · per-script detail lives in that script's own header comment · hard prerequisite: `yq` must be installed
 
-## ภาษา
+## Language
 
-| อะไร | ภาษา |
+| What | Language |
 |---|---|
-| แชท / รายงาน / คำถามที่ถาม user | `project.language` (`$PROJECT_LANG`) |
-| ไฟล์ใต้ `vault_path` ทุก folder | `project.vault_language` — ไม่ระบุ ⇒ ตาม `project.language` (`$VAULT_LANG`) |
-| code comment · frontmatter · commit message · `.ow/commands` · `.claude/agents` | อังกฤษ |
+| Chat / reports / questions to the user | `project.language` (`$PROJECT_LANG`) |
+| Files under `vault_path`, every folder | `project.vault_language` — unset ⇒ falls back to `project.language` (`$VAULT_LANG`) |
+| Code comments · frontmatter · commit messages · `.ow/commands` · `.claude/agents` | English |
 <!-- OW END: workflow -->
 
-## Design spec ของงานพัฒนา obsidian-workflow เอง (`.superpowers/`)
+## Design spec for obsidian-workflow's own development (`.superpowers/`)
 
-skill `superpowers:brainstorming` เขียน design spec ที่ `.superpowers/specs/` — **gitignored**
+The `superpowers:brainstorming` skill writes design specs to `.superpowers/specs/` — **gitignored**
 
-`docs/` ใน repo นี้คือ **sample vault** (`docs/obsidian-vault/`) ที่ greenfield install คัดลอกไปให้ project ใหม่ — ห้ามเอา spec ของงานพัฒนา obsidian-workflow ไปวางปน
+`docs/` in this repo is the **sample vault** (`docs/obsidian-vault/`) that a greenfield install copies into a new project — never mix obsidian-workflow's own dev specs into it

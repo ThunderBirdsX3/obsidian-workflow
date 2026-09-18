@@ -39,6 +39,12 @@ start to finish. Not sure which verb applies? Run `ow-help`.
 1. **Vault-first** — read the docs that relate to the task before asking questions or
    writing code. Start at `<vault>/00-Index/IMPLEMENTATION-STATUS.md`. Read what the
    task needs, not the whole vault.
+   - UI/web work, even asked for directly in chat without going through `ow-implement` —
+     if `70-Reference/DesignSystem/` exists, always read `DS-Tokens.md`, `DS-Components.md`,
+     `DS-Patterns.md`, `DS-Accessibility.md` before writing code. A needed component missing
+     from the DS ⇒ tell the user to run `ow-design component <name>` first; never guess it.
+     `70-Reference/DesignSystem/` absent (no DS set up yet) ⇒ skip this, proceed as normal —
+     do not suggest creating a DS first.
 2. **Plan and implement are separate** — `ow-plan` and `ow-fix` produce documents and
    must not touch code. `ow-implement` is the only verb that modifies code.
 3. **Log everything** — every plan and fix leaves a log in the vault stating what was

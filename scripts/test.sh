@@ -1847,7 +1847,7 @@ run "docs: no stale command count" '
   [ -z "$bad" ] || { echo "stale count (real = $n):"; echo "$bad"; exit 1; }'
 run "docs: state the real count"   '
   n=$(ls .ow/commands/ow-*.md | wc -l | tr -d " ")
-  grep -q "คำสั่งทั้งหมด ($n ตัว)" CLAUDE.md && grep -q "$n Commands" README.md && grep -q "$n slash commands" README.md'
+  grep -q "All commands ($n)" CLAUDE.md && grep -q "$n Commands" README.md && grep -q "$n slash commands" README.md'
 run "usage: one doc per command"   '
   for f in .ow/commands/ow-*.md; do [ -f "usage/$(basename "$f")" ] || { echo "no usage doc for $(basename "$f")"; exit 1; }; done
   for f in usage/ow-*.md; do [ -f ".ow/commands/$(basename "$f")" ] || { echo "orphan usage doc: $f"; exit 1; }; done'
@@ -2133,7 +2133,7 @@ printf "\n${c_bold}Section 38 — CLAUDE.md managed block${c_reset}\n"
 run "claude-md: helper exists + is owned"  '[ -f scripts/ow-claude-md.sh ] && . scripts/ow-owned.sh && ow_owned_scripts | grep -qx ow-claude-md.sh'
 run "claude-md: merge fn defined"          '. scripts/ow-claude-md.sh && command -v ow_claude_md_merge >/dev/null'
 run "claude-md: markers present"           'grep -qx "<!-- OW START: workflow -->" CLAUDE.md && grep -qx "<!-- OW END: workflow -->" CLAUDE.md'
-run "claude-md: block extracts"            '. scripts/ow-claude-md.sh && ow_claude_md_block CLAUDE.md | grep -q "หัวใจ 3 ข้อ"'
+run "claude-md: block extracts"            '. scripts/ow-claude-md.sh && ow_claude_md_block CLAUDE.md | grep -q "The three core rules"'
 run "claude-md: dev prose stays outside"   '. scripts/ow-claude-md.sh && ! ow_claude_md_block CLAUDE.md | grep -q "superpowers"'
 run "claude-md: sample-vault line outside" '. scripts/ow-claude-md.sh && ! ow_claude_md_block CLAUDE.md | grep -q "sample vault"'
 run "claude-md: install merges"            'grep -q "ow_claude_md_merge" scripts/install.sh'

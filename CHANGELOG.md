@@ -3,6 +3,28 @@
 Format: [Keep a Changelog](https://keepachangelog.com). Versions: SemVer.
 Version marker: `ow.version` in `.ow.yml`.
 
+## [1.4.1] — 2026-09-18
+
+### Changed — CLAUDE.md / AGENTS.md gain a UI/design-system entry rule, and CLAUDE.md moves to English
+
+`70-Reference/DesignSystem/` (tokens, components, patterns, a11y) was only enforced as a hard
+gate inside `/ow-implement` Phase 4. A UI request made directly in chat, without going through
+that command, had no path to the same rules.
+
+- `CLAUDE.md` / `AGENTS.md` — the Vault-first rule now says: for UI/web work, even asked for
+  directly in chat, read `DS-Tokens.md`, `DS-Components.md`, `DS-Patterns.md`,
+  `DS-Accessibility.md` first when `70-Reference/DesignSystem/` exists; a missing component
+  routes the user to `/ow-design component <name>` instead of being guessed; no DS directory at
+  all ⇒ skip silently, do not suggest creating one.
+- `CLAUDE.md`'s shipped block (between the `OW START/END: workflow` markers) is now written in
+  English, matching `AGENTS.md` — both are core template content injected into every consumer
+  project regardless of that project's `project.language`, so hardcoding Thai prose into the
+  template no longer ships a Thai-only file to non-Thai projects. `project.language` still
+  governs the language Claude actually chats in; this only changes the language the instruction
+  file itself is written in.
+- `scripts/test.sh` — two assertions pinned to the old Thai literals (`หัวใจ 3 ข้อ`, `คำสั่งทั้งหมด
+  ($n ตัว)`) now check the equivalent English text.
+
 ## [1.4.0] — 2026-09-16
 
 ### Added — a test-credentials protocol so a test user is never invented
