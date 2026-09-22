@@ -9,6 +9,7 @@ When user says `ow-<verb>: <task>` or `<verb>: <task>`, read the corresponding s
 | User input | Spec file to load |
 |---|---|
 | `ow-agent` / `agent` | `.ow/commands/ow-agent.md` |
+| `ow-archive` / `archive` | `.ow/commands/ow-archive.md` |
 | `ow-checklist` / `checklist` | `.ow/commands/ow-checklist.md` |
 | `ow-clarify` / `clarify` | `.ow/commands/ow-clarify.md` |
 | `ow-design` / `design` | `.ow/commands/ow-design.md` |

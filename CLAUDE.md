@@ -22,7 +22,7 @@ This project uses **obsidian-workflow** — AI + Obsidian docs-driven developmen
 2. **Plan and implement are separate** — `/ow-plan` produces a plan, never touches code · **`/ow-implement` is the only command that edits code** · `/ow-fix` diagnoses + writes a fix-log, then asks before acting
 3. **Log everything** — every plan/fix leaves a log in the vault stating what actually ran and what it produced
 
-## All commands (20)
+## All commands (21)
 
 Not sure which one → `/ow-help` · the spec for each verb lives at `.ow/commands/<verb>.md` (sub-modes live in `_shared/`, read when that mode fires) · usage docs at `usage/`
 
@@ -32,7 +32,7 @@ Spec-driven:   /ow-new  /ow-clarify  /ow-plan  /ow-checklist  /ow-implement  /ow
 GitHub:        /ow-triage-issues  /ow-fix-issue
 Docs + tests:  /ow-doc  /ow-test  /ow-design
 Reverse:       /ow-reverse-engineer   ← extract a spec from existing code/db
-Delivery:      /ow-secure  /ow-verify  /ow-git  /ow-handoff
+Delivery:      /ow-secure  /ow-verify  /ow-git  /ow-handoff  /ow-archive
 Help:          /ow-help
 ```
 

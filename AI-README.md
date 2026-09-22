@@ -153,7 +153,7 @@ AI ตัวที่ไม่ support sub-agents → main AI ทำเองท
 │   └── commands/                    ← source-of-truth verb specs (neutral)
 │       ├── ow-init.md
 │       ├── ow-new.md
-│       └── ... (20 verbs)
+│       └── ... (21 verbs)
 ├── .claude/
 │   ├── commands/          ← Claude Code slash shims (5-line each, @.ow/commands/…)
 │   ├── agents/            ← Claude sub-agents (always-on 4 + ที่ /ow-agent create ไว้)

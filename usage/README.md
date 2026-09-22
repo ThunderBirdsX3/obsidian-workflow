@@ -53,6 +53,7 @@
 | [/ow-verify](./ow-verify.md) | verify ครบ (tests/vault/security/DS) |
 | [/ow-handoff](./ow-handoff.md) | สร้าง Handoff Report ส่งต่อ reviewer/exec/QA |
 | [/ow-git](./ow-git.md) | submodule-aware commit/push/branch/merge |
+| [/ow-archive](./ow-archive.md) | ย้าย plan/fix-log ที่เสร็จแล้วเข้า `archive/` |
 
 ---
 

@@ -257,6 +257,7 @@ Show a 1-page table (as short as possible):
 | /ow-verify     | verify (tests/vault/security/DS)      | verify report           |
 | /ow-handoff    | executive handoff report              | HOR-*.md in 95-Handoff  |
 | /ow-git        | submodule-aware commit/push           | git history             |
+| /ow-archive    | archive finished plan/fix-log         | files moved to archive/ |
 | /ow-sync       | pull the latest snapshot from the obsidian-workflow repo | .ow/ updated |
 | /ow-agent      | manage subagents                      | .claude/agents/ updated |
 | /ow-help       | this help                             |                          |

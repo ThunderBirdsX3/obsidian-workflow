@@ -442,7 +442,7 @@ run "resolver exposes snapshot slot" 'bash scripts/ow-paths.sh --shell | grep -q
 # Test 13: Issue workflow commands + gh-issue agent
 # ════════════════════════════════════════════════════════════════════════════
 printf "\n${c_bold}Section 13 — Issue workflow (triage + fix-issue)${c_reset}\n"
-run "command count = 20"           '[ "$(find .ow/commands -name "ow-*.md" | wc -l | tr -d " ")" -eq 20 ]'
+run "command count = 21"           '[ "$(find .ow/commands -name "ow-*.md" | wc -l | tr -d " ")" -eq 21 ]'
 run "spec: ow-triage-issues"      '[ -f .ow/commands/ow-triage-issues.md ]'
 run "spec: ow-fix-issue"          '[ -f .ow/commands/ow-fix-issue.md ]'
 run "shim: ow-triage-issues"      '[ -f .claude/commands/ow-triage-issues.md ]'

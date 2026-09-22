@@ -2,7 +2,7 @@
 
 **AI + Obsidian docs-driven development workflow** สำหรับทีมที่ใช้ AI ทำงาน — รวม spec-kit philosophy และ Obsidian vault patterns
 
-> 20 slash commands · 4 always-on + 5 on-demand AI subagents (per-agent + per-command AI model in `.ow.yml`) · 7 AI front-ends (Claude · Codex · Gemini · GPT · GLM · Cline · Kimi) · config-driven, works for any project (single-repo or submodule monorepo) · the vault stays text-only — command output is quoted into the doc, never stored as a file
+> 21 slash commands · 4 always-on + 5 on-demand AI subagents (per-agent + per-command AI model in `.ow.yml`) · 7 AI front-ends (Claude · Codex · Gemini · GPT · GLM · Cline · Kimi) · config-driven, works for any project (single-repo or submodule monorepo) · the vault stays text-only — command output is quoted into the doc, never stored as a file
 
 ---
 
@@ -65,7 +65,7 @@ ow doctor     # health check
 
 ---
 
-## 🎯 20 Commands
+## 🎯 21 Commands
 
 | กลุ่ม | Commands |
 |---|---|
@@ -73,7 +73,7 @@ ow doctor     # health check
 | **Spec-driven cycle** | `/ow-new` `/ow-clarify` `/ow-plan` `/ow-checklist` `/ow-implement` `/ow-fix` |
 | **GitHub issues** | `/ow-triage-issues` `/ow-fix-issue` |
 | **เอกสาร + ทดสอบ + ออกแบบ** | `/ow-doc` `/ow-test` `/ow-design` |
-| **ส่งมอบ** | `/ow-secure` `/ow-verify` `/ow-handoff` `/ow-git` |
+| **ส่งมอบ** | `/ow-secure` `/ow-verify` `/ow-handoff` `/ow-git` `/ow-archive` |
 
 **Usage guide ละเอียด:** [`usage/README.md`](./usage/README.md) — 1 ไฟล์ต่อ command
 
