@@ -36,6 +36,6 @@ recursively (`cp -R`), so this subdir reaches consumer projects with no extra pl
 | `design-process.md` | any design-system work runs — the DS gates + per-action process | `/ow-design` 1 · 2 · 3 · 4 · 5 |
 | `build-test.md` | always, at the build/test run | `/ow-implement` 5.0 |
 | `fixlog-close.md` | the run is fix-escalated (`source_fix:` / `--from-fix`) | `/ow-implement` 6.5 |
-| `git-sync.md` | a sync actually runs (not `--status` / `--switch-only` / `--no-sync` / `auto_sync: false`) | `/ow-git` 2.5 · 6 · 7 |
+| `git-sync.md` | a sync actually runs (not `--status` / `--switch-only` / `--no-sync` / `auto_sync: false`) | `/ow-git` 2.5 · 2.6 · 6 · 7 |
 | `git-post-push.md` | a push succeeded **and** either (the pushed range closes an issue, or `--fix` on a fix-log with `github_issue:`) with no `--no-ready-for-test` — **or** `--bump` finalizes a local fix-log (`--plan` with `source_fix:`, or `--fix` with `fixed_commit: pending`) | `/ow-git` 8.5 · 8.6 |
 | `test-credentials.md` | scaffolding, reading, or checking `test_credentials` (`$TEST_ENV_FILE` / `$TEST_CREDENTIALS_JSON`) | `/ow-init` 6.3 · `/ow-test` Phase 2 · `/ow-secure` Phase 6 |

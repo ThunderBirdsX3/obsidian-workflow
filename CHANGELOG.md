@@ -3,6 +3,60 @@
 Format: [Keep a Changelog](https://keepachangelog.com). Versions: SemVer.
 Version marker: `ow.version` in `.ow.yml`.
 
+## [1.6.0] — 2026-10-07
+
+### Added — `/ow-git` merges vault-doc conflicts on its own: version numbers by rule, prose by intent
+
+A shared branch collided on vault docs constantly, and almost every collision was either a
+frontmatter `version:` both people bumped or two edits to different parts of one FN/FEAT/SRS
+doc. All of them stopped the sync for a human.
+
+- `scripts/ow-git-sync.sh` — the `vault-meta` class now merges a frontmatter region holding
+  `version:` and date fields key by key: dates keep the later one, different versions keep the
+  higher one, and the same version on both sides that moved from base (both people bumped) adds
+  the deltas (`0.1.0` + `0.1.1` + `0.1.1` ⇒ `0.1.2`; `0.1.3` + `0.2.0` + `0.2.0` ⇒ `0.3.0`). Any
+  other key in the region ⇒ human. Table/list regions and frontmatter regions in one file are
+  decided per region.
+- Rebase/merge run with `merge.conflictStyle=diff3`, so conflict markers carry the common
+  ancestor (`|||||||`) — the version rule needs it, and a human resolving by hand sees it too.
+- After every successful sync, a vault doc both sides edited **without** a conflict (different
+  sections, same `version:` bump) gets the same add-the-deltas rule as its own `docs:` commit,
+  reported like any auto-resolve. Identical files on both sides (the same change arriving
+  twice) and files with uncommitted edits are left alone.
+- New subcommands: `sides <repo> <file>` (commits and plan/fix-log files per side of a
+  conflicted file) and `continue <repo>` (resolve safe classes + `rebase --continue` until done,
+  reporting every replayed commit's auto-resolves — the old second pass discarded them).
+- `/ow-git` Phase 2.6 — vault prose still conflicted after the script: the AI reads base / HEAD /
+  incoming plus each side's plan and fix-logs, merges both intents, and stages the file only if
+  it passes the gate (no markers, frontmatter parses, every wikilink and heading kept,
+  `ow-verify-vault-style.sh` passes). Same spot changed two ways, or no log for a side ⇒ human.
+  Vault `.md` only — code and non-vault docs always stop for a human.
+- `git.auto_resolve` gains `vault-ai` (default on). A project with its own `auto_resolve` list
+  adds it by hand. The app `VERSION` file still keeps the higher semver only.
+
+### Changed — tests follow the v1.5.1 blanket `Bash` permission
+
+- `scripts/test.sh` — asserts the shipped `.claude/settings.json` carries the bare `"Bash"`
+  allow, and the legacy-signature merge test checks that the blanket `WebFetch` is retired.
+- `scripts/ow-settings-merge.sh` — warns about a bare `"Bash"` only when the consumer added it
+  and the shipped set has none, so every upgrade no longer prints a warning about our own grant.
+
+## [1.5.1] — 2026-09-22
+
+### Changed
+
+- `.claude/settings.json` — the shipped allow list grants a bare `"Bash"` instead of the scoped
+  `Bash(...)` list.
+
+## [1.5.0] — 2026-09-22
+
+### Added — `/ow-archive`
+
+- New command moves everything under `80-ImplementPlan/` and `85-FixLog/` into an
+  `archive/<name>/` subfolder (default: today's date, or `/ow-archive <name>` / `--into <name>`),
+  then fixes vault links that pointed at the old path. Content and frontmatter are untouched —
+  archiving is a location change, not a status transition.
+
 ## [1.4.1] — 2026-09-18
 
 ### Changed — CLAUDE.md / AGENTS.md gain a UI/design-system entry rule, and CLAUDE.md moves to English

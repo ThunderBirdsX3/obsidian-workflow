@@ -64,6 +64,7 @@ figma  [read-only]  skipped
 1. **Phase 1** — Parse args (message precedence: `--message` > free text > auto > prompt)
 2. **Phase 2** — Status / Switch-only modes (ไม่ commit)
 2.5. **Phase 2.5** — Sync กับ origin ก่อน stage (fetch + rebase ทุก repo) — **default-on** สำหรับทีมหลายคน; conflict ที่ auto ไม่ได้ → หยุดทั้ง command
+2.6. **Phase 2.6** — prose ใน vault doc ที่ยังชน → AI merge ตาม plan/fix-log ของทั้งสองฝั่ง ผ่าน gate แล้ว `rebase --continue` ให้; ไม่แน่ใจหรือมีโค้ดชน → หยุดให้คนแก้
 3. **Phase 3** — `--pull` เดี่ยวๆ (ไม่มี `--plan`/`--fix`/`--message`/free text) = **sync แล้วจบ** ไม่ commit ไม่ push; พ่วงกับ flag อื่น = sync แล้วไหลต่อ
 4. **Phase 4** — Scope staged files (จาก plan `Affected Files` — file นอก list ไม่ stage + แจ้ง)
 5. **Phase 5** — Generate commit message (plan → `feat(<area>): <title>`, fix → `fix(<area>): <title>`)
@@ -191,7 +192,10 @@ A: `/ow-git --pull` — fetch + rebase ทุก repo (main + submodules) แล
 A: ไม่ต้อง — Phase 2.5 fetch + rebase ให้ทุกครั้งก่อน stage. ปิดเฉพาะรอบนี้ด้วย `--no-sync`, ปิดถาวรที่ `.ow.yml` → `git.auto_sync: false`
 
 **Q: อะไรที่ AI แก้ conflict ให้เองได้บ้าง?**
-A: เฉพาะที่มีกฎตายตัว — version file (เอาเลขสูงกว่า), lock file (regenerate), `CHANGELOG.md` (union), และ vault `.md` **เฉพาะตอนที่ conflict เป็น table row / list item ล้วนและไม่มี key ซ้ำ** (เช่น `IMPLEMENTATION-STATUS.md`, MOC). โค้ดและ prose ในเอกสาร = คนแก้เสมอ. ทุกไฟล์ที่แก้ให้จะขึ้นในรายงาน — ไม่มีการแก้เงียบ. ปรับได้ที่ `git.auto_resolve` (`[]` = ปิดหมด)
+A: สองชั้น — ทุกไฟล์ที่แก้ให้ขึ้นในรายงาน ไม่มีการแก้เงียบ. ปรับได้ที่ `git.auto_resolve` (`[]` = ปิดหมด)
+- **กฎตายตัว (script)** — version file (เอาเลขสูงกว่า), lock file (regenerate), `CHANGELOG.md` (union), vault `.md` ที่ conflict เป็น table row / list item ล้วนและไม่มี key ซ้ำ (เช่น `IMPLEMENTATION-STATUS.md`, MOC), และ frontmatter `version:` / วันที่ — วันที่เอาล่าสุด, version ต่างกันเอาสูงกว่า, version เท่ากันแต่ขยับจาก base (ทั้งสองคน bump) = บวก delta กัน เช่น `0.1.0` → ทั้งคู่ `0.1.1` ได้ `0.1.2`
+- **ตาม intent (Phase 2.6, `vault-ai`)** — prose ใน vault doc ที่ชนกัน: AI อ่าน 3 เวอร์ชัน + plan/fix-log ของแต่ละฝั่ง แล้ว merge ให้ได้ทั้งสองการเปลี่ยนแปลง ผ่าน gate (ไม่มี marker · frontmatter parse ได้ · wikilink/heading ครบ · vault-style ผ่าน). สองฝั่งแก้จุดเดียวกันต่างกัน หรือไม่มี log = คนแก้
+- โค้ด, README, เอกสารนอก vault = คนแก้เสมอ
 
 **Q: ผมแก้ค้างไว้ยังไม่ commit แล้ว teammate push มาก่อน — งานผมหายไหม?**
 A: ไม่หาย — rebase ใช้ `--autostash` (stash ให้อัตโนมัติแล้วคืนให้ตอนจบ). ถ้าคืนแล้วชนบรรทัดเดียวกัน `/ow-git` **หยุดทันที** ไม่ stage ไม่ commit ไม่ push, และงานคุณอยู่ **2 ที่**: marker ในไฟล์ + `git stash list`. เคสนี้ rebase จบไปแล้ว → แก้เสร็จใช้ `git add <file> && git stash drop` (**ไม่ใช่** `git rebase --continue`) แล้วรันคำสั่งเดิมซ้ำ. ตั้ง `git.strategy: merge` แทนได้ถ้าไม่อยากให้ stash เลย — git จะปฏิเสธตั้งแต่ต้นเมื่อ tree ยังไม่สะอาด

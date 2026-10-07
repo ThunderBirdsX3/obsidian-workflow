@@ -13,6 +13,10 @@
 #   ow-git-sync.sh sync     <repo>                → fetch + rebase|merge onto upstream
 #   ow-git-sync.sh classify <repo>                → "<class>\t<file>" per conflicted file (no writes)
 #   ow-git-sync.sh resolve  <repo>                → auto-resolve safe classes in the current conflict
+#   ow-git-sync.sh continue <repo>                → after files were resolved by hand/AI: resolve safe
+#                                                   classes + rebase --continue (or merge commit) until done
+#   ow-git-sync.sh sides    <repo> <file>         → evidence for a conflicted file: commits per side
+#                                                   + the plan / fix-log files those commits touched
 #   ow-git-sync.sh push     <repo> <branch>       → push, sync+retry on non-fast-forward
 #   ow-git-sync.sh push-tag <repo> <tag>          → push one tag; collision NEVER retried/forced
 #   ow-git-sync.sh config                         → print effective knobs (debug/test)
@@ -60,11 +64,13 @@ _cfg() {  # _cfg <jq-path> <default>
 AUTO_SYNC="${OW_GIT_AUTO_SYNC:-$(_cfg '.auto_sync' 'true')}"
 STRATEGY="${OW_GIT_STRATEGY:-$(_cfg '.strategy' 'rebase')}"
 PUSH_RETRY="${OW_GIT_PUSH_RETRY:-$(_cfg '.push_retry' '1')}"
-AUTO_RESOLVE="${OW_GIT_AUTO_RESOLVE:-$(printf '%s' "$GIT_SYNC_JSON" | jq -r '(.auto_resolve // ["version","lock","changelog","vault"]) | join(",")' 2>/dev/null)}"
-[ -n "$AUTO_RESOLVE" ] && [ "$AUTO_RESOLVE" != "null" ] || AUTO_RESOLVE="version,lock,changelog,vault"
+AUTO_RESOLVE="${OW_GIT_AUTO_RESOLVE:-$(printf '%s' "$GIT_SYNC_JSON" | jq -r '(.auto_resolve // ["version","lock","changelog","vault","vault-ai"]) | join(",")' 2>/dev/null)}"
+[ -n "$AUTO_RESOLVE" ] && [ "$AUTO_RESOLVE" != "null" ] || AUTO_RESOLVE="version,lock,changelog,vault,vault-ai"
 
+# vault-ai is NOT resolved here — the calling command (an AI) merges vault prose with the
+# plan/fix-log evidence from `sides`, then calls `continue`. This script only carries the knob.
 _class_enabled() {  # vault-append / vault-meta both ride the "vault" knob
-  local c="$1"; case "$c" in vault-*) c=vault ;; esac
+  local c="$1"; case "$c" in vault-append|vault-meta) c=vault ;; esac
   case ",$AUTO_RESOLVE," in *",$c,"*) return 0 ;; *) return 1 ;; esac
 }
 
@@ -99,6 +105,12 @@ _upstream() {
 _has_remote() { [ -n "$(git -C "$1" remote 2>/dev/null)" ]; }
 
 _conflicted() { git -C "$1" diff --name-only --diff-filter=U 2>/dev/null; }
+
+_merge_in_progress() { git -C "$1" rev-parse -q --verify MERGE_HEAD >/dev/null 2>&1; }
+
+# diff3 markers carry the common-ancestor region — the frontmatter version rule needs the
+# base to tell "both sides bumped" from "one side bumped".
+GIT_DIFF3="-c merge.conflictStyle=diff3"
 
 _rebase_in_progress() {
   local d; d=$(git -C "$1" rev-parse --git-path rebase-merge 2>/dev/null)
@@ -193,24 +205,58 @@ _resolve_regions() {  # _resolve_regions <class> <file> <out>
       if (match(t, /^[A-Za-z0-9_.\/-]+/))  return substr(t, RSTART, RLENGTH)
       return ""
     }
-    # frontmatter date field only (updated:, last_synced:, ...)
-    function alldate(a, n,   i, t) {
+    # ── frontmatter (vault-meta): `version:` + date fields, merged key by key ──
+    function metakey(line,   t) {
+      t = trim(line)
+      if (t ~ /^version:[^0-9]*[0-9]+\.[0-9]+\.[0-9]+/) return "version"
+      if (match(t, /^(updated|last_synced|date_modified|synced_at):[^0-9]*[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]/)) {
+        sub(/:.*/, "", t); return t
+      }
+      return ""
+    }
+    function metashape(a, n,   i) {
       for (i = 1; i <= n; i++) {
-        t = trim(a[i]); if (t == "") continue
-        if (t !~ /^(updated|last_synced|date_modified|synced_at):[ \t]*[0-9]{4}-[0-9]{2}-[0-9]{2}/) return 0
+        if (trim(a[i]) == "") continue
+        if (metakey(a[i]) == "") return 0
       }
       return 1
     }
-    function maxdate(a, n,   i, m, t) {
-      m = ""
-      for (i = 1; i <= n; i++) {
-        t = a[i]
-        if (match(t, /[0-9]{4}-[0-9]{2}-[0-9]{2}([T ][0-9:]+)?/)) {
-          t = substr(t, RSTART, RLENGTH)
-          if (m == "" || t > m) { m = t; mline = a[i] }
-        }
+    function semver(line) { return match(line, /[0-9]+\.[0-9]+\.[0-9]+/) ? substr(line, RSTART, RLENGTH) : "" }
+    function dateof(line) { return match(line, /[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]([T ][0-9:]+)?/) ? substr(line, RSTART, RLENGTH) : "" }
+    # both sides bumped the same base to the same number = two edits → add the deltas:
+    # base 0.1.0, both 0.1.1 → 0.1.2 · base 0.1.3, both 0.2.0 → 0.3.0. "" = not a bump.
+    function vsum(v, o,   va, oa, i, k) {
+      split(v, va, "."); split(o, oa, ".")
+      for (i = 1; i <= 3; i++) if ((va[i]+0) != (oa[i]+0)) break
+      if (i > 3 || (va[i]+0) < (oa[i]+0)) return ""
+      va[i] = (va[i]+0) * 2 - (oa[i]+0)
+      return va[1] "." va[2] "." va[3]
+    }
+    function meta_merge(   i, k, n, la, lb, v, out, MA, MB, MO, nka, nkb) {
+      nka = 0; nkb = 0
+      for (i = 1; i <= na; i++) { k = metakey(A[i]); if (k == "") continue; if (k in MA) return 0; MA[k] = A[i]; nka++ }
+      for (i = 1; i <= nb; i++) { k = metakey(B[i]); if (k == "") continue; if (k in MB) return 0; MB[k] = B[i]; nkb++ }
+      for (i = 1; i <= no; i++) { k = metakey(O[i]); if (k != "") MO[k] = O[i] }
+      # different key sets = one side added/removed a field → not a value collision
+      if (nka != nkb) return 0
+      for (k in MA) if (!(k in MB)) return 0
+      n = 0
+      for (i = 1; i <= na; i++) {
+        k = metakey(A[i])
+        if (k == "") { out[++n] = A[i]; continue }
+        la = MA[k]; lb = MB[k]
+        if (k == "version") {
+          if (semver(la) == semver(lb)) {
+            if ((k in MO) && semver(MO[k]) != semver(la)) {
+              v = vsum(semver(la), semver(MO[k])); if (v == "") return 0
+              sub(/[0-9]+\.[0-9]+\.[0-9]+/, v, la)
+            }
+            out[++n] = la
+          } else out[++n] = vgt(semver(lb), semver(la)) ? lb : la
+        } else out[++n] = (dateof(lb) > dateof(la)) ? lb : la
       }
-      return mline
+      for (i = 1; i <= n; i++) print out[i]
+      return 1
     }
 
     function flush_region(   i, j, va, vb, seen, ka, kb, out, n, t) {
@@ -243,7 +289,14 @@ _resolve_regions() {  # _resolve_regions <class> <file> <out>
         return
       }
       if (CLASS == "vault-append") {
+        # a vault file carries two safe shapes: table/list rows (append) and the
+        # frontmatter version/date block (meta). Decided per region, prose ⇒ human.
+        if (metashape(A, na) && metashape(B, nb)) {
+          if (!meta_merge()) { bad = 1; return }
+          usedmeta = 1; resolved++; return
+        }
         if (!appendable(A, na) || !appendable(B, nb)) { bad = 1; return }
+        usedappend = 1
         # same primary key on both sides with different content = two people edited
         # the same record → no deterministic answer, hand it to the human
         for (i = 1; i <= na; i++) { t = rowkey(A[i]); if (t != "") ka[t] = trim(A[i]) }
@@ -263,29 +316,21 @@ _resolve_regions() {  # _resolve_regions <class> <file> <out>
         resolved++
         return
       }
-      if (CLASS == "vault-meta") {
-        if (!alldate(A, na) || !alldate(B, nb)) { bad = 1; return }
-        mline = ""
-        for (i = 1; i <= na; i++) C[i] = A[i]
-        for (j = 1; j <= nb; j++) C[na + j] = B[j]
-        print maxdate(C, na + nb)
-        resolved++
-        return
-      }
       bad = 1
     }
 
-    /^<<<<<<< /  { inA = 1; inBase = 0; inB = 0; na = 0; nb = 0; next }
+    /^<<<<<<< /  { inA = 1; inBase = 0; inB = 0; na = 0; nb = 0; no = 0; next }
     /^\|\|\|\|\|\|\| / { if (inA) { inA = 0; inBase = 1; next } }
     /^=======$/  { if (inA || inBase) { inA = 0; inBase = 0; inB = 1; next } }
     /^>>>>>>> /  { if (inB) { inB = 0; flush_region(); next } }
     {
       if (inA)         { A[++na] = $0 }
-      else if (inBase) { }
+      else if (inBase) { O[++no] = $0 }
       else if (inB)    { B[++nb] = $0 }
       else             { print }
     }
-    END { if (bad || resolved == 0) exit 3 }
+    # 11 = resolved, but only frontmatter regions → reported as vault-meta
+    END { if (bad || resolved == 0) exit 3; if (usedmeta && !usedappend) exit 11 }
   ' "$2" > "$3"
 }
 
@@ -304,6 +349,59 @@ _lock_regen() {  # _lock_regen <repo> <lockfile> → 0 ok / 1 cannot
     Gemfile.lock)      command -v bundle >/dev/null 2>&1 && (cd "$dir" && bundle lock                       >/dev/null 2>&1) ;;
     *) return 1 ;;   # Podfile.lock etc. — regeneration is heavy/interactive → human
   esac
+}
+
+# ── converged doc-version bumps ──────────────────────────────────────────────
+# Two people edit different sections of one vault doc and both bump `version:` 0.1.0 → 0.1.1.
+# Git sees the same line change on both sides ⇒ no conflict ⇒ 0.1.1, one bump lost. After a
+# sync, find those docs and add the deltas (0.1.2), as one commit of its own, reported.
+# Same blob on both sides = the same change arrived twice (cherry-pick) ⇒ left alone.
+_fm_version() {  # _fm_version <repo> <rev> <file> → semver of the frontmatter version: line
+  git -C "$1" show "$2:$3" 2>/dev/null | awk '
+    NR == 1 { if ($0 != "---") exit; next }
+    $0 == "---" { exit }
+    /^version:/ { if (match($0, /[0-9]+\.[0-9]+\.[0-9]+/)) print substr($0, RSTART, RLENGTH); exit }'
+}
+_vsum() {  # same rule as vsum() in the awk resolver; empty = not a forward bump
+  awk -v v="$1" -v o="$2" 'BEGIN {
+    split(v, a, "."); split(o, b, ".")
+    for (i = 1; i <= 3; i++) if ((a[i]+0) != (b[i]+0)) break
+    if (i > 3 || (a[i]+0) < (b[i]+0)) exit
+    a[i] = (a[i]+0) * 2 - (b[i]+0); print a[1] "." a[2] "." a[3] }'
+}
+_converged_bumps() {  # _converged_bumps <repo> <pre-sync HEAD> <upstream>
+  local repo="$1" pre="$2" up="$3" base root f vb vu vl vn list
+  _class_enabled vault-meta && [ -n "$VAULT_ABS" ] || return 0
+  base=$(git -C "$repo" merge-base "$pre" "$up" 2>/dev/null) || return 0
+  root=$(cd "$repo" && pwd -P)
+  list=$(mktemp)
+  git -C "$repo" diff --name-only "$base" "$up" -- '*.md' 2>/dev/null | sort > "$list.u"
+  git -C "$repo" diff --name-only "$base" "$pre" -- '*.md' 2>/dev/null | sort > "$list.l"
+  comm -12 "$list.u" "$list.l" | while IFS= read -r f; do
+    case "$root/$f" in "$VAULT_ABS"/*) ;; *) continue ;; esac
+    [ "$(git -C "$repo" rev-parse "$up:$f" 2>/dev/null)" != "$(git -C "$repo" rev-parse "$pre:$f" 2>/dev/null)" ] || continue
+    # the user's uncommitted edits to this file must never ride along in our commit
+    git -C "$repo" diff --quiet -- "$f" && git -C "$repo" diff --cached --quiet -- "$f" || continue
+    vb=$(_fm_version "$repo" "$base" "$f"); vu=$(_fm_version "$repo" "$up" "$f"); vl=$(_fm_version "$repo" "$pre" "$f")
+    [ -n "$vb" ] && [ "$vu" = "$vl" ] && [ "$vu" != "$vb" ] || continue
+    [ "$(_fm_version "$repo" HEAD "$f")" = "$vu" ] || continue     # a conflict pass already merged it
+    vn=$(_vsum "$vu" "$vb"); [ -n "$vn" ] || continue
+    awk -v vu="$vu" -v vn="$vn" '
+      NR == 1 && $0 == "---" { fm = 1; print; next }
+      fm && $0 == "---" { fm = 0 }
+      fm && !done && /^version:/ { sub(vu, vn); done = 1 }
+      { print }' "$repo/$f" > "$list.f" && cat "$list.f" > "$repo/$f"
+    printf '%s\n' "$f" >> "$list"
+    emit "resolved	vault-meta	$f	both sides bumped $vb→$vu ⇒ $vn"
+  done
+  if [ -s "$list" ]; then
+    # pathspec commit: only these files, whatever else the user has staged stays staged
+    ( cd "$repo" && tr '\n' '\0' < "$list" | xargs -0 git add -- && \
+      tr '\n' '\0' < "$list" | xargs -0 git commit -q -m "docs: add up version bumps both sides made to the same vault docs" -- ) >/dev/null 2>&1 \
+      || log "converged doc-version commit failed — files left modified"
+  fi
+  rm -f "$list" "$list.u" "$list.l" "$list.f"
+  return 0
 }
 
 # ── subcommand: classify ─────────────────────────────────────────────────────
@@ -326,7 +424,7 @@ EOF
 # Resolves every conflicted file whose class is enabled AND whose regions match the
 # class shape. Any file left over ⇒ exit 3 (the human finishes the rebase/merge).
 cmd_resolve() {
-  local repo="$1" f c tmp left=0 did=0
+  local repo="$1" f c tmp rc left=0 did=0
   _in_repo "$repo" || { log "not a git repo: $repo"; return 1; }
   [ -n "$(_conflicted "$repo")" ] || return 0
 
@@ -349,20 +447,13 @@ cmd_resolve() {
     if [ "$c" = none ]; then left=1; emit "unresolved	none	$f"; continue; fi
 
     tmp=$(mktemp)
-    if _resolve_regions "$c" "$repo/$f" "$tmp"; then
+    _resolve_regions "$c" "$repo/$f" "$tmp"; rc=$?
+    if [ $rc -eq 0 ] || [ $rc -eq 11 ]; then
+      [ $rc -eq 11 ] && c=vault-meta
       cat "$tmp" > "$repo/$f"; rm -f "$tmp"
       git -C "$repo" add -- "$f" && { emit "resolved	$c	$f"; did=1; continue; }
     fi
     rm -f "$tmp"
-    # vault-append gate can fail on the .md body but still pass on frontmatter dates
-    if [ "$c" = vault-append ] && _class_enabled vault-meta; then
-      tmp=$(mktemp)
-      if _resolve_regions vault-meta "$repo/$f" "$tmp"; then
-        cat "$tmp" > "$repo/$f"; rm -f "$tmp"
-        git -C "$repo" add -- "$f" && { emit "resolved	vault-meta	$f"; did=1; continue; }
-      fi
-      rm -f "$tmp"
-    fi
     left=1; emit "unresolved	$c	$f"
   done <<EOF
 $(_conflicted "$repo")
@@ -391,7 +482,7 @@ cmd_status() {
 
 # ── subcommand: sync ─────────────────────────────────────────────────────────
 cmd_sync() {
-  local repo="$1" up br rc out
+  local repo="$1" up br rc out pre
   _in_repo "$repo" || { log "not a git repo: $repo"; return 1; }
   [ "$AUTO_SYNC" = "true" ] || { emit "skipped	auto_sync=off"; return 4; }
 
@@ -418,10 +509,11 @@ cmd_sync() {
   git -C "$repo" config --local rerere.enabled >/dev/null 2>&1 || \
     git -C "$repo" config --local rerere.enabled true >/dev/null 2>&1
 
+  pre=$(git -C "$repo" rev-parse HEAD)
   if [ "$STRATEGY" = "merge" ]; then
-    out=$(git -C "$repo" merge --no-edit "$up" 2>&1); rc=$?
+    out=$(git -C "$repo" $GIT_DIFF3 merge --no-edit "$up" 2>&1); rc=$?
   else
-    out=$(git -C "$repo" rebase --autostash "$up" 2>&1); rc=$?
+    out=$(git -C "$repo" $GIT_DIFF3 rebase --autostash "$up" 2>&1); rc=$?
   fi
 
   # `rebase --autostash` exits 0 even when the autostash pops with conflicts: the rebase
@@ -430,28 +522,83 @@ cmd_sync() {
   # (markers + the kept stash), so nothing is lost — but a human decides which side wins.
   if [ $rc -eq 0 ]; then
     [ -n "$(_conflicted "$repo")" ] && { emit "conflict	autostash	$up"; return 3; }
+    _converged_bumps "$repo" "$pre" "$up"
     emit "synced	$up	$STRATEGY"; return 0
   fi
 
   # conflicted → try the safe classes, then continue if everything got resolved
   if [ -n "$(_conflicted "$repo")" ]; then
-    cmd_resolve "$repo"; rc=$?
-    if [ $rc -eq 0 ] && [ -z "$(_conflicted "$repo")" ]; then
-      if [ "$STRATEGY" = "merge" ]; then
-        git -C "$repo" commit --no-edit >/dev/null 2>&1 && { emit "synced	$up	$STRATEGY	auto-resolved"; return 0; }
-      else
-        GIT_EDITOR=true git -C "$repo" rebase --continue >/dev/null 2>&1 && { emit "synced	$up	$STRATEGY	auto-resolved"; return 0; }
-        # --continue can stop again on the NEXT replayed commit → recurse once per commit
-        if [ -n "$(_conflicted "$repo")" ]; then cmd_resolve "$repo" >/dev/null 2>&1 && \
-          GIT_EDITOR=true git -C "$repo" rebase --continue >/dev/null 2>&1 && { emit "synced	$up	$STRATEGY	auto-resolved"; return 0; }
-        fi
-      fi
-    fi
-    emit "conflict	$up"   # left in place on purpose — the human finishes it
-    return 3
+    _finish "$repo" "$up" "$pre"; return $?
   fi
   log "$out"
   emit "error	$up"; return 1
+}
+
+# Resolve safe classes → continue → repeat for every replayed commit that stops again.
+# Every pass prints its own resolved/unresolved lines — a later commit's auto-resolve is
+# reported exactly like the first one. Leftovers ⇒ exit 3, the stop stays in place.
+_finish() {  # _finish <repo> <upstream> <pre-sync HEAD>
+  local repo="$1" label="$2" pre="$3" out rc
+  while :; do
+    if [ -n "$(_conflicted "$repo")" ]; then
+      cmd_resolve "$repo"; rc=$?
+      if [ $rc -ne 0 ] || [ -n "$(_conflicted "$repo")" ]; then
+        emit "conflict	$label"   # left in place on purpose — the human (or AI step) finishes it
+        return 3
+      fi
+    fi
+    if _merge_in_progress "$repo"; then
+      out=$(git -C "$repo" commit --no-edit 2>&1); rc=$?
+    elif _rebase_in_progress "$repo"; then
+      out=$(GIT_EDITOR=true git -C "$repo" $GIT_DIFF3 rebase --continue 2>&1); rc=$?
+    else
+      [ -n "$pre" ] && [ -n "$label" ] && _converged_bumps "$repo" "$pre" "$label"
+      emit "synced	$label	$STRATEGY	auto-resolved"; return 0
+    fi
+    if [ $rc -ne 0 ] && [ -z "$(_conflicted "$repo")" ]; then
+      log "$out"; emit "error	$label"; return 1   # e.g. the resolution left an empty commit
+    fi
+  done
+}
+
+# ── subcommand: continue ─────────────────────────────────────────────────────
+# The calling command resolved (and `git add`-ed) files this script cannot judge —
+# vault prose merged from plan/fix-log evidence. Finish the stopped rebase/merge.
+cmd_continue() {
+  local repo="$1"
+  _in_repo "$repo" || { log "not a git repo: $repo"; return 1; }
+  _rebase_in_progress "$repo" || _merge_in_progress "$repo" || { emit "nothing-to-continue"; return 0; }
+  _finish "$repo" "$(_upstream "$repo")" "$(git -C "$repo" rev-parse -q --verify ORIG_HEAD 2>/dev/null)"
+}
+
+# ── subcommand: sides ────────────────────────────────────────────────────────
+# Evidence for merging one conflicted file by intent instead of by text:
+#   head\tcommit\t<sha>\t<subject>    commits on the HEAD side (index stage :2)
+#   other\tcommit\t<sha>\t<subject>   commits on the incoming side (stage :3)
+#   <side>\tlog\t<path>               plan / fix-log files those commits touched
+# During a rebase HEAD is the upstream being rebased onto and "other" is the local
+# commit being replayed — git's own ours/theirs inversion, kept visible on purpose.
+cmd_sides() {
+  local repo="$1" f="$2" other base side ref sha subj p plan fix
+  _in_repo "$repo" || { log "not a git repo: $repo"; return 1; }
+  if git -C "$repo" rev-parse -q --verify REBASE_HEAD >/dev/null 2>&1; then other=REBASE_HEAD
+  elif _merge_in_progress "$repo"; then other=MERGE_HEAD
+  else log "no rebase/merge in progress"; return 1; fi
+  base=$(git -C "$repo" merge-base HEAD "$other" 2>/dev/null) || { log "no merge base"; return 1; }
+  plan=$(basename "${OW_PLAN_DIR:-$(bash "$SCRIPT_DIR/ow-paths.sh" --check PLAN_DIR 2>/dev/null)}")
+  fix=$(basename "${OW_FIX_DIR:-$(bash "$SCRIPT_DIR/ow-paths.sh" --check FIX_DIR 2>/dev/null)}")
+  [ -n "$plan" ] && [ "$plan" != . ] || plan=80-ImplementPlan
+  [ -n "$fix" ] && [ "$fix" != . ] || fix=85-FixLog
+  for side in head other; do
+    ref=HEAD; [ "$side" = other ] && ref="$other"
+    git -C "$repo" log --format='%H	%s' "$base..$ref" -- "$f" 2>/dev/null | while IFS='	' read -r sha subj; do
+      emit "$side	commit	$sha	$subj"
+      git -C "$repo" show --name-only --format= "$sha" 2>/dev/null | while IFS= read -r p; do
+        case "/$p" in */"$plan"/*|*/"$fix"/*) emit "$side	log	$p" ;; esac
+      done
+    done
+  done
+  return 0
 }
 
 # ── subcommand: push ─────────────────────────────────────────────────────────
@@ -512,8 +659,10 @@ case "$SUB" in
   sync)     cmd_sync     "${1:-.}" ;;
   classify) cmd_classify "${1:-.}" ;;
   resolve)  cmd_resolve  "${1:-.}" ;;
+  continue) cmd_continue "${1:-.}" ;;
+  sides)    [ $# -ge 2 ] || { log "usage: sides <repo> <file>"; exit 1; }; cmd_sides "$1" "$2" ;;
   push)     [ $# -ge 2 ] || { log "usage: push <repo> <branch>"; exit 1; }; cmd_push "$1" "$2" ;;
   push-tag) [ $# -ge 2 ] || { log "usage: push-tag <repo> <tag>"; exit 1; }; cmd_push_tag "$1" "$2" ;;
   config)   cmd_config ;;
-  *) log "usage: ow-git-sync.sh {status|sync|classify|resolve|push|push-tag|config} [args]"; exit 1 ;;
+  *) log "usage: ow-git-sync.sh {status|sync|classify|resolve|continue|sides|push|push-tag|config} [args]"; exit 1 ;;
 esac

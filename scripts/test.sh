@@ -1572,9 +1572,10 @@ _gs_conflict() {
   printf '%b' "$4" > "$d/$f"; git -C "$d" commit -qam mine
   git -C "$d" checkout -q main
   printf '%b' "$5" > "$d/$f"; git -C "$d" commit -qam theirs
-  git -C "$d" checkout -q feat; git -C "$d" merge main -m x >/dev/null 2>&1 || true
+  git -C "$d" checkout -q feat; git -C "$d" -c merge.conflictStyle=diff3 merge main -m x >/dev/null 2>&1 || true
 }
 VROW='| ID | S |\n|---|---|\n'
+FM='---\nid: FN-1\n'
 
 run "git-sync: script exists + executable"  '[ -x scripts/ow-git-sync.sh ]'
 run "git-sync: in owned manifest"           'bash scripts/ow-owned.sh 2>/dev/null; . scripts/ow-owned.sh; ow_owned_scripts | grep -qx "ow-git-sync.sh"'
@@ -1595,6 +1596,32 @@ run "git-sync: vault prose is NEVER auto-resolved" \
   "_gs_conflict $GS_TMP/vp docs/obsidian-vault/FN-1.md 'intro\n' 'intro mine\n' 'intro theirs\n'; OW_VAULT_ABS=$GS_TMP/vp/docs/obsidian-vault bash $GS resolve $GS_TMP/vp | grep -q '^unresolved'"
 run "git-sync: same row key + different value = human" \
   "_gs_conflict $GS_TMP/vk docs/obsidian-vault/S.md '${VROW}| FN-001 | wip |\n' '${VROW}| FN-001 | done |\n' '${VROW}| FN-001 | blocked |\n'; OW_VAULT_ABS=$GS_TMP/vk/docs/obsidian-vault bash $GS resolve $GS_TMP/vk | grep -q '^unresolved'"
+# frontmatter version/date — merged key by key, base from diff3 markers
+run "git-sync: doc version — both bumped same base = deltas added, later date" \
+  "_gs_conflict $GS_TMP/fv docs/obsidian-vault/FN-1.md '${FM}version: 0.1.0\nupdated: 2026-10-01\n---\nbody\n' '${FM}version: 0.1.1\nupdated: 2026-10-05\n---\nbody\n' '${FM}version: 0.1.1\nupdated: 2026-10-06\n---\nbody\n' && OW_VAULT_ABS=$GS_TMP/fv/docs/obsidian-vault bash $GS resolve $GS_TMP/fv | grep -q '^resolved	vault-meta' && grep -qx 'version: 0.1.2' $GS_TMP/fv/docs/obsidian-vault/FN-1.md && grep -qx 'updated: 2026-10-06' $GS_TMP/fv/docs/obsidian-vault/FN-1.md"
+run "git-sync: doc version — different bumps = higher wins" \
+  "_gs_conflict $GS_TMP/fm docs/obsidian-vault/FN-1.md '${FM}version: 0.1.0\nupdated: 2026-10-01\n---\nbody\n' '${FM}version: 0.2.0\nupdated: 2026-10-05\n---\nbody\n' '${FM}version: 0.1.1\nupdated: 2026-10-06\n---\nbody\n' && OW_VAULT_ABS=$GS_TMP/fm/docs/obsidian-vault bash $GS resolve $GS_TMP/fm >/dev/null && grep -qx 'version: 0.2.0' $GS_TMP/fm/docs/obsidian-vault/FN-1.md"
+run "git-sync: doc version — minor bump on both sides adds at minor" \
+  "_gs_conflict $GS_TMP/fn docs/obsidian-vault/FN-1.md '${FM}version: 0.1.3\nupdated: 2026-10-01\n---\nbody\n' '${FM}version: 0.2.0\nupdated: 2026-10-05\n---\nbody\n' '${FM}version: 0.2.0\nupdated: 2026-10-06\n---\nbody\n' && OW_VAULT_ABS=$GS_TMP/fn/docs/obsidian-vault bash $GS resolve $GS_TMP/fn >/dev/null && grep -qx 'version: 0.3.0' $GS_TMP/fn/docs/obsidian-vault/FN-1.md"
+run "git-sync: other frontmatter key in the region = human" \
+  "_gs_conflict $GS_TMP/fk docs/obsidian-vault/FN-1.md '${FM}version: 0.1.0\nstatus: draft\n---\n' '${FM}version: 0.1.1\nstatus: done\n---\n' '${FM}version: 0.1.2\nstatus: wip\n---\n'; OW_VAULT_ABS=$GS_TMP/fk/docs/obsidian-vault bash $GS resolve $GS_TMP/fk | grep -q '^unresolved'"
+run "git-sync: frontmatter + table rows in one file both resolve" \
+  "_gs_conflict $GS_TMP/ft docs/obsidian-vault/S.md '${FM}version: 0.1.0\n---\nintro\n\n${VROW}| FN-001 | done |\n' '${FM}version: 0.1.1\n---\nintro\n\n${VROW}| FN-001 | done |\n| FN-003 | wip |\n' '${FM}version: 0.1.4\n---\nintro\n\n${VROW}| FN-001 | done |\n| FN-002 | wip |\n' && OW_VAULT_ABS=$GS_TMP/ft/docs/obsidian-vault bash $GS resolve $GS_TMP/ft | grep -q '^resolved	vault-append' && grep -qx 'version: 0.1.4' $GS_TMP/ft/docs/obsidian-vault/S.md && grep -q FN-002 $GS_TMP/ft/docs/obsidian-vault/S.md && grep -q FN-003 $GS_TMP/ft/docs/obsidian-vault/S.md"
+run "git-sync: vault-ai is its own knob (does not enable vault)" \
+  "_gs_conflict $GS_TMP/fa docs/obsidian-vault/FN-1.md '${FM}version: 0.1.0\n---\n' '${FM}version: 0.1.1\n---\n' '${FM}version: 0.1.2\n---\n'; OW_GIT_AUTO_RESOLVE=vault-ai OW_VAULT_ABS=$GS_TMP/fa/docs/obsidian-vault bash $GS resolve $GS_TMP/fa | grep -q '^unresolved'"
+run "git-sync: vault-ai on by default" \
+  "OW_GIT_SYNC_JSON='{}' bash $GS config | grep -q '^auto_resolve=.*vault-ai'"
+# sides + continue — the AI step merges prose from plan/fix-log evidence, then hands back
+run "git-sync: sides lists each side's commits + plan/fix logs" \
+  "_gs_repo $GS_TMP/sd && mkdir -p $GS_TMP/sd/v/40-Functions $GS_TMP/sd/v/80-ImplementPlan && printf 'a\n' > $GS_TMP/sd/v/40-Functions/FN.md && git -C $GS_TMP/sd add -A && git -C $GS_TMP/sd commit -qm base && git -C $GS_TMP/sd checkout -qb feat && printf 'mine\n' > $GS_TMP/sd/v/40-Functions/FN.md && printf 'p\n' > $GS_TMP/sd/v/80-ImplementPlan/p.md && git -C $GS_TMP/sd add -A && git -C $GS_TMP/sd commit -qm 'feat: mine' && git -C $GS_TMP/sd checkout -q main && printf 'theirs\n' > $GS_TMP/sd/v/40-Functions/FN.md && git -C $GS_TMP/sd commit -qam 'fix: theirs' && git -C $GS_TMP/sd checkout -q feat && ! git -C $GS_TMP/sd rebase main >/dev/null 2>&1; out=\$(OW_PLAN_DIR=x/80-ImplementPlan OW_FIX_DIR=x/85-FixLog bash $GS sides $GS_TMP/sd v/40-Functions/FN.md); printf '%s' \"\$out\" | grep -q '^other	log	v/80-ImplementPlan/p.md' && printf '%s' \"\$out\" | grep -q '^head	commit	.*fix: theirs'"
+run "git-sync: continue finishes the stopped rebase after a hand/AI resolve" \
+  "printf 'mine + theirs\n' > $GS_TMP/sd/v/40-Functions/FN.md && git -C $GS_TMP/sd add v/40-Functions/FN.md && bash $GS continue $GS_TMP/sd >/dev/null; [ \$? -eq 0 ] && [ ! -d $GS_TMP/sd/.git/rebase-merge ] && git -C $GS_TMP/sd log -1 --format=%s | grep -q 'feat: mine'"
+run "git-sync: continue with a file still conflicted stays at 3" \
+  "_gs_conflict $GS_TMP/sc app.js 'x=1\n' 'x=3\n' 'x=2\n'; bash $GS continue $GS_TMP/sc >/dev/null; [ \$? -eq 3 ] && grep -q '<<<<<<<' $GS_TMP/sc/app.js"
+run "git-sync: sync end-to-end — doc version collision rebased + reported" \
+  "git init -q --bare $GS_TMP/rem3 && _gs_repo $GS_TMP/e1 && mkdir -p $GS_TMP/e1/v && printf -- '---\nversion: 0.1.0\n---\n\ntop\n\nmid\n\nend\n' > $GS_TMP/e1/v/FN.md && git -C $GS_TMP/e1 add -A && git -C $GS_TMP/e1 commit -qm base && git -C $GS_TMP/e1 remote add origin $GS_TMP/rem3 && git -C $GS_TMP/e1 push -q -u origin main && git clone -q $GS_TMP/rem3 $GS_TMP/e2 && git -C $GS_TMP/e2 config user.email e@e && git -C $GS_TMP/e2 config user.name e && printf -- '---\nversion: 0.1.1\n---\n\nTOP\n\nmid\n\nend\n' > $GS_TMP/e2/v/FN.md && git -C $GS_TMP/e2 commit -qam teammate && git -C $GS_TMP/e2 push -q origin main && printf -- '---\nversion: 0.1.1\n---\n\ntop\n\nmid\n\nEND\n' > $GS_TMP/e1/v/FN.md && git -C $GS_TMP/e1 commit -qam mine && out=\$(OW_VAULT_ABS=$GS_TMP/e1/v bash $GS sync $GS_TMP/e1) && printf '%s' \"\$out\" | grep -q '^resolved	vault-meta	v/FN.md' && grep -qx 'version: 0.1.2' $GS_TMP/e1/v/FN.md && grep -qx TOP $GS_TMP/e1/v/FN.md && grep -qx END $GS_TMP/e1/v/FN.md && [ -z \"\$(git -C $GS_TMP/e1 status --porcelain)\" ]"
+run "git-sync: same change arriving twice is NOT bumped again" \
+  "git -C $GS_TMP/e2 pull -q --rebase origin main 2>/dev/null; git -C $GS_TMP/e2 fetch -q; printf -- '---\nversion: 0.1.3\n---\n\nTOP\n\nmid\n\nEND\n' > $GS_TMP/e1/v/FN.md && git -C $GS_TMP/e1 commit -qam same && git -C $GS_TMP/e1 push -q origin main && git -C $GS_TMP/e2 reset -q --hard origin/main~1 && cp $GS_TMP/e1/v/FN.md $GS_TMP/e2/v/FN.md && git -C $GS_TMP/e2 commit -qam same2 && OW_VAULT_ABS=$GS_TMP/e2/v bash $GS sync $GS_TMP/e2 >/dev/null && grep -qx 'version: 0.1.3' $GS_TMP/e2/v/FN.md"
 run "git-sync: source conflict exits 3" \
   "_gs_conflict $GS_TMP/src app.js 'x=1\n' 'x=3\n' 'x=2\n'; bash $GS resolve $GS_TMP/src >/dev/null; [ \$? -eq 3 ]"
 run "git-sync: no remote exits 4 (solo/offline unchanged)" \
@@ -1629,6 +1656,8 @@ run "git-sync: bare --pull is sync-only"    'grep -q "sync-only gate" .ow/comman
 run "git-sync: bump fetches tags first"     'grep -q "fetch --tags" .ow/commands/ow-git.md'
 run "git-sync: push goes through helper"    'grep -q "ow-git-sync.sh" .ow/commands/ow-git.md'
 run "git-sync: exit 3 stops the command"    'grep -q "Exit 3 ends the command" .ow/commands/ow-git.md'
+run "git-sync: ow-git has Phase 2.6 vault-ai merge" 'grep -q "Phase 2.6 — Merge vault docs by intent" .ow/commands/ow-git.md && grep -q "sides <repo> <file>" .ow/commands/ow-git.md && grep -q "continue \"\$repo\"" .ow/commands/ow-git.md'
+run "git-sync: vault-ai is vault-only + unsure = human" 'grep -q "Vault \`.md\` only" .ow/commands/ow-git.md && grep -q "Unsure = leave it" .ow/commands/ow-git.md'
 run "git-sync: worktree fetches base"       'grep -q "START_REF" .ow/commands/_shared/worktree.md && grep -q "worktree_base_sha" .ow/commands/_shared/worktree.md'
 run "git-sync: fragment registered in README" 'grep -q "git-sync.md" .ow/commands/_shared/README.md'
 # /ow-sync ships commands/ but never scripts/ → every call site must degrade, not fail
@@ -2093,10 +2122,10 @@ run "settings: in ROLLBACK_PATHS"            'awk "/^ROLLBACK_PATHS=\(/,/^\)/" s
 run "settings: backed up before the merge"   'grep -q "for p in .claude/commands .claude/agents .claude/settings.json; do" scripts/upgrade.sh'
 run "settings: degrades, never destroys"     'grep -q "python3 not found" scripts/ow-settings-merge.sh && grep -q "LEFT UNCHANGED" scripts/ow-settings-merge.sh'
 run "settings: adds no jq dependency"        '! grep -qE "^[^#]*[^a-z]jq " scripts/ow-settings-merge.sh'
-run "settings: no blanket Bash shipped"      '! grep -qE "^ *\"Bash\",?$" .claude/settings.json'
+run "settings: blanket Bash shipped (v1.5.1)" 'grep -qE "^ *\"Bash\",?$" .claude/settings.json'
 run "settings: no blanket WebFetch shipped"  '! grep -qE "^ *\"WebFetch\",?$" .claude/settings.json'
 run "settings: dead OW_VAULT gone"     '! grep -q "OW_VAULT" .claude/settings.json'
-run "settings[behavioral]: hooks/deny/env survive, legacy blanket retired" '
+run "settings[behavioral]: hooks/deny/env survive, legacy WebFetch retired" '
   d=$(mktemp -d);
   printf "%s\n" "{" "  \"permissions\": { \"allow\": [\"Bash\",\"Read\",\"Edit\",\"Write\",\"WebFetch\"], \"deny\": [\"Read(./.env)\"] }," "  \"hooks\": { \"PreToolUse\": [] }," "  \"env\": { \"OW_VAULT\": \"docs\", \"CO\": \"x\" }" "}" > "$d/cur.json";
   ( . scripts/ow-settings-merge.sh; ow_settings_merge .claude/settings.json "$d/cur.json" ) >/dev/null 2>&1;
@@ -2104,7 +2133,7 @@ run "settings[behavioral]: hooks/deny/env survive, legacy blanket retired" '
   grep -q "PreToolUse" "$d/cur.json" || ok=0;
   grep -q "Read(./.env)" "$d/cur.json" || ok=0;
   grep -q "\"CO\"" "$d/cur.json" || ok=0;
-  grep -qE "^ *\"Bash\",?$" "$d/cur.json" && ok=0;
+  grep -qE "^ *\"WebFetch\",?$" "$d/cur.json" && ok=0;
   grep -q "OW_VAULT" "$d/cur.json" && ok=0;
   rm -rf "$d"; [ "$ok" = 1 ]'
 run "settings[behavioral]: a curated allow list is never taken away" '

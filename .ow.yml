@@ -38,7 +38,7 @@ vault_path: docs/obsidian-vault
 # - `source`  = where /ow-sync pulls from
 # - `last_synced` = updated by /ow-sync Phase 6 + scripts/upgrade.sh
 ow:
-  version: "1.5.1"
+  version: "1.6.0"
   source: "https://github.com/ThunderBirdsX3/obsidian-workflow"
   last_synced: "2026-09-10"
 
@@ -164,13 +164,17 @@ version_bump: { files: [], docs_only_skip: true, append_tag: "[v{version}]", uni
 #                changelog — CHANGELOG.md → union both sides, higher version first
 #                vault     — vault .md, but ONLY where the conflict
 #                            is pure table rows / list items with no repeated primary key
-#                            (IMPLEMENTATION-STATUS, MOCs). Any prose line ⇒ human.
+#                            (IMPLEMENTATION-STATUS, MOCs) — plus frontmatter `version:` /
+#                            date fields, key by key: later date · higher version · both
+#                            bumped the same base ⇒ deltas added (0.1.0 + 0.1.1 + 0.1.1 ⇒ 0.1.2)
+#                vault-ai  — vault prose left over → /ow-git Phase 2.6 merges it from both
+#                            sides' plan/fix-logs, gated; unsure ⇒ human
 #                []        — resolve nothing automatically
 #   push_retry   non-fast-forward push → re-sync and push again this many times
 git:
   auto_sync: true
   strategy: rebase
-  auto_resolve: [version, lock, changelog, vault]
+  auto_resolve: [version, lock, changelog, vault, vault-ai]
   push_retry: 1
 
 # Vault dir-name overrides — only entries that DIFFER from the numbered default.

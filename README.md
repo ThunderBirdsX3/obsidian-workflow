@@ -114,7 +114,7 @@ cd my-app
 > push โดน teammate แซง → sync ใหม่แล้ว push ซ้ำเอง **ไม่เคย force**; conflict ที่ไม่มีกฎตายตัว = rebase ค้างไว้ให้คนแก้ (ไม่ commit อะไรทั้งนั้น)
 > · งาน uncommitted ตอน sync = `--autostash` คืนให้เอง; คืนแล้วชน → หยุดเหมือน conflict ปกติ และงานอยู่ครบทั้งใน marker และใน stash
 > · แค่ดึงงานล่าสุด → `/ow-git --pull` · ดูว่าตามหลังแค่ไหน → `/ow-git --status`
-> · auto-resolve เฉพาะที่มีกฎตายตัว (version / lock / CHANGELOG / ตาราง-ลิสต์ใน vault) และ **ขึ้นรายงานทุกไฟล์** — ปรับที่ `git.auto_resolve`
+> · auto-resolve ที่มีกฎตายตัว (version / lock / CHANGELOG / ตาราง-ลิสต์ใน vault / frontmatter `version:` + วันที่) + prose ใน vault doc merge ตาม plan/fix-log ของทั้งสองฝั่ง (ไม่แน่ใจ = คนแก้) และ **ขึ้นรายงานทุกไฟล์** — ปรับที่ `git.auto_resolve`
 
 ### B. แก้บั๊ก
 

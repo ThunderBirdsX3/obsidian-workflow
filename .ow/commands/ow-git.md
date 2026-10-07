@@ -55,7 +55,7 @@ FRESH SHELL — Phase 0's exports are gone — so it re-hydrates first, then ass
 ## Rules
 
 - **Never run automatically** — run only when the user invokes it (the Phase 8.5 issue-handoff is a sub-step of a push the user asked for, not the command running itself)
-- **Auto-sync (Phase 2.5)** — every run that will commit/push first fetches + rebases onto origin, so two people on the same branch never fight over a non-fast-forward push. Default-on (`git.auto_sync`, off per run with `--no-sync`); no remote / offline → skipped silently. A conflict it cannot resolve → **STOP before staging** (nothing committed, nothing pushed, nothing bumped)
+- **Auto-sync (Phase 2.5)** — every run that will commit/push first fetches + rebases onto origin, so two people on the same branch never fight over a non-fast-forward push. Default-on (`git.auto_sync`, off per run with `--no-sync`); no remote / offline → skipped silently. Vault prose left conflicted → **Phase 2.6** merges it from the plan/fix-log evidence of both sides. A conflict still left → **STOP before staging** (nothing committed, nothing pushed, nothing bumped)
 - **Auto issue-handoff (Phase 8.5)** — a push containing `Closes #NN` → auto comment "fixed in vX.Y.Z" + flip label `ready for test` (default-on; turn it off with `--no-ready-for-test`); the **never close** issue rule still holds
 - **Auto fix-log stamp (Phase 8.6)** — a `--bump` push of a plan that has `source_fix:` → stamp `fixed_in_version` + `fixed_commit` (real sha) into the source fix-log (mirror of 8.5 for a local fix-log: no comment / no label flip) (#30)
 - **Unified bump version (Phase 5.5)** — `--bump` computes `TARGET_VERSION` once (= bump from the max of every repo's current version), then uses the same number for tag + commit-tag + version file in every repo **including main** (main = canonical version, moves on every `--bump`); never bump repos separately until the versions diverge (config `version_bump.unified`, default true). The version file is written by `scripts/ow-version.sh` (bare semver, read-back verified) and a **format gate runs before commit/tag/push** — a malformed bump aborts instead of shipping (#34)
@@ -136,31 +136,33 @@ else
   [ "$rebase_flag" = "1" ] && export OW_GIT_STRATEGY=rebase
   [ "$merge_flag"  = "1" ] && export OW_GIT_STRATEGY=merge
 
+  OW_ROOT="$(git rev-parse --show-toplevel)"
+  : > "$OW_ROOT/.ow/local/sync-conflicts"          # repos Phase 2.6 gets a turn at
   for repo in . $(bash "$RESOLVER" --submodules | cut -f1); do
     [ -n "$repo" ] || continue
     out=$(bash "$SYNC" sync "$repo"); rc=$?
     echo "$repo: $out"
     case $rc in
       0|4) ;;                                # synced / already in sync / offline-solo → carry on
-      3)   echo "🛑 $repo — conflict left for you. Nothing was staged, committed, pushed or bumped."
-           bash "$SYNC" classify "$repo"
-           case "$out" in
-             # the rebase already finished — `rebase --continue` here is a dead end
+      3)   case "$out" in
+             # the rebase already finished — `rebase --continue` here is a dead end, and the
+             # stash is the user's uncommitted work: never an AI merge target
              *autostash*)
+               echo "🛑 $repo — stash pop conflict. Nothing was staged, committed, pushed or bumped."
+               bash "$SYNC" classify "$repo"
                echo "   your work is safe twice: the markers in the file, and \`git stash list\`"
-               echo "   resolve → git add <file> && git stash drop → re-run this command" ;;
-             *)
-               echo "   resolve → git add <file> && git rebase --continue   (or --abort) → re-run this command" ;;
-           esac
-           exit 1 ;;
+               echo "   resolve → git add <file> && git stash drop → re-run this command"
+               exit 1 ;;
+             *) echo "$repo" >> "$OW_ROOT/.ow/local/sync-conflicts" ;;   # → Phase 2.6
+           esac ;;
       *)   echo "🛑 $repo — git sync failed"; exit 1 ;;
     esac
   done
 fi
 ```
 
-🔴 **Exit 3 ends the command** — never "sync failed, committing anyway". A commit on top of an
-unfinished rebase is the exact damage this phase exists to prevent
+🔴 **Exit 3 ends the command** — after Phase 2.6 has had its turn. Never "sync failed, committing
+anyway". A commit on top of an unfinished rebase is the exact damage this phase exists to prevent
 🔴 **Every `resolved` line the helper prints must reach the Phase 9 report** — an auto-resolve the
 user never hears about is a silent edit to their work
 🔴 Read-only submodules are skipped by the loop's own read-only column (Phase 6), and a repo with
@@ -169,6 +171,83 @@ no remote returns exit 4 → a solo/offline project behaves exactly as it did be
 (the pre-sync behavior) and the report says auto-sync was off — a `/ow-sync`-only project keeps working.
 Scope: **this sync helper only**. `scripts/ow-version.sh` (Phase 6/7 version writer) is the one helper
 whose absence STOPs a `--bump`, because degrading there means an ad-hoc write — the defect itself (#34)
+
+## Phase 2.6 — Merge vault docs by intent (only when Phase 2.5 left a conflict)
+
+Runs only when `.ow/local/sync-conflicts` is non-empty. The script already merged everything
+with a fixed rule (version · lock · changelog · vault rows · frontmatter `version:`/dates). What
+is left in the vault is **prose** — two people edited the same FN/FEAT/SRS doc. Those changes
+came from plans and fix-logs, so the reason behind each side is on record: merge by that
+reason, not by guessing between two texts.
+
+**Off** when `git.auto_resolve` has no `vault-ai` (`bash "$SYNC" config` → `auto_resolve=`).
+Off ⇒ skip straight to the stop below.
+
+```bash
+. "$(git rev-parse --show-toplevel)/.ow/local/paths.env"
+[ -n "$PLAN_DIR" ] || { echo 'FATAL: Phase 0 not loaded'; exit 1; }
+OW_ROOT="$(git rev-parse --show-toplevel)"; SYNC="$OW_ROOT/scripts/ow-git-sync.sh"
+for repo in $(cat "$OW_ROOT/.ow/local/sync-conflicts"); do
+  echo "=== $repo ==="
+  bash "$SYNC" classify "$repo"                  # vault-append rows still here = AI candidates
+done
+```
+
+Per candidate file (class `vault-append`, still conflicted) — **one file at a time**:
+
+1. **Read the three versions** — `git -C <repo> show :1:<file>` (base) · `:2:<file>` (HEAD side) ·
+   `:3:<file>` (incoming side). During a **rebase**, `:2` is the upstream (teammate) and `:3` is
+   *your* replayed commit — git's inversion; the `sides` labels follow the stage numbers.
+2. **Collect the evidence** — `bash "$SYNC" sides <repo> <file>` → commits on each side and the
+   plan / fix-log files those commits touched. Read those logs (both sides, from their commit:
+   `git show <sha>:<log>`), the commit subjects, and any `$PLAN_DIR`/`$FIX_DIR` file in either
+   side's tree that links `[[<doc-name>]]`. No log and no meaningful commit subject on a side ⇒
+   that side's intent is unknown ⇒ **leave the file for the human**.
+3. **Merge** — base + every change the HEAD side made + every change the incoming side made,
+   each one traced to its log. Two changes to different sections / rows / sentences ⇒ keep both.
+   Same sentence, same value, or same decision changed two different ways ⇒ **leave the file for
+   the human** — even if one log is newer. A newer log does not mean the older one was dropped.
+   Write the result in the vault's present-tense style (`_shared/vault-doc-style.md`) — never
+   "A changed this, B changed that" inside the doc.
+4. **Gate — every item, or the file goes back** (`git -C <repo> checkout -m -- <file>` restores the
+   conflict markers exactly as git left them):
+   - no `<<<<<<<` / `|||||||` / `=======` / `>>>>>>>` line left
+   - frontmatter parses: `yq --front-matter=extract '.' <file>` exits 0
+   - every `[[wikilink]]` present on either side (`:2` and `:3`) is still present, unless one
+     side's log says it removed that link
+   - every heading on either side is still present, under the same rule
+   - `bash "$OW_ROOT/scripts/ow-verify-vault-style.sh"` passes
+5. **Stage** — `git -C <repo> add -- <file>`. Record `<file> ← <log-a>, <log-b>` for the report.
+
+Then, per repo where every candidate staged and **no non-vault file is still conflicted**:
+
+```bash
+out=$(bash "$SYNC" continue "$repo"); rc=$?
+echo "$out"        # resolved lines for later replayed commits → also go into Phase 9
+```
+
+`continue` → rc `3` means the **next** replayed commit stopped too: run this phase again on that
+repo (new candidates, new evidence). A repo whose conflicts are all gone drops out of the list.
+
+**Stop** — any repo still at `3` (code conflict, a file the gate sent back, or `vault-ai` off):
+
+```bash
+echo "🛑 $repo — conflict left for you. Nothing was staged, committed, pushed or bumped."
+bash "$SYNC" classify "$repo"
+echo "   resolve → git add <file> && git rebase --continue   (or --abort) → re-run this command"
+exit 1
+```
+
+Report both lists with the stop: what the AI merged (with the logs it used) **and** what is left.
+Files already staged stay staged — the human's `rebase --continue` keeps them.
+
+🔴 **Vault `.md` only.** Source code, README, `usage/`, anything outside `$VAULT_ABS` ⇒ human,
+always — there is no plan/fix-log trail to merge those by
+🔴 **Unsure = leave it.** A wrong merge in a spec doc is a silent wrong requirement that the next
+`/ow-implement` builds faithfully. A stop costs the user one manual merge
+🔴 Never edit the plan / fix-log files themselves here — they are evidence, not merge targets
+🔴 Every file this phase stages becomes an `auto-resolved … (vault-ai)` row in Phase 9 with the
+logs it was merged from — never drop one
 
 ## Phase 3 — `--pull` (sync-only gate)
 
@@ -186,7 +265,9 @@ fi
 ```
 
 🔴 **Sync-only never commits.** A user asking to update must not get a commit prompt, an empty
-commit, or a push — `git pull` does not commit either
+commit, or a push — `git pull` does not commit either. The one commit a sync itself may add is the
+helper's `docs:` doc-version merge (`_shared/git-sync.md` §2) — part of the sync result, reported
+as an `auto-resolved` row, never pushed by `--pull`
 🔴 With `--plan` / `--fix` / `--message` / free text present, `--pull` is redundant (Phase 2.5 is
 already default-on) and the run continues normally
 🔴 A conflict in this mode behaves like any other: Phase 2.5 exits 3, the rebase is left in place,
@@ -473,6 +554,7 @@ figma  [read-only] —                 skipped
 
 sync (Phase 2.5)                    api ↻rebased +2 · web in-sync · app in-sync · main ↻rebased +1
 auto-resolved                       docs/obsidian-vault/00-Index/IMPLEMENTATION-STATUS.md (vault-append)
+auto-resolved                       docs/obsidian-vault/40-Functions/FN-Search.md (vault-ai ← 2026-06-08-1533-bar, 2026-06-08-1610-baz)
 ready-for-test handoff (Phase 8.5)  v0.2.78:  #62 #63 → ready for test ✅
 fix-log stamp (Phase 8.6)           v0.2.78:  2026-06-08-1523-foo ← plan 2026-06-08-1533-bar
 ```
@@ -508,3 +590,4 @@ At the end of /ow-git, answer with **short, quick-to-read bullets** in the confi
 - Never commit / push / bump after a sync returned exit 3 — the run ends there
 - Never move a tag that already exists on origin (exit 5 = a teammate claimed that version)
 - Never resolve a conflict without listing it in the Phase 9 report
+- Never AI-merge a file outside the vault, or a vault file whose two sides changed the same thing differently

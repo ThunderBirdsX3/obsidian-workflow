@@ -20,7 +20,12 @@ bash "$SYNC" sync     <repo>            # fetch + rebase|merge onto upstream, au
 bash "$SYNC" push     <repo> <branch>   # push; non-fast-forward → re-sync + retry
 bash "$SYNC" push-tag <repo> <tag>      # push one tag; collision is fatal, never forced
 bash "$SYNC" classify <repo>            # "<class>\t<file>" per conflicted file, writes nothing
+bash "$SYNC" sides    <repo> <file>     # commits + plan/fix logs per side (evidence for Phase 2.6)
+bash "$SYNC" continue <repo>            # after a hand/AI resolve: safe classes + rebase --continue until done
 ```
+
+Rebase and merge run with `merge.conflictStyle=diff3`, so every conflict region carries the
+common-ancestor lines (`|||||||`) — the frontmatter version rule needs the base.
 
 **Helper not installed?** `/ow-sync` refreshes `commands/` but never `scripts/` — so this fragment
 can reach a project that does not have `ow-git-sync.sh` yet. Every caller guards with `[ -x "$SYNC" ]`
@@ -50,15 +55,28 @@ A file in a safe class whose regions do not match the class shape still goes to 
 | `lock` | `package-lock.json`, `pnpm-lock.yaml`, `yarn.lock`, `poetry.lock`, `Cargo.lock`, `composer.lock`, `Gemfile.lock` | take the checked-out side, then **regenerate** lockfile-only from the manifest. Regen missing or failing ⇒ back to conflicted (never commit a lock we cannot vouch for) |
 | `changelog` | `CHANGELOG.md` | union both sides, dedupe identical lines, higher version block first |
 | `vault-append` | `.md` under `$VAULT_ABS` | union — **only** when every region line on both sides is a table row / list item **and** no primary key appears on both sides with different content |
-| `vault-meta` | frontmatter date fields (`updated:`, `last_synced:`, `date_modified:`, `synced_at:`) | keep the later date |
-| everything else | source code, vault prose, other frontmatter | **human** |
+| `vault-meta` | vault frontmatter region holding only `version:` and date fields (`updated:`, `last_synced:`, `date_modified:`, `synced_at:`) — merged key by key | dates: the later one · `version:` different ⇒ higher semver · `version:` equal on both sides but moved from base ⇒ both bumped ⇒ add the deltas (base `0.1.0`, both `0.1.1` ⇒ `0.1.2`; base `0.1.3`, both `0.2.0` ⇒ `0.3.0`). Any other key, or a key only one side has ⇒ human |
+| `vault-ai` | vault `.md` prose the classes above left | **not this script** — `/ow-git` Phase 2.6 merges it by intent from both sides' plan/fix-logs (`sides`), gates it, then calls `continue`. Unsure ⇒ human |
+| everything else | source code, non-vault docs, other frontmatter | **human** |
 
 The classes that pay for themselves in a real team: `00-Index/IMPLEMENTATION-STATUS.md`, MOC link
 lists — append-only tables that collide constantly. Plan and fix-log
 filenames carry a timestamp, so those never collide in the first place.
 
 Which classes run at all comes from `.ow.yml` → `git.auto_resolve`
-(default `[version, lock, changelog, vault]`; `[]` turns every auto-resolve off).
+(default `[version, lock, changelog, vault, vault-ai]`; `[]` turns every auto-resolve off).
+`vault` covers `vault-append` + `vault-meta`; `vault-ai` is its own knob.
+
+**Bumps git never sees as a conflict.** Two people edit different sections of one vault doc and
+both bump `version:` `0.1.0 → 0.1.1` — the same line change on both sides merges cleanly to
+`0.1.1`, one bump lost. After every successful sync the helper compares base / upstream / local
+for each vault `.md` both sides changed, applies the add-the-deltas rule (`0.1.2`), and commits
+it as one `docs:` commit (pathspec-only — the user's other staged work is untouched), printing a
+`resolved\tvault-meta\t<file>` line like any other. Skipped when both sides hold the identical
+file (the same change arrived twice) or the user has uncommitted edits to that file.
+
+The app `VERSION` file keeps **max** only — never the add-the-deltas rule: a tag is cut from it,
+and `--bump` runs after the sync anyway, so two bumps become one bump on top of the higher number.
 
 ## 3. Invariants
 

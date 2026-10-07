@@ -21,7 +21,7 @@
 # exception is the LEGACY signature — the exact blanket set obsidian-workflow shipped through
 # v0.5.1 — replaced wholesale precisely BECAUSE an unmodified list proves the file is
 # obsidian-workflow's own and was never curated. A consumer who edited the list keeps it, and
-# is warned if a bare "Bash" (auto-approves every shell command) is among it.
+# is warned if they added a bare "Bash" themselves while the shipped set has none.
 #
 # Portable: bash 3.2 (no declare -A / mapfile) + BSD userland. JSON handling uses
 # python3 — the SAME optional dependency install.sh + upgrade.sh already use for the
@@ -32,9 +32,9 @@
 # API:
 #   ow_settings_merge <shipped.json> <target.json>   → merge in place; always rc 0
 
-# The blanket allow-list obsidian-workflow shipped through v0.5.1. Retired: a bare "Bash" entry
-# auto-approves EVERY shell command, including ones that reach outside the project, and
-# it overrides the scoped Bash(...) grants in every .claude/agents/*.md frontmatter.
+# The blanket allow-list obsidian-workflow shipped through v0.5.1 — recognised only as an
+# untouched signature, then swapped for the current shipped set (which carries no blanket
+# WebFetch). Whether the shipped set grants a bare "Bash" is decided in .claude/settings.json.
 OW_SETTINGS_LEGACY_ALLOW='Bash Read Edit Write WebFetch'
 
 # env keys obsidian-workflow used to ship and now withdraws, each with the exact value it
@@ -104,14 +104,14 @@ if ship_allow:
     if not isinstance(have, list): have = []
     if have and set(have) == legacy:
         perms["allow"] = list(ship_allow)
-        notes.append("replaced the unmodified legacy blanket allow-list with the scoped set")
+        notes.append("replaced the unmodified legacy blanket allow-list with the shipped set")
     else:
         seen = set(have)
         added = [r for r in ship_allow if r not in seen]
         perms["allow"] = have + added
         if added:
             notes.append("added %d allow rule(s): %s" % (len(added), ", ".join(added)))
-        if "Bash" in perms["allow"]:
+        if "Bash" in have and "Bash" not in ship_allow:
             notes.append("KEPT your own bare \"Bash\" allow - it auto-approves EVERY shell command; consider scoped Bash(...) rules")
 # env — withdraw retired OW_* keys still holding the value obsidian-workflow shipped.
 env = cur.get("env")
