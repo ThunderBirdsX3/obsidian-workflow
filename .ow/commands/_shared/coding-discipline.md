@@ -7,7 +7,7 @@
 > Read by: `/ow-implement` 5.2 · 5.3 · `/ow-fix` Phase 3 · `_shared/fix-issue-fix-flow.md` 4 · 6
 >
 > 🔴 The project's own rule file for area `coding` under `.ow/rules/` — loaded by every
-> command's Phase 0 via `ow-paths.sh --rules coding` — **overrides** anything in this file. This is
+> command's Phase 0 via `ow-paths.sh --rules-load coding` — **overrides** anything in this file. This is
 > the floor that applies when a project has written no rule of its own.
 
 ## 1. Checkable success criteria before the first edit

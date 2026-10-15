@@ -29,7 +29,7 @@
 #      every verb spec. Check 1 only proves the marker is present, so a typo in one command's
 #      resolver call would live there forever; every command loads this block on every run, so a
 #      drifted copy is a per-command failure mode nothing else catches. Step 2 is exempt — its
-#      `--rules <area>` argument is legitimately per-command.
+#      `--rules-load <area>` argument is legitimately per-command.
 #   9. The `context_closed` contract appears in ow-plan.md, ow-implement.md and
 #      _shared/delegation.md. /ow-plan emits the flag on a phased plan and the other two are its
 #      only readers; losing it on one side silently re-inflates a phase's context to the full
@@ -191,7 +191,7 @@ fi
 # ── check 8: the Phase 0 step-1 block has not drifted between commands ───────
 # Every command pastes this block into context on every run; a drifted copy (typo'd resolver
 # path, missing VAULT_ABS assert, missing export) breaks that one command only and check 1 —
-# which just looks for the marker — would never see it. Step 2 is skipped: its `--rules <area>`
+# which just looks for the marker — would never see it. Step 2 is skipped: its `--rules-load <area>`
 # argument is per-command by design.
 if [ -d "$CMDS" ]; then
   ref=""; ref_cmd=""; drift=""; nop0=""

@@ -284,7 +284,7 @@ bash scripts/install.sh --source $(pwd) --target /tmp/test-ow --dry-run
 
 | ไฟล์ | หน้าที่ |
 |---|---|
-| `ow-paths.sh` | config + path resolver — single source ของทุก path/flag (`--shell` `--rules` `--submodules` `--agent-model` `--command-model` `--selftest`) |
+| `ow-paths.sh` | config + path resolver — single source ของทุก path/flag (`--shell` `--rules` `--rules-load` `--submodules` `--agent-model` `--command-model` `--selftest`) |
 | `ow-safe-paths.sh` | protected-set (`SAFE_PATHS`) — install + upgrade + sync ใช้ร่วมกัน |
 | `ow-owned.sh` | owned-file manifest ของ `scripts/` + `bin/` |
 | `ow-claude-md.sh` | canonical `CLAUDE.md` managed-block merge — block content อยู่ใน `CLAUDE.md` ที่ ship มา, นอก marker ไม่เคยถูกแตะ |

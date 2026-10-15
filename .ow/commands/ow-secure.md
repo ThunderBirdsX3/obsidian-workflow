@@ -7,7 +7,7 @@ description: Security pre-flight — scan secrets, PII, screenshot masking, publ
 Check secrets, PII, public-repo guardrails, and screenshot masking before commit/handoff
 
 ## Phase 0 — Load Context (MANDATORY — before every other phase)
-<!-- OW-PHASE0: canonical Load-Context preamble. Step 1 (resolver eval + assert + export) is byte-identical in every command and conformance-lint check 8 fails on any drift. Step 2 is per-command only in its `--rules <area>` argument (/ow-fix-issue extends it for multi-area + rules-validate). Do NOT edit anything else per-command. -->
+<!-- OW-PHASE0: canonical Load-Context preamble. Step 1 (resolver eval + assert + export) is byte-identical in every command and conformance-lint check 8 fails on any drift. Step 2 is per-command only in its `--rules-load <area[,area]>` argument. Do NOT edit anything else per-command. -->
 
 Runs FIRST, before any other phase. Loads resolved project paths + config so this spec
 never hardcodes a vault/build path. If the resolver is absent or exits non-zero, **STOP**
@@ -23,10 +23,10 @@ bash "$OW_ROOT/scripts/ow-paths.sh" --shell > "$OW_ENV.tmp" && mv "$OW_ENV.tmp" 
 [ -n "$VAULT_ABS" ] || { echo "FATAL: Phase 0 not loaded"; exit 1; }
 export OW_CTX_LOADED=1
 # 2) load this command's project rules — they OVERRIDE the generic guidance in this spec
-RULES=$(bash "$(git rev-parse --show-toplevel)/scripts/ow-paths.sh" --rules security)
-for _rf in $RULES; do echo "Read rule: $_rf"; done
+bash "$(git rev-parse --show-toplevel)/scripts/ow-paths.sh" --rules-load security
 ```
 
+Step 2's rule text is binding (it OVERRIDES this spec for its area); the final report lists `rules applied: <file, …>` or `rules applied: none`.
 Use ONLY resolved vars in every later phase — never a `<vault>/...` literal or a hardcoded
 build/test command: `$VAULT_ABS $IMPL_STATUS $PRD_DIR $FEAT_DIR $FN_DIR $PHASE_DIR $FLOW_DIR
 $REF_DIR $DS_DIR $PLAN_DIR $FIX_DIR $TEST_DIR $HANDOFF_DIR $TEMPLATE_CHAIN
@@ -43,6 +43,16 @@ FRESH SHELL — Phase 0's exports are gone — so it re-hydrates first, then ass
 /ow-secure pii                # scan PII only
 /ow-secure --since <ref>      # scan diff since ref
 ```
+
+## Project rules — how they bind each phase
+
+The rule text Phase 0 step 2 printed is part of this spec for this run. Apply it phase by phase:
+- **Phase 1–2** — a rule may ADD secret/PII patterns, paths to scan, or a documented
+  false-positive allowlist; it never waives or narrows the secret/PII scans themselves
+- **Phase 4–6** — a rule may replace the generic check (public-repo signals, the dependency
+  tool, prod config names, the auth/deploy model) — the rule wins over the text below
+- A rule that conflicts with a BLOCK and is not explicit about it → keep the BLOCK, quote
+  the rule line in the report as an open item
 
 ## Phase 1 — Secret scan
 
@@ -200,6 +210,7 @@ Security pre-flight
 ✅ Public-repo guardrails: ok
 🟡 npm audit: 3 high-severity (express@4.17 — upgrade to 4.19)
 ✅ Production guardrails: ok
+📜 Rules applied: .ow/rules/security.md (Phase 1: 2 added patterns · Phase 6: prod config names)
 
 Verdict: REVIEW NEEDED (2 yellow)
 ```
@@ -215,6 +226,7 @@ Verdict: REVIEW NEEDED (2 yellow)
 At the end of /ow-secure answer with **short bullets, quick to read**, in the configured language (`$PROJECT_LANG` from Phase 0; `en` → English). Only:
 
 - **What was scanned** — scope (staged/changed/full) + verdict (PASS/REVIEW/BLOCKED)
+- **Rules applied** — each rule file from Phase 0 step 2 + the phase it changed, or `none`
 - **Findings** — the real counts (secrets/PII/CVE/vault-language/vault present-tense) + scan output
 - **Risks / next** — the secret patterns do not cover custom ones, the PII regex may false-positive; BLOCKED → fix before committing
 

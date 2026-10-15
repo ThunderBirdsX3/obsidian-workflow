@@ -17,6 +17,9 @@
 #   --rules <area>     resolved rule file paths for <area> (.ow/rules)
 #   --rules-expected <area>  canonical expected rule path for <area> + present|absent,
 #                            printed even when the file does not exist (TSV)
+#   --rules-load <area[,area]>  print every resolved rule's CONTENT for the area(s) —
+#                      what a command's Phase 0 step 2 runs, so the rule text lands in
+#                      context instead of a bare path; names the expected file when none
 #   --rules-validate   assert every rule in .ow.yml rules.files resolves to a real
 #                      file; non-zero exit + FAIL lines on any miss (#22)
 #   --selftest         assert rooting + list/depth-4 reads + rules-validate; non-zero on failure
@@ -69,11 +72,12 @@ while [ "$#" -gt 0 ]; do
     --command-models) MODE=command_models; shift ;;
     --rules)      MODE=rules; RULES_AREA="${2:-}"; shift; [ "$#" -gt 0 ] && shift ;;
     --rules-expected) MODE=rules_expected; RULES_AREA="${2:-}"; shift; [ "$#" -gt 0 ] && shift ;;
+    --rules-load) MODE=rules_load; RULES_AREA="${2:-}"; shift; [ "$#" -gt 0 ] && shift ;;
     --rules-validate) MODE=rules_validate; shift ;;
     --selftest)   MODE=selftest; shift ;;
     --check)      MODE=check; CHECK_KEY="$2"; shift 2 ;;
     -h|--help)
-      grep '^#' "$0" | head -27; exit 0 ;;
+      grep '^#' "$0" | head -30; exit 0 ;;
     *) echo "Unknown flag: $1" >&2; exit 1 ;;
   esac
 done
@@ -341,6 +345,28 @@ emit_rules_expected() {
   printf '%s\t%s\n' "$p" "$([ -f "$ROOT/$p" ] && echo present || echo absent)"
 }
 
+# ── rules loader ─────────────────────────────────────────────────────────────
+# Phase 0 step 2 of every command. Prints each resolved rule's full content (the rule text
+# itself must reach context — a printed path alone gets skipped), a "(none) — expected file"
+# line for every area with no rule, and a STOP-RISK line when a registered rule is missing.
+emit_rules_load() {
+  local areas="$1" area f
+  [ -n "$areas" ] || { echo "Usage: --rules-load <area[,area]>" >&2; return 1; }
+  for area in $(printf '%s' "$areas" | tr ',' ' '); do
+    [ -n "$(emit_rules "$area")" ] || \
+      echo "RULE($area): (none) — expected file: $(emit_rules_expected "$area" | cut -f1) (create it to add project $area conventions)"
+  done
+  while IFS= read -r f; do
+    [ -n "$f" ] || continue
+    echo "=== RULE: ${f#"$ROOT"/} — OVERRIDES this command's generic guidance ==="
+    cat "$f"
+    echo "=== END RULE: ${f#"$ROOT"/} ==="
+  done < <(emit_rules "$areas")
+  validate_rules >/dev/null 2>&1 || \
+    echo "⚠ STOP-RISK: a rule registered in .ow.yml rules.files did not resolve — run: bash scripts/ow-paths.sh --rules-validate"
+  return 0
+}
+
 # ── rules registry validator (#22) ───────────────────────────────────────────
 # A rule registered in .ow.yml rules.files MUST resolve to a real file. A
 # registered-but-unresolved rule means a project's load-bearing convention is being
@@ -556,6 +582,9 @@ EOF
     ;;
   rules_expected)
     emit_rules_expected "$RULES_AREA"
+    ;;
+  rules_load)
+    emit_rules_load "$RULES_AREA"
     ;;
   rules_validate)
     validate_rules

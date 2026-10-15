@@ -12,7 +12,7 @@ Takes GitHub issues (single / batch / cluster) → diagnoses + implements + test
 > This step follows `/ow-triage-issues` — pick up only confirmed real-bugs (has label `bug`, none of question/wontfix/need-info/not-implement-yet)
 
 ## Phase 0 — Load Context (MANDATORY — before every other phase)
-<!-- OW-PHASE0: canonical Load-Context preamble. Step 1 (resolver eval + assert + export) is byte-identical in every command and conformance-lint check 8 fails on any drift. Step 2 is per-command only in its `--rules <area>` argument (/ow-fix-issue extends it for multi-area + rules-validate). Do NOT edit anything else per-command. -->
+<!-- OW-PHASE0: canonical Load-Context preamble. Step 1 (resolver eval + assert + export) is byte-identical in every command and conformance-lint check 8 fails on any drift. Step 2 is per-command only in its `--rules-load <area[,area]>` argument. Do NOT edit anything else per-command. -->
 
 Runs FIRST, before any other phase. Loads resolved project paths + config so this spec
 never hardcodes a vault/build path. If the resolver is absent or exits non-zero, **STOP**
@@ -27,23 +27,11 @@ bash "$OW_ROOT/scripts/ow-paths.sh" --shell > "$OW_ENV.tmp" && mv "$OW_ENV.tmp" 
 . "$OW_ENV"
 [ -n "$VAULT_ABS" ] || { echo "FATAL: Phase 0 not loaded"; exit 1; }
 export OW_CTX_LOADED=1
-# 2) load this command's project rules — they OVERRIDE the generic guidance in this spec.
-#    The rule file is NAMED (not just a dir) so a missing rule cannot vanish silently (#22).
-RES="$(git rev-parse --show-toplevel)/scripts/ow-paths.sh"
-for AREA in coding testing; do
-  RULES=$(bash "$RES" --rules "$AREA" | paste -sd' ' -)
-  if [ -n "$RULES" ]; then
-    for _rf in $RULES; do echo "Read rule($AREA): $_rf"; done
-  else
-    echo "rule($AREA): (none) — expected file: $(bash "$RES" --rules-expected "$AREA" | cut -f1)"
-  fi
-done
-# Fail loud: a rule REGISTERED in .ow.yml rules.files that fails to resolve is a STOP-RISK,
-# never a silent skip — surface it instead of proceeding as if no rule existed.
-bash "$RES" --rules-validate >/dev/null 2>&1 || \
-  echo "⚠ STOP-RISK: a rule registered in .ow.yml rules.files did not resolve — run: bash \"$RES\" --rules-validate"
+# 2) load this command's project rules — they OVERRIDE the generic guidance in this spec
+bash "$(git rev-parse --show-toplevel)/scripts/ow-paths.sh" --rules-load coding,testing
 ```
 
+Step 2's rule text is binding (it OVERRIDES this spec for its area); the final report lists `rules applied: <file, …>` or `rules applied: none`.
 Use ONLY resolved vars in every later phase — never a `<vault>/...` literal or a hardcoded
 build/test command: `$VAULT_ABS $IMPL_STATUS $PRD_DIR $FEAT_DIR $FN_DIR $PHASE_DIR $FLOW_DIR
 $REF_DIR $DS_DIR $PLAN_DIR $FIX_DIR $TEST_DIR $HANDOFF_DIR $TEMPLATE_CHAIN

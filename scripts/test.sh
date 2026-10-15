@@ -510,6 +510,16 @@ run "rules: comma areas + dedupe"  '
   printf -- "---\napplies_to: [coding, testing]\n---\n" > "$d/r/shared.md";
   out=$( cd "$d" && OW_ROOT=. bash '"$PWD"'/scripts/ow-paths.sh --rules coding,testing ); rm -rf "$d";
   [ "$(printf "%s\n" "$out" | grep -c .)" -eq 2 ]'
+run "rules-load prints rule content + none line per empty area" '
+  d=$(mktemp -d); printf "rules: { dir: \"r\", files: [] }\n" > "$d/.ow.yml"; mkdir -p "$d/r";
+  printf -- "---\napplies_to: [security]\n---\nRULE-BODY-MARK\n" > "$d/r/backend.md";
+  out=$( cd "$d" && OW_ROOT=. bash '"$PWD"'/scripts/ow-paths.sh --rules-load security,testing ); rm -rf "$d";
+  echo "$out" | grep -q RULE-BODY-MARK && echo "$out" | grep -q "=== RULE: r/backend.md" &&
+  echo "$out" | grep -q "RULE(testing): (none) — expected file: r/testing.md" && ! echo "$out" | grep -q "RULE(security): (none)"'
+run "rules-load flags an unresolved registered rule" '
+  d=$(mktemp -d); printf "rules: { dir: \"r\", files: [\"nope.md\"] }\n" > "$d/.ow.yml"; mkdir -p "$d/r";
+  out=$( cd "$d" && OW_ROOT=. bash '"$PWD"'/scripts/ow-paths.sh --rules-load security ); rm -rf "$d";
+  echo "$out" | grep -q "STOP-RISK"'
 run "rules-validate fails on bogus" '
   d=$(mktemp -d); printf "rules: { dir: \".ow/rules\", files: [\"nope.md\"] }\n" > "$d/.ow.yml"; mkdir -p "$d/.ow/rules";
   ( cd "$d" && OW_ROOT=. bash '"$PWD"'/scripts/ow-paths.sh --rules-validate ) >/dev/null 2>&1; rc=$?; rm -rf "$d"; [ "$rc" -ne 0 ]'
@@ -533,7 +543,7 @@ run "bin: doctor uses owned manifest"  'grep -q "ow_owned_scripts" bin/ow && ! g
 # #22 — commands name the rule file + fail loud
 run "implement: rules-expected"    'grep -q "rules-expected" .ow/commands/_shared/delegation.md'
 run "implement: STOP-RISK loud"    'grep -q "STOP-RISK" .ow/commands/ow-implement.md'
-run "fix-issue: STOP-RISK loud"    'grep -q "STOP-RISK" .ow/commands/ow-fix-issue.md'
+run "fix-issue: STOP-RISK loud"    'grep -q -- "--rules-load coding,testing" .ow/commands/ow-fix-issue.md && grep -q "STOP-RISK" scripts/ow-paths.sh'
 
 # ════════════════════════════════════════════════════════════════════════════
 # Section 16 — .gitignore managed-block merge (brownfield no-clobber)
@@ -1504,8 +1514,12 @@ run "p0: check 8 exists in the lint"      'grep -q "check 8" scripts/conformance
 run "p0: real tree passes check 8"        'bash scripts/conformance-lint.sh 2>&1 | grep -q "check 8: Phase 0 step-1 block identical"'
 run "p0: the marker no longer claims commands are wholly identical" \
   '! grep -rq "identical across all commands; enforced by conformance lint" .ow/commands/*.md'
-run "p0: marker names the per-command exception (--rules area)" \
-  'grep -q -- "per-command only in its \`--rules <area>\` argument" .ow/commands/ow-plan.md'
+run "p0: marker names the per-command exception (--rules-load area)" \
+  'grep -q -- "per-command only in its \`--rules-load <area\[,area\]>\` argument" .ow/commands/ow-plan.md'
+run "p0: every command loads rule CONTENT (--rules-load), none only echoes a path" \
+  '[ "$(grep -l -- "ow-paths.sh\" --rules-load " .ow/commands/ow-*.md | wc -l)" -eq "$(ls .ow/commands/ow-*.md | wc -l)" ] && ! grep -q "Read rule" .ow/commands/ow-*.md'
+run "p0: every command reports rules applied" \
+  '! grep -L "rules applied: <file" .ow/commands/ow-*.md | grep -q .'
 # BEHAVIORAL — drift must actually fail the gate, not just be described as failing
 _p0_fixture() {   # DIR  → two commands whose step-1 blocks match
   mkdir -p "$1/.ow/commands"

@@ -3,6 +3,26 @@
 Format: [Keep a Changelog](https://keepachangelog.com). Versions: SemVer.
 Version marker: `ow.version` in `.ow.yml`.
 
+## [1.6.1] — 2026-10-15
+
+### Fixed — commands actually read project rules (`.ow/rules/`)
+
+Phase 0 step 2 only echoed `Read rule: <path>`, and nothing later in any spec referred to the
+rules again, so the model saw a path and moved on — most visibly in `/ow-secure`.
+
+- `scripts/ow-paths.sh --rules-load <area[,area]>` — prints the full text of every rule
+  resolved for the area(s), a `RULE(<area>): (none) — expected file: …` line for an area with no
+  rule, and a `STOP-RISK` line when a rule registered in `.ow.yml` `rules.files` is missing.
+- All 21 commands: Phase 0 step 2 is that one call, so the rule text lands in context instead
+  of a bare path. The final report carries `rules applied: <file, …>` (or `rules applied: none`).
+  `/ow-fix-issue` uses `--rules-load coding,testing` in place of its own loop.
+- `/ow-secure` — new "Project rules — how they bind each phase": a rule may add Phase 1–2
+  patterns/paths/allowlists but never waive the secret/PII scans; it may replace the Phase 4–6
+  generic checks; an ambiguous conflict with a BLOCK keeps the BLOCK. The report lists rules
+  applied and the phase each changed.
+- Tests: rule content + none line + STOP-RISK from `--rules-load`; every command uses it and
+  reports rules applied.
+
 ## [1.6.0] — 2026-10-07
 
 ### Added — `/ow-git` merges vault-doc conflicts on its own: version numbers by rule, prose by intent

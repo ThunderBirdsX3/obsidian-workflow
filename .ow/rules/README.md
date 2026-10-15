@@ -54,11 +54,15 @@ scaffolds a stub for each **enabled** area (idempotent — never overwrites your
 ## How it is consumed
 
 ```bash
-# every command Phase 0 + every spawned agent reads the resolved rules for its area:
+# every command's Phase 0 step 2 prints the full text of the resolved rules for its area(s):
+bash "$(git rev-parse --show-toplevel)/scripts/ow-paths.sh" --rules-load backend
+# a spawned agent gets the resolved paths instead (it reads them itself):
 bash "$(git rev-parse --show-toplevel)/scripts/ow-paths.sh" --rules backend
 ```
 
-- Commands `Read` each printed file in their Phase 0 Load-Context step.
+- Commands get each rule's content printed in Phase 0 (`--rules-load`), so the rule text is in
+  context, not only its path; an area with no rule prints its expected file. The final report
+  lists `rules applied: <file, …>` (or `none`).
 - Spawned subagents receive the resolved rule paths in their injected PROJECT CONTEXT
   block (agents have no bash tool — the injection is their only channel).
 

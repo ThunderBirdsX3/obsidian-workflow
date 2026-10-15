@@ -126,7 +126,7 @@ Verdict: REVIEW NEEDED (2 yellow)
 - ก่อน `/ow-secure`: [/ow-implement](./ow-implement.md), [/ow-test](./ow-test.md)
 - หลัง `/ow-secure`: [/ow-git](./ow-git.md), [/ow-verify](./ow-verify.md)
 - Embedded ใน: [/ow-verify](./ow-verify.md) Phase 5
-- Rules: `.ow/rules/security.md` (resolver `ow-paths.sh --rules security`)
+- Rules: `.ow/rules/security.md` — Phase 0 พิมพ์เนื้อหา rule ออกมาเลย (`ow-paths.sh --rules-load security`) · rule เพิ่ม pattern ของ Phase 1–2 ได้ แต่ห้ามยกเว้นการสแกน secret/PII · rule ใช้แทนเกณฑ์ของ Phase 4–6 ได้ · รายงานบอกเสมอว่าใช้ rule ไฟล์ไหน
 
 ## FAQ
 
