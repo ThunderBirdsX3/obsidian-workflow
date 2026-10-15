@@ -3,6 +3,19 @@
 Format: [Keep a Changelog](https://keepachangelog.com). Versions: SemVer.
 Version marker: `ow.version` in `.ow.yml`.
 
+## [1.6.2] — 2026-10-15
+
+### Changed — `/ow-implement` spec trimmed (399 → 362 lines)
+
+The always-loaded spec sat one line under its 400-line regrowth guard. No rule was dropped.
+
+- The `--from-fix` severity gate (P2/P3 only, fail-closed) and the fix-log-mode description move
+  to `_shared/fixlog-close.md` §0; Phase 1.1 points there — a plan run never reads it.
+- Two `Never` lines that restated 3.0 (no chunking/fan-out inline) and 3.1 rule 5 (no
+  `git checkout/restore/stash/clean` on files the task does not own) are removed; the body rules stay.
+- The 3.0 area table, the `context_closed` read-set note, the Phase 4 design-system gate, the 6.2
+  `$IMPL_STATUS` note and the header comment are reworded shorter, same meaning.
+
 ## [1.6.1] — 2026-10-15
 
 ### Fixed — commands actually read project rules (`.ow/rules/`)

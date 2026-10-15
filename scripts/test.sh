@@ -1203,9 +1203,9 @@ run "autofix: ow-fix cites ow-implement.md rather than copying its phases" \
 run "autofix: ow-implement --from-fix accepts P2 and P3" \
   "grep -qE '\--from-fix.*P2' $IMPL_MD"
 run "autofix: ow-implement --from-fix refuses P0/P1 in bash (fail-closed)" \
-  "grep -qF 'P2|P3) ;;' $IMPL_MD && grep -qF -- 'accepts only a fix-log with' $IMPL_MD"
+  "grep -qF 'P2|P3) ;;' $FIXCLOSE_MD && grep -qF -- 'accepts only a fix-log with' $IMPL_MD && grep -qF 'fixlog-close.md\` §0' $IMPL_MD"
 run "autofix: ow-implement reads severity from the fix-log frontmatter" \
-  "grep -qF \"grep -m1 '^severity:'\" $IMPL_MD"
+  "grep -qF \"grep -m1 '^severity:'\" $FIXCLOSE_MD"
 # stale-reference guards — removed commands / vars must not reappear
 run "autofix: no dangling /ow-daily-log reference in commands" \
   "! grep -rqF '/ow-daily-log' .ow/commands/"

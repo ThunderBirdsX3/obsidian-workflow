@@ -2,14 +2,9 @@
 description: Execute an approved plan file — implement inline or delegate, run build/test, sync vault
 ---
 
-<!--
-Obsidian behaviour this command must honour:
-- Read `$IMPL_STATUS` (00-Index/IMPLEMENTATION-STATUS.md) FIRST
-- The run's record goes into the plan file under `$PLAN_DIR` (Phase 6.2: Implementation Result),
-  and `$IMPL_STATUS` is reconciled in the same phase — its prose is in `$VAULT_LANG` (Phase 0);
-  headings, frontmatter, and IDs stay English
--->
-
+<!-- Obsidian behaviour: read `$IMPL_STATUS` (00-Index/IMPLEMENTATION-STATUS.md) FIRST · the run's record goes into
+the plan (6.2 Implementation Result) and `$IMPL_STATUS` is reconciled in the same phase — prose in `$VAULT_LANG`,
+headings/frontmatter/IDs English -->
 
 # /ow-implement — execute the plan
 
@@ -23,7 +18,7 @@ Mode-gated detail lives in `_shared/` fragments. 🔴 **Read one the moment its 
 | `.ow/commands/_shared/phases.md` | the plan carries `## Phases` — Phases 1 · 1.3 · 3.3 · 4 · 6.0 · 6.1 |
 | `.ow/commands/_shared/delegation.md` | the 3.0 judgment lands on a subagent — Phase 3.2 |
 | `.ow/commands/_shared/build-test.md` | always — Phase 5.0 |
-| `.ow/commands/_shared/fixlog-close.md` | the run is fix-escalated (`source_fix:` / `--from-fix`) — Phase 6.5 |
+| `.ow/commands/_shared/fixlog-close.md` | the run is fix-escalated — `--from-fix`: Phase 1.1 · `source_fix:` or `--from-fix`: Phase 6.5 |
 | `.ow/commands/_shared/vault-doc-style.md` | a vault doc outside `$PLAN_DIR`/`$FIX_DIR`/`$TEST_DIR`/`$HANDOFF_DIR` is written — Phases 2 · 6.2 |
 
 ## Phase 0 — Load Context (MANDATORY — before every other phase)
@@ -68,9 +63,7 @@ FRESH SHELL — Phase 0's exports are gone — so it re-hydrates first, then ass
 
 Empty → ask (render in `$PROJECT_LANG`) which plan, and list the 5 most recent plans with `status: approved`
 
-> `--from-fix` accepts only a fix-log with `severity: P2` or `P3` — `/ow-fix` Phase 4 is the caller, after the auto-fix gate passes. **P0/P1 → always `/ow-plan fix:<slug>`** (`--from-fix` must refuse)
->
-> In this mode the **fix-log is the unit of work** (there is no separate plan): Phase 1 skips the `status: approved` gate (invoking it = approval); the build-test/coverage/discipline gates (5.0/5.2/5.3) + the open-checkbox gate (6.0) run against the fix-log; Phase 6 closes the fix-log as `status: fixed` via Phase 6.5
+> `--from-fix` accepts only a fix-log with `severity: P2` or `P3` (caller: `/ow-fix` Phase 4) — **P0/P1 → always `/ow-plan fix:<slug>`**; the fix-log is the unit of work (1.1)
 
 ## Phase 1 — Validate
 
@@ -83,17 +76,8 @@ Empty → ask (render in `$PROJECT_LANG`) which plan, and list the 5 most recent
 
 ### 1.1 `--from-fix` gate (fix-log mode)
 
-Target = fix-log → skip item 2 (invoking = approval) and enforce severity instead:
-
-```bash
-SEV=$(grep -m1 '^severity:' "$PLAN_PATH" | sed -E 's/^severity:[[:space:]]*//; s/[[:space:]]*—.*$//' | tr -d '"')
-case "$SEV" in
-  P2|P3) ;;
-  *) echo "🛑 STOP: --from-fix accepts only P2/P3 (this fix-log = ${SEV:-unset}) → /ow-plan fix:<slug>"; exit 1 ;;
-esac
-```
-
-🔴 Empty/unreadable severity = **refuse** (fail-closed) — never assume it is P3
+🔴 Target = fix-log → **read `.ow/commands/_shared/fixlog-close.md` §0 and run its severity gate** in place
+of item 2 (P2/P3 only, fail-closed). Not `--from-fix` → skip.
 
 ### 1.2 Resume gate — progress markers (when present)
 
@@ -141,9 +125,7 @@ used by Phases 3-6.
 ### 2.7.1 Resolve mode (flag override > plan frontmatter > off)
 ```bash
 [ -n "$VAULT_ABS" ] || { echo 'FATAL: Phase 0 not loaded'; exit 1; }
-# $ROOT from Phase 0 (--shell) = absolute project root. Fallback = git toplevel (the orchestrator is always
-# in the main tree at this point — the worktree is not created yet), in case a separate bash block call
-# did not persist $ROOT.
+# $ROOT from Phase 0 = absolute project root; fallback = git toplevel (still the main tree — no worktree yet)
 MAIN_ROOT="${ROOT:-$(git rev-parse --show-toplevel)}"
 PLAN_PATH=$(printf '%s' "$ARGUMENTS" | sed -E 's/[[:space:]]*--phase[[:space:]]+[A-Za-z0-9_-]+//g; s/[[:space:]]*--(no-)?worktree//g; s/^[[:space:]]+//; s/[[:space:]]+$//')
 WT_MODE=off
@@ -166,14 +148,8 @@ WORK_ROOT="$MAIN_ROOT"                                # default = build in the m
 `subagent_target` names the **area** the work belongs to ⇒ which rules and gates apply. It is **not** an
 order to spawn. 🔴 Phased run → the running phase's `area` replaces it everywhere below (`phases.md` §2.6):
 
-| `subagent_target` | area rules — apply them inline, or spawn this agent |
-|---|---|
-| `backend` | `.claude/agents/backend.md` |
-| `frontend` | `.claude/agents/frontend.md` |
-| `mobile` | `.claude/agents/mobile.md` |
-| `docs` | `.claude/agents/docs.md` |
-| `design` | `.claude/agents/design.md` |
-| `all` | the areas the plan actually touches, in order backend → frontend → mobile → docs |
+area rules = `.claude/agents/<subagent_target>.md` (`backend` · `frontend` · `mobile` · `docs` · `design`) — apply them
+inline, or spawn that agent · `all` = the areas the plan actually touches, in order backend → frontend → mobile → docs
 
 🔴 **Only `docs` is guaranteed to exist.** Every other row is an agent this project creates with
 `/ow-agent create <name>`; obsidian-workflow ships no body for it. The file is absent ⇒ **run inline** — that is the
@@ -193,17 +169,12 @@ here forces either one: judge it as you would any other task, with the real trad
 
 **Running it inline** — these come with it (the agent file would otherwise have carried them):
 1. Read `.claude/agents/<area>.md` gates **if that file exists** + every file the resolver's `--rules <area>`
-   names, before code
-   (🔴 a rule registered in `.ow.yml` `rules.files` that fails to resolve is a STOP-RISK, not a silent skip:
-   `bash scripts/ow-paths.sh --rules-validate`)
+   names, before code (🔴 a registered rule that fails to resolve is a STOP-RISK: `bash scripts/ow-paths.sh --rules-validate`)
 2. Read the plan's FN/FEAT docs, the existing code/tests it names, and the conditional refs the include-when
    table in `.ow/commands/_shared/context-refs.md` judges relevant (**uncertain ⇒ read it** — a wrong skip costs more)
-   🔴 The plan carries `context_closed: true` → its `context_refs:` list **is** the read set, so skip the
-   include-when resolution: the running phase's list on a phased plan, the plan's own top-level list on one
-   without `## Phases` (a sub-plan from the retired `/ow-split` — still valid, read it as written).
-   It was already measured against the executor's budget. Reading outside the list stays allowed — report
-   `context gap: <doc> — needed for <reason>` (the same escape hatch as `CONTEXT_SKIPPED`). No such field →
-   unchanged: uncertain ⇒ read it
+   🔴 `context_closed: true` → its `context_refs:` list **is** the read set (the running phase's list on a phased
+   plan, else the top-level one — a sub-plan from the retired `/ow-split` included); reading outside it is
+   allowed — report `context gap: <doc> — needed for <reason>` (same escape hatch as `CONTEXT_SKIPPED`)
 3. Follow the implementation rules (3.1) yourself — they are not agent-specific
 4. Every gate in Phases 4/5/6 runs identically
 5. 🔴 **Never chunk an inline run** — chunking exists only for agents (you can compact and see your own context)
@@ -276,15 +247,11 @@ written:
 
 ## Phase 4 — Design system gate (when present)
 
-If `<vault>/70-Reference/DesignSystem/` exists and the run's area is `frontend` or `mobile` — the plan's
-`subagent_target`, or 🔴 on a phased run the **running phase's `area`** (`phases.md` §2.6), since a plan
-spanning areas carries `subagent_target: all` and would skip this gate on a UI phase
-(applies the same inline or delegated — the gate is on the work, not on who does it):
-
-Before any UI code is written — by you or by the agent:
-1. Read `DS-Tokens.md`, `DS-Components.md`, `DS-Patterns.md`
-2. Use the existing tokens/components
-3. If a new component is needed → STOP, tell the user to run `/ow-design` to add that component first
+`<vault>/70-Reference/DesignSystem/` exists and the run's area is `frontend` or `mobile` (the plan's
+`subagent_target`, or 🔴 on a phased run the **running phase's `area`** — `phases.md` §2.6 — since a multi-area plan
+carries `subagent_target: all`) → before any UI code: read `DS-Tokens.md`, `DS-Components.md`, `DS-Patterns.md`, use
+the existing tokens/components; a new component is needed → STOP, tell the user to run `/ow-design` first.
+Inline or delegated alike — the gate is on the work, not on who does it.
 
 ## Phase 5 — Verify + integrity audit (🔴 before marking done)
 
@@ -352,10 +319,8 @@ phase re-runs 6.0 whole-file first). 🔴 Never flip the plan `status: done` whi
    - Build/test result: <the 5.0 results table — pass/fail as the run reported it>
    - Executed by: inline | subagent `<name>`   · Time: <duration>
    ```
-3. Update `$IMPL_STATUS` to mark the feature/phase done
-
-🔴 Step 3 writes into `00-Index`, so it follows `_shared/vault-doc-style.md` (read at Phase 2): the
-plan carries the before/after, `$IMPL_STATUS` carries only the row that is true now — never both.
+3. Update `$IMPL_STATUS` to mark the feature/phase done — 🔴 `00-Index` follows `_shared/vault-doc-style.md`:
+   the plan carries the before/after, `$IMPL_STATUS` only the row that is true now
 
 ### 6.4 Commit in the worktree (worktree mode only — #31)
 
@@ -365,7 +330,7 @@ plan carries the before/after, `$IMPL_STATUS` carries only the row that is true 
 ### 6.5 Close the source fix-log (🔴 fix-escalated runs only — #30)
 
 The plan carries `source_fix:` (it came from `/ow-plan fix:<slug>`), **or** the run was `/ow-implement --from-fix <fix-log>`
-→ 🔴 **read `.ow/commands/_shared/fixlog-close.md` and follow it** — the fix-log must never be left at
+→ 🔴 **read `.ow/commands/_shared/fixlog-close.md` and follow it** (fix-log → `status: fixed`) — it must never be left at
 `in-progress` once the work that owns it is done. Neither case → skip silently.
 
 ## Phase 7 — Output (short bullets, in `$PROJECT_LANG`)
@@ -386,10 +351,8 @@ Answer with **short bullets, quick to read**, in the configured language (`$PROJ
 - Never implement if the plan is not `approved` · never change scope without revising the plan first (`/ow-plan --revise`)
 - 🔴 Never read `subagent_target` as an order to spawn — it names the **area's rules**; how the work runs is a judgment call (3.0), and no phase may make either mode mandatory
 - 🔴 Never drop an area gate because the work ran inline — inline means **you** read `.claude/agents/<area>.md` + its rules and enforce them (3.0)
-- 🔴 Never chunk an inline run · never fan out parallel agents for one plan on one tree
 - 🔴 Never run an inline plan without writing `## Step Progress` as you go (3.3) — a dead session then leaves zero recoverable state
 - 🔴 Never resume from a progress marker without first re-running the `exit:` of the last ticked line (1.2) — a marker whose code was reverted is worse than no marker
-- 🔴 Never `git checkout`/`git restore`/`git stash`/`git clean` on files the task did not create/change itself — it deletes a parallel task's uncommitted work (data loss, #29); revert churn = a surgical Edit on files the task owns only
 - Never fake a test/build result — the pass/fail count must parse from real stdout; cannot parse → `?/?` + `parse-failed: true`, never guess
 - 🔴 Never flip `status: done` unless all four pass: 5.0 build/test run · 5.2 coverage (`PROD>0 && TEST==0` = STOP, write a test or map to untestable 1–6 — "hard" is not one) · 5.3 discipline · 6.0 open-checkbox = 0
 - 🔴 Phased plan → every `Never` in `_shared/phases.md` applies in full: no phase runs on an unfinished `depends_on` or a `state: planned` contract row, no phase touches another phase's files, and the plan never flips `done` while a phase row is not

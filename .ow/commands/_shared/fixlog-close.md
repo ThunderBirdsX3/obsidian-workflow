@@ -6,6 +6,23 @@ Read this **only when the work is fix-escalated**: the plan carries `source_fix:
 🔴 **bi-directional close:** plan `done` (or `--from-fix` finished) ⇒ fix-log `fixed`, always:
 no fix-log left at `in-progress` once the work that owns it is done.
 
+## 0. `--from-fix` entry gate (`/ow-implement` Phase 1.1)
+
+`--from-fix` accepts only a fix-log with `severity: P2` or `P3`. In this mode the **fix-log is the unit of
+work** (there is no separate plan): Phase 1 skips the `status: approved` gate (invoking it = approval); the
+build-test/coverage/discipline gates (5.0/5.2/5.3) + the open-checkbox gate (6.0) run against the fix-log;
+Phase 6 closes the fix-log as `status: fixed` via §1–§2 below.
+
+```bash
+SEV=$(grep -m1 '^severity:' "$PLAN_PATH" | sed -E 's/^severity:[[:space:]]*//; s/[[:space:]]*—.*$//' | tr -d '"')
+case "$SEV" in
+  P2|P3) ;;
+  *) echo "🛑 STOP: --from-fix accepts only P2/P3 (this fix-log = ${SEV:-unset}) → /ow-plan fix:<slug>"; exit 1 ;;
+esac
+```
+
+🔴 Empty/unreadable severity = **refuse** (fail-closed) — never assume it is P3
+
 ## 1. Resolve the fix-log
 
 ```bash
