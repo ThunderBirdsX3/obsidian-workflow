@@ -10,6 +10,7 @@ When user says `ow-<verb>: <task>` or `<verb>: <task>`, read the corresponding s
 |---|---|
 | `ow-agent` / `agent` | `.ow/commands/ow-agent.md` |
 | `ow-archive` / `archive` | `.ow/commands/ow-archive.md` |
+| `ow-auto` / `auto` | `.ow/commands/ow-auto.md` |
 | `ow-checklist` / `checklist` | `.ow/commands/ow-checklist.md` |
 | `ow-clarify` / `clarify` | `.ow/commands/ow-clarify.md` |
 | `ow-design` / `design` | `.ow/commands/ow-design.md` |

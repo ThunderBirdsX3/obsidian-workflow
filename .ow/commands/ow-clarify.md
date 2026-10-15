@@ -126,6 +126,9 @@ User answers → record + move to the next question
 
 If the user answers `skip` or `TBD` → record as `[DEFERRED]` in the Clarifications log
 
+> `/ow-auto` Phase 1.5 reuses Phase 1 (scan) and Phase 3 (write-back) of this command but asks every item's
+> questions as **one batch** — the auto run stops for a human exactly once, before any side effect.
+
 ## Phase 3 — Write back to source doc
 
 After the session ends (5 questions, or the user stops earlier):

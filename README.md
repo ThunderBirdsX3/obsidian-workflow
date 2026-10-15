@@ -2,7 +2,7 @@
 
 **AI + Obsidian docs-driven development workflow** สำหรับทีมที่ใช้ AI ทำงาน — รวม spec-kit philosophy และ Obsidian vault patterns
 
-> 21 slash commands · 4 always-on + 5 on-demand AI subagents (per-agent + per-command AI model in `.ow.yml`) · 7 AI front-ends (Claude · Codex · Gemini · GPT · GLM · Cline · Kimi) · config-driven, works for any project (single-repo or submodule monorepo) · the vault stays text-only — command output is quoted into the doc, never stored as a file
+> 22 slash commands · 4 always-on + 5 on-demand AI subagents (per-agent + per-command AI model in `.ow.yml`) · 7 AI front-ends (Claude · Codex · Gemini · GPT · GLM · Cline · Kimi) · config-driven, works for any project (single-repo or submodule monorepo) · the vault stays text-only — command output is quoted into the doc, never stored as a file
 
 ---
 
@@ -65,7 +65,7 @@ ow doctor     # health check
 
 ---
 
-## 🎯 21 Commands
+## 🎯 22 Commands
 
 | กลุ่ม | Commands |
 |---|---|
@@ -74,6 +74,7 @@ ow doctor     # health check
 | **GitHub issues** | `/ow-triage-issues` `/ow-fix-issue` |
 | **เอกสาร + ทดสอบ + ออกแบบ** | `/ow-doc` `/ow-test` `/ow-design` |
 | **ส่งมอบ** | `/ow-secure` `/ow-verify` `/ow-handoff` `/ow-git` `/ow-archive` |
+| **อัตโนมัติ** | `/ow-auto` — ถามครั้งเดียว แล้ว plan→implement→test ให้จบเอง (`--codex`/`--claude` ส่งงานให้ CLI อีกตัว) |
 
 **Usage guide ละเอียด:** [`usage/README.md`](./usage/README.md) — 1 ไฟล์ต่อ command
 
@@ -164,7 +165,7 @@ bash <(curl -fsSL .../install.sh)
 
 | ไฟล์ | gitTracked? | ใช้สำหรับ |
 |---|---|---|
-| `.ow.yml` | ✅ | project name, vault path (relative หรือ absolute ถ้า vault อยู่นอก repo), subagents, submodules, AI agents, `git:` sync (ทีมหลายคน) |
+| `.ow.yml` | ✅ | project name, vault path (relative หรือ absolute ถ้า vault อยู่นอก repo), subagents, submodules, AI agents, `git:` sync (ทีมหลายคน), `auto:` (เพดาน fix + model ของ worker `--codex`/`--claude`) |
 | `.ow/local/` | ❌ | สถานะรันไทม์ของเครื่อง (resolver cache, install marker) — สร้างอัตโนมัติ ไม่ต้องแก้ |
 
 **Template lookup chain (สูง → ต่ำ):**
@@ -261,7 +262,7 @@ ow upgrade --rollback   # restore from backup
 
 ```bash
 # Test suite
-bash scripts/test.sh           # 531 smoke tests
+bash scripts/test.sh           # 1118 smoke tests
 bash scripts/test.sh -v        # verbose
 bash scripts/test.sh --filter <kw>  # filter by keyword
 
@@ -293,6 +294,7 @@ bash scripts/install.sh --source $(pwd) --target /tmp/test-ow --dry-run
 | `ow-version.sh` | canonical version-file writer ของ `/ow-git --bump` — tag = `v<X.Y.Z>` แต่ **ไฟล์เป็น bare `<X.Y.Z>`** (pubspec/package.json ไม่รับ `v`). **ตัวเดียวที่หายแล้ว `--bump` ต้อง STOP** ไม่ใช่ degrade |
 | `ow-claude-manifest.sh` | `.claude` ownership + `generate_shims` (override-first) + `apply_agent_models` |
 | `ow-shims.sh` · `ow-frontends.sh` | สร้าง shim · จัดการ AI frontend dir ที่เปิดใช้ |
+| `ow-worker.sh` | worker ภายนอกของ `/ow-implement --codex` / `--claude` — ส่ง chunk ให้ `codex exec` / `claude -p` แล้วคืนแค่ `STATUS:` + HANDOFF (log ดิบอยู่ `.ow/local/runs/`) |
 | `ow-config-merge.sh` | additive block merge ของ `.ow.yml` — backfill block ใหม่ ไม่ทับค่าที่ user กรอกไว้ ไม่ใช้ `yq -i` (คอมเมนต์รอด) |
 | `conformance-lint.sh` | 12-check hard gate — รันโดย sync/install/upgrade |
 | `ow-verify-vault-lang.sh` | gate ภาษา vault (#33) — เรียกจาก `/ow-secure` Phase 2.5 |

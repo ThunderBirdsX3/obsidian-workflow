@@ -30,6 +30,7 @@ ow_owned_scripts() {
     "ow-owned.sh" \
     "ow-frontends.sh" \
     "ow-shims.sh" \
+    "ow-worker.sh" \
     "ow-claude-manifest.sh" \
     "ow-settings-merge.sh" \
     "ow-config-merge.sh" \

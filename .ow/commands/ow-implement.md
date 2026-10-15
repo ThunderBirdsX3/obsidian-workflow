@@ -17,6 +17,8 @@ Mode-gated detail lives in `_shared/` fragments. 🔴 **Read one the moment its 
 | `.ow/commands/_shared/worktree.md` | `WT_MODE=on` — Phases 2.7 · 6.4 · 7 |
 | `.ow/commands/_shared/phases.md` | the plan carries `## Phases` — Phases 1 · 1.3 · 3.3 · 4 · 6.0 · 6.1 |
 | `.ow/commands/_shared/delegation.md` | the 3.0 judgment lands on a subagent — Phase 3.2 |
+| `.ow/commands/_shared/worker-cli.md` | `WORKER=codex\|claude` (`--codex` / `--claude`) — Phases 2.7.1 · 3.0 · 3.2 |
+| `.ow/commands/_shared/auto-loop.md` | `AUTO_MODE=on` (`--auto`) — Phases 1 · 1.3 · 5.1 · 6.1 · 6.2 · 6.4 · 7 |
 | `.ow/commands/_shared/build-test.md` | always — Phase 5.0 |
 | `.ow/commands/_shared/fixlog-close.md` | the run is fix-escalated — `--from-fix`: Phase 1.1 · `source_fix:` or `--from-fix`: Phase 6.5 |
 | `.ow/commands/_shared/vault-doc-style.md` | a vault doc outside `$PLAN_DIR`/`$FIX_DIR`/`$TEST_DIR`/`$HANDOFF_DIR` is written — Phases 2 · 6.2 |
@@ -58,7 +60,10 @@ FRESH SHELL — Phase 0's exports are gone — so it re-hydrates first, then ass
 /ow-implement <plan> --phase P2      # run ONE phase of a phased plan (/ow-plan Phase 2.5) — no flag = every phase in order
 /ow-implement <plan> --worktree      # force the build into a separate git worktree (even when the plan frontmatter has no worktree:) (#31)
 /ow-implement <plan> --no-worktree   # force the build into the main tree (overrides a plan carrying worktree: true)
-/ow-implement --from-fix <vault>/85-FixLog/YYYY-MM-DD-HHMM-<slug>.md   # P2 minor + P3 polish — skips the plan; closes this fix-log itself when done (6.5)
+/ow-implement <plan> --auto          # run every plan phase in order, no "Start now?", bounded fix loop — `_shared/auto-loop.md` (never asks after start)
+/ow-implement <plan> --codex         # delegate chunks to the Codex CLI (host must be Claude) — `_shared/worker-cli.md`
+/ow-implement <plan> --claude        # delegate chunks to the Claude CLI (host must be Codex) — `_shared/worker-cli.md`
+/ow-implement --from-fix <vault>/85-FixLog/YYYY-MM-DD-HHMM-<slug>.md   # P2 minor + P3 polish — skips the plan; closes this fix-log itself when done (6.5)  # --auto/--codex/--claude combine with it
 ```
 
 Empty → ask (render in `$PROJECT_LANG`) which plan, and list the 5 most recent plans with `status: approved`
@@ -71,7 +76,7 @@ Empty → ask (render in `$PROJECT_LANG`) which plan, and list the 5 most recent
 2. **Refuse** if `status != approved` → tell the user to set the status first
 3. **Refuse** if it is already `status: done` → tell the user
 4. Check that `Implementation Steps` is complete + `subagent_target` is set (it names the **area** whose rules/gates apply — not an order to spawn, see 3.0)
-5. Show task + submodule + step count → ask (render in `$PROJECT_LANG`): "Start now?"
+5. Show task + submodule + step count → ask (render in `$PROJECT_LANG`): "Start now?" · `AUTO_MODE=on` → skip the question, print the summary and start (the `/ow-auto` grant or the explicit `--auto` flag already answered it)
 6. If `Doc Gaps Found` is non-empty → go to Phase 2 first
 
 ### 1.1 `--from-fix` gate (fix-log mode)
@@ -127,12 +132,18 @@ used by Phases 3-6.
 [ -n "$VAULT_ABS" ] || { echo 'FATAL: Phase 0 not loaded'; exit 1; }
 # $ROOT from Phase 0 = absolute project root; fallback = git toplevel (still the main tree — no worktree yet)
 MAIN_ROOT="${ROOT:-$(git rev-parse --show-toplevel)}"
-PLAN_PATH=$(printf '%s' "$ARGUMENTS" | sed -E 's/[[:space:]]*--phase[[:space:]]+[A-Za-z0-9_-]+//g; s/[[:space:]]*--(no-)?worktree//g; s/^[[:space:]]+//; s/[[:space:]]+$//')
+PLAN_PATH=$(printf '%s' "$ARGUMENTS" | sed -E 's/[[:space:]]*--phase[[:space:]]+[A-Za-z0-9_-]+//g; s/[[:space:]]*--(no-)?worktree//g; s/[[:space:]]*--auto//g; s/[[:space:]]*--codex//g; s/[[:space:]]*--claude//g; s/^[[:space:]]+//; s/[[:space:]]+$//')
 WT_MODE=off
 grep -q '^worktree:[[:space:]]*true' "$PLAN_PATH" 2>/dev/null && WT_MODE=on   # plan frontmatter (from /ow-plan --worktree)
 case " $ARGUMENTS " in *" --worktree "*)    WT_MODE=on ;;  esac               # explicit flag beats frontmatter
 case " $ARGUMENTS " in *" --no-worktree "*) WT_MODE=off ;; esac               # --no-worktree wins over all
 WORK_ROOT="$MAIN_ROOT"                                # default = build in the main tree (no worktree opened)
+AUTO_MODE=off; case " $ARGUMENTS " in *" --auto "*) AUTO_MODE=on ;; esac        # → read _shared/auto-loop.md
+WORKER=native
+case " $ARGUMENTS " in *" --codex "*)  WORKER=codex ;;  esac
+case " $ARGUMENTS " in *" --claude "*) WORKER=claude ;; esac
+case " $ARGUMENTS " in *" --codex "*" --claude "*|*" --claude "*" --codex "*) echo '🛑 both --codex and --claude given — pick one'; exit 1 ;; esac
+# WORKER≠native → read _shared/worker-cli.md NOW (§0 host check + preflight run before any plan read)
 ```
 🔴 Every phase from here uses **`$PLAN_PATH`** (flag-stripped) as the plan file — never the raw `$ARGUMENTS`
 
@@ -213,6 +224,8 @@ here forces either one: judge it as you would any other task, with the real trad
 
 🔴 Delegating → **read `.ow/commands/_shared/delegation.md` and follow it** — CONTEXT_REFS resolution,
 chunk partition, the PROJECT CONTEXT / CHUNK blocks, the spawn prompt, and the chunk loop all live there.
+`WORKER=codex|claude` → the user's flag already made the 3.0 call: the work is delegated, and `_shared/worker-cli.md`
+replaces the spawn step (the external CLI runs the chunk; every other rule of `delegation.md` stands).
 Running inline → skip it entirely.
 
 ### 3.3 `## Step Progress` — resume marker (inline runs only)
@@ -264,6 +277,13 @@ into a captured file and produces the results table (pass/fail parsed from real 
 **No run = the work is not done** — never flip `status: done`. Its `## Test Coverage Added` table is the
 direct input to `Implementation Result` (6) and to the audit below.
 
+### 5.1 Fix loop (`AUTO_MODE=on` only)
+
+A failing `EXIT_STATE` (delegation §6 step 3) or a failing 5.0 run → 🔴 **read `.ow/commands/_shared/auto-loop.md` §2
+and follow it**: bounded fix chunks (`AUTO_MAX_FIX` per phase), a short fix-log per attempt, a progress line per
+attempt, `STOPPED:` when the cap is hit. `AUTO_MODE=off` → this section does not exist: a failure is handled as
+the surrounding phase already says (STOP / ask).
+
 ### 5.2 Coverage audit — STOP gate (🔴 before marking done)
 
 ```bash
@@ -306,6 +326,7 @@ If >0 → finish the outstanding items first (inline, or the `docs` agent under 
 
 Tick that phase's row `done`, then decide whether the plan itself closes — `_shared/phases.md` §5 (the last
 phase re-runs 6.0 whole-file first). 🔴 Never flip the plan `status: done` while a phase row is not `done`.
+`AUTO_MODE=on` → commit the phase now, `_shared/auto-loop.md` §2.5 (row *plan phase closed*)
 
 ### 6.2 Close the plan
 
@@ -321,11 +342,12 @@ phase re-runs 6.0 whole-file first). 🔴 Never flip the plan `status: done` whi
    ```
 3. Update `$IMPL_STATUS` to mark the feature/phase done — 🔴 `00-Index` follows `_shared/vault-doc-style.md`:
    the plan carries the before/after, `$IMPL_STATUS` only the row that is true now
+4. `AUTO_MODE=on` → commit the plan file + the vault docs this run wrote, `_shared/auto-loop.md` §2.5 (row *plan closed*)
 
 ### 6.4 Commit in the worktree (worktree mode only — #31)
 
 `WT_MODE=on` → all gates passed (5.0/5.2/5.3/6.0) ⇒ commit the code in the worktree per
-`_shared/worktree.md` §4 (**no push, no merge** — `/ow-test` merges it when smoke passes)
+`_shared/worktree.md` §4 (**no push, no merge** — `/ow-test` merges it when smoke passes) · `AUTO_MODE=on` → the single end-of-run commit is replaced by the per-phase / per-fix commits of `_shared/auto-loop.md` §2.5; the same no-push / no-merge rule holds
 
 ### 6.5 Close the source fix-log (🔴 fix-escalated runs only — #30)
 
@@ -340,6 +362,7 @@ Answer with **short bullets, quick to read**, in the configured language (`$PROJ
 - **What was done** — the main change + files/area + how it ran (inline, or subagent `<name>`)
 - **Verification** — the test/build actually run + its result (pass/fail count from stdout; cannot parse = `?/?` + `parse-failed: true`)
 - **Phase** — phased run only: which phase closed, which remain, the next command, and 🔴 `/clear` before it
+- **Auto** — `AUTO_MODE=on` only: phases run this session, fix attempts (`fix n/N` + fix-log paths), Auto Decisions taken, and — when it could not finish — one line `STOPPED: <reason>` (`_shared/auto-loop.md` §3) · `WORKER≠native` → `worker: <backend> <version>` + `log dir: <RUN_DIR>`
 - **Risks / open / next** — only if any (e.g. "manual UAT not done yet"), plus any `context gap:` collected
 
 🔴 **Never fabricate** a count / path / sha — no real value = `pending verification`
@@ -360,3 +383,4 @@ Answer with **short bullets, quick to read**, in the configured language (`$PROJ
 - Never deliver work without a verification map back to the success criteria · never touch a shared/production env without confirming
 - 🔴 Worktree mode → the orchestrator **must not merge** (that is `/ow-test`'s job) · **must not push** · the agent must not commit/merge itself · a create failure = **STOP**, never a silent fallback to the main tree
 - 🔴 Never trust a delegated `STATUS: DONE` without running `EXIT_STATE` yourself · `BLOCKED` → stop, ask a human, never auto-retry
+- 🔴 `--auto` / `--codex` / `--claude` absent → every line above holds exactly as written; the fragments they name are never read · `--auto` present → after Phase 1 the run **never waits for a human** — it finishes or emits `STOPPED:` (`_shared/auto-loop.md`)

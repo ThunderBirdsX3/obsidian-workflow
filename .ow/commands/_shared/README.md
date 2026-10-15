@@ -28,6 +28,8 @@ recursively (`cp -R`), so this subdir reaches consumer projects with no extra pl
 | `fix-issue-fix-flow.md` | always, at Phase 4 — delegated (= the prompt) or inline (= your own checklist) | `/ow-fix-issue` 4.1 |
 | `fix-issue-ready-for-test.md` | `--ready-for-test` (that mode skips Phases 0.5-7) | `/ow-fix-issue` 8 |
 | `delegation.md` | the work is delegated to a subagent (3.0 judgment) | `/ow-implement` 3.1–3.5 |
+| `worker-cli.md` | `/ow-implement --codex` or `--claude` (`WORKER=codex\|claude`) — chunks run on the other CLI via `scripts/ow-worker.sh` | `/ow-implement` 2.7.1 · 3.2 |
+| `auto-loop.md` | `/ow-implement --auto` (`AUTO_MODE=on`) — phase loop, bounded fix loop, auto commit, `STOPPED:` | `/ow-implement` 1 · 5.1 · 6.1 · 6.2 · 6.4 · 7 · `/ow-auto` |
 | `phases.md` | the plan carries a `## Phases` table (a phased plan) | `/ow-implement` 1 · 1.3 · 3.3 · 4 · 6.0 · 6.1 |
 | `coding-discipline.md` | at the code-editing phase — always, for any verb that writes code | `/ow-implement` 5.2 · 5.3 · `/ow-fix` 3 · `fix-issue-fix-flow.md` 4 · 6 |
 | `context-refs.md` | a conditional vault read set is being selected | `/ow-plan` 1.3 · `/ow-implement` 3.1 · `/ow-fix-issue` 4.0 · `delegation.md` 1 |

@@ -36,6 +36,9 @@
 /ow-implement <plan> --worktree      # บังคับ build ใน git worktree แยก (#31)
 /ow-implement <plan> --no-worktree   # บังคับ build ใน main tree (override plan ที่มี worktree: true)
 /ow-implement --from-fix <fix-log>   # P2/P3 เท่านั้น (skip plan) — /ow-fix เรียกให้เอง
+/ow-implement <plan> --auto          # รันทุก phase ต่อกัน ไม่ถาม "Start now?" · build/test พัง → fix เองไม่เกิน auto.max_fix_per_phase · commit local เอง
+/ow-implement <plan> --codex         # ส่ง chunk ให้ Codex CLI เขียน (host = Claude Code)
+/ow-implement <plan> --claude        # ส่ง chunk ให้ Claude CLI เขียน (host = Codex)
 ```
 
 ## 📐 Phased plan (`--phase`)
@@ -77,6 +80,15 @@ subagent สั่ง compact ตัวเองไม่ได้ — วิ่
 - 1 chunk = 1 agent (`subagent_target: all` แบ่งแยกต่อ agent)
 - orchestrator **รันคำสั่ง exit ของแต่ละ chunk เอง** ไม่เชื่อคำประกาศของ agent
 - agent ติด → คืน `BLOCKED` → **หยุด ถามคุณ** ไม่ retry เอง ไม่ rollback
+
+## 🤖 `--auto` · `--codex` · `--claude`
+
+- `--auto` — คนตอบครั้งเดียวก่อนเริ่ม (approve plan / พิมพ์ flag) หลังจากนั้นไม่ถามอีก: รันทุก phase ใน session เดียว,
+  build/test พัง → fix chunk + fix-log สั้นๆ ไม่เกิน `auto.max_fix_per_phase` (default 2), ทุก phase/fix/plan ที่ผ่าน → commit local
+  (stage เฉพาะไฟล์ของงาน ไม่ push) · ทำต่อไม่ได้ → จบด้วย `STOPPED: <reason>` แทนการถาม
+- `--codex` / `--claude` — chunk ถูกเขียนโดย CLI อีก vendor ผ่าน `scripts/ow-worker.sh` คืนมาแค่ `STATUS:` + HANDOFF ·
+  orchestrator ยังรัน `EXIT_STATE` เองทุก chunk · model ตั้งที่ `.ow.yml` `auto.codex_model` / `auto.claude_model`
+- ไม่ใส่ flag = ทำงานเหมือนเดิมทุกอย่าง · รันทั้ง vault phase แบบ hands-off → [`/ow-auto`](./ow-auto.md)
 
 ## 🔖 ทำค้างแล้ว session ปิดไป — resume ได้
 

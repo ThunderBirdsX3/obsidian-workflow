@@ -54,6 +54,7 @@
 | [/ow-handoff](./ow-handoff.md) | สร้าง Handoff Report ส่งต่อ reviewer/exec/QA |
 | [/ow-git](./ow-git.md) | submodule-aware commit/push/branch/merge |
 | [/ow-archive](./ow-archive.md) | ย้าย plan/fix-log ที่เสร็จแล้วเข้า `archive/` |
+| [/ow-auto](./ow-auto.md) | สั่งครั้งเดียว: clarify → plan → implement → test ทั้ง vault phase โดยไม่ถามซ้ำ · `--codex`/`--claude` ใช้ worker ภายนอก |
 
 ---
 

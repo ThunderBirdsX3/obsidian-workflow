@@ -442,7 +442,7 @@ run "resolver exposes snapshot slot" 'bash scripts/ow-paths.sh --shell | grep -q
 # Test 13: Issue workflow commands + gh-issue agent
 # ════════════════════════════════════════════════════════════════════════════
 printf "\n${c_bold}Section 13 — Issue workflow (triage + fix-issue)${c_reset}\n"
-run "command count = 21"           '[ "$(find .ow/commands -name "ow-*.md" | wc -l | tr -d " ")" -eq 21 ]'
+run "command count = 22"           '[ "$(find .ow/commands -name "ow-*.md" | wc -l | tr -d " ")" -eq 22 ]'
 run "spec: ow-triage-issues"      '[ -f .ow/commands/ow-triage-issues.md ]'
 run "spec: ow-fix-issue"          '[ -f .ow/commands/ow-fix-issue.md ]'
 run "shim: ow-triage-issues"      '[ -f .claude/commands/ow-triage-issues.md ]'
@@ -2448,6 +2448,296 @@ run "coding-discipline[behavioral]: check 12 fails on a fake citation" '
   printf "\n- rule per OW §9.9\n" >> "$_cd_tmp/repo/.ow/commands/ow-doc.md";
   ! bash "$_cd_tmp/repo/scripts/conformance-lint.sh" "$_cd_tmp/repo" >/dev/null 2>&1;
   _cd_rc=$?; rm -rf "$_cd_tmp"; [ $_cd_rc -eq 0 ]'
+
+# ════════════════════════════════════════════════════════════════════════════
+# /ow-auto — config block + resolver exports
+# ════════════════════════════════════════════════════════════════════════════
+run "auto-cfg: .ow.yml has auto: block with 4 keys" '
+  yq -e ".auto.max_fix_per_phase == 2" .ow.yml >/dev/null &&
+  yq -e ".auto.worker_timeout_min == 30" .ow.yml >/dev/null &&
+  yq -e ".auto | has(\"codex_model\")" .ow.yml >/dev/null &&
+  yq -e ".auto | has(\"claude_model\")" .ow.yml >/dev/null'
+run "auto-cfg: resolver exports AUTO_* with defaults when block absent" '
+  d=$(mktemp -d); cd "$d"; git init -q; mkdir -p docs/obsidian-vault
+  printf "project:\n  language: \"en\"\nvault_path: docs/obsidian-vault\n" > .ow.yml
+  out=$(OW_ROOT="$d" bash "'"$ROOT"'/scripts/ow-paths.sh" --shell)
+  echo "$out" | grep -q "^AUTO_MAX_FIX=2$" &&
+  echo "$out" | grep -q "^AUTO_TIMEOUT_MIN=30$" &&
+  echo "$out" | grep -q "^AUTO_CODEX_MODEL=" &&
+  echo "$out" | grep -q "^AUTO_CLAUDE_MODEL="'
+run "auto-cfg: resolver reads configured auto values" '
+  d=$(mktemp -d); cd "$d"; git init -q; mkdir -p docs/obsidian-vault
+  printf "project:\n  language: \"en\"\nvault_path: docs/obsidian-vault\nauto:\n  max_fix_per_phase: 3\n  worker_timeout_min: 5\n  codex_model: \"gpt-5-codex\"\n" > .ow.yml
+  out=$(OW_ROOT="$d" bash "'"$ROOT"'/scripts/ow-paths.sh" --shell)
+  echo "$out" | grep -q "^AUTO_MAX_FIX=3$" &&
+  echo "$out" | grep -q "^AUTO_TIMEOUT_MIN=5$" &&
+  echo "$out" | grep -q "^AUTO_CODEX_MODEL=gpt-5-codex$"'
+
+# ════════════════════════════════════════════════════════════════════════════
+# ow-worker.sh — external CLI worker (fake codex/claude; no real provider)
+# ════════════════════════════════════════════════════════════════════════════
+# Builds $TD/bin/{codex,claude} fakes driven by FAKE_MODE and a fixture dir.
+_worker_fixture() {
+  TD=$(mktemp -d); mkdir -p "$TD/bin" "$TD/wt" "$TD/runs"
+  cat > "$TD/bin/codex" <<'EOF'
+#!/usr/bin/env bash
+# fake codex: `codex --version` · `codex login status` · `codex exec [resume <id>] ... -o <file> -`
+case "$1" in
+  --version) echo "codex-cli 0.155.1"; exit 0 ;;
+  login) [ "${FAKE_MODE:-ok}" = auth ] && exit 1; echo "Logged in"; exit 0 ;;
+esac
+echo "$@" > "$FAKE_ARGV"
+out=""; mdl=""; while [ $# -gt 0 ]; do [ "$1" = -o ] && out="$2"; [ "$1" = -m ] && mdl="$2"; shift; done
+cat >/dev/null   # consume prompt on stdin
+echo '{"type":"thread.started","thread_id":"sess-codex-123"}'
+if [ -n "${FAKE_REJECT:-}" ] && [ "$mdl" = "$FAKE_REJECT" ]; then   # account cannot use this model
+  echo "{\"type\":\"error\",\"message\":\"The '$mdl' model is not supported when using Codex with a ChatGPT account.\"}"; exit 1
+fi
+echo "OPENAI_API_KEY=sk-fake-should-not-leak" >&2
+case "${FAKE_MODE:-ok}" in
+  ok)        printf 'did work\nSTATUS: DONE\nDONE: steps 1-2\nFILES: a.ts\nDIGEST: (none)\nDECISIONS: (none)\nDEVIATIONS: (none)\nOPEN: (none)\nCONTEXT_GAPS: (none)\n' > "$out" ;;
+  short)     printf 'STATUS: CONTINUE\nDONE: steps 1\nFILES: a.ts\n' > "$out" ;;
+  no-status) printf 'I finished everything, trust me.\n' > "$out" ;;
+  exit-fail) exit 1 ;;
+  timeout)   sleep 30 ;;
+  nested)    ( sleep "$FAKE_SLEEP"; : ) & wait ;;   # grandchild of the CLI process
+esac
+exit 0
+EOF
+  cat > "$TD/bin/claude" <<'EOF'
+#!/usr/bin/env bash
+case "$1" in --version) echo "2.1.0 (Claude Code)"; exit 0 ;; esac
+echo "$@" > "$FAKE_ARGV"
+cat >/dev/null
+case "${FAKE_MODE:-ok}" in
+  auth) echo "Not logged in" >&2; exit 1 ;;
+  ok) printf '{"type":"result","session_id":"sess-claude-456","result":"work\\nSTATUS: DONE\\nDONE: steps 1-2\\nFILES: b.ts\\nDIGEST: (none)\\nDECISIONS: (none)\\nDEVIATIONS: (none)\\nOPEN: (none)\\nCONTEXT_GAPS: (none)"}\n' ;;
+  preflight-ok) printf '{"type":"result","session_id":"x","result":"OK"}\n' ;;
+esac
+exit 0
+EOF
+  chmod +x "$TD/bin/codex" "$TD/bin/claude"
+  printf 'PROJECT CONTEXT\nSTEPS: 1-2\n' > "$TD/prompt.md"
+  export FAKE_ARGV="$TD/argv"
+}
+W="$ROOT/scripts/ow-worker.sh"
+
+run "worker: preflight codex ok prints version" '_worker_fixture
+  PATH="$TD/bin:$PATH" FAKE_MODE=ok bash "$W" codex --preflight | grep -q "codex-cli 0.155.1"'
+run "worker: preflight codex auth fail → exit 2, no RUN_DIR" '_worker_fixture
+  PATH="$TD/bin:$PATH" FAKE_MODE=auth bash "$W" codex --preflight >/dev/null 2>&1; rc=$?
+  [ $rc -eq 2 ] && [ -z "$(ls -A "$TD/runs")" ]'
+run "worker: preflight missing CLI → exit 2" '_worker_fixture
+  PATH="/usr/bin:/bin" bash "$W" codex --preflight >/dev/null 2>&1; [ $? -eq 2 ]'
+run "worker: codex ok → stdout is STATUS + 7 HANDOFF lines only" '_worker_fixture
+  out=$(PATH="$TD/bin:$PATH" FAKE_MODE=ok bash "$W" codex "$TD/wt" "$TD/runs" P1-chunk1 "$TD/prompt.md")
+  [ "$(echo "$out" | wc -l | tr -d " ")" = 8 ] &&
+  echo "$out" | head -1 | grep -q "^STATUS: DONE$" &&
+  ! echo "$out" | grep -q "did work" &&
+  ! echo "$out" | grep -q "sk-fake"'
+run "worker: codex argv has -C wt, -s workspace-write, --json, -o, no dangerously" '_worker_fixture
+  PATH="$TD/bin:$PATH" FAKE_MODE=ok bash "$W" codex "$TD/wt" "$TD/runs" P1-chunk1 "$TD/prompt.md" >/dev/null
+  a=$(cat "$FAKE_ARGV")
+  echo "$a" | grep -q -- "exec" && echo "$a" | grep -q -- "-C $TD/wt" &&
+  echo "$a" | grep -q -- "-s workspace-write" && echo "$a" | grep -q -- "--json" &&
+  echo "$a" | grep -q -- "-o $TD/runs/P1-chunk1.last.md" && ! echo "$a" | grep -q dangerously'
+run "worker: codex session id captured from events" '_worker_fixture
+  PATH="$TD/bin:$PATH" FAKE_MODE=ok bash "$W" codex "$TD/wt" "$TD/runs" P1-chunk1 "$TD/prompt.md" >/dev/null
+  [ "$(cat "$TD/runs/P1-chunk1.session")" = "sess-codex-123" ] && [ -s "$TD/runs/P1-chunk1.events.jsonl" ]'
+run "worker: stderr saved to file, never on stdout" '_worker_fixture
+  PATH="$TD/bin:$PATH" FAKE_MODE=ok bash "$W" codex "$TD/wt" "$TD/runs" P1-chunk1 "$TD/prompt.md" >/dev/null
+  grep -q "sk-fake" "$TD/runs/P1-chunk1.stderr"'
+run "worker: pads-handoff — short HANDOFF padded to 7 lines with (none)" '_worker_fixture
+  out=$(PATH="$TD/bin:$PATH" FAKE_MODE=short bash "$W" codex "$TD/wt" "$TD/runs" P1-chunk1 "$TD/prompt.md")
+  [ "$(echo "$out" | wc -l | tr -d " ")" = 8 ] && echo "$out" | head -1 | grep -q "^STATUS: CONTINUE$" &&
+  echo "$out" | grep -q "^CONTEXT_GAPS: (none)$"'
+run "worker: no STATUS line → STATUS: BLOCKED REASON: no-status-line" '_worker_fixture
+  out=$(PATH="$TD/bin:$PATH" FAKE_MODE=no-status bash "$W" codex "$TD/wt" "$TD/runs" P1-chunk1 "$TD/prompt.md")
+  echo "$out" | grep -q "^STATUS: BLOCKED$" && echo "$out" | grep -q "^REASON: no-status-line"'
+run "worker: exit≠0 → STATUS: BLOCKED REASON: exit-code" '_worker_fixture
+  out=$(PATH="$TD/bin:$PATH" FAKE_MODE=exit-fail bash "$W" codex "$TD/wt" "$TD/runs" P1-chunk1 "$TD/prompt.md")
+  echo "$out" | grep -q "^STATUS: BLOCKED$" && echo "$out" | grep -q "^REASON: exit-code 1"'
+run "worker: timeout → STATUS: BLOCKED REASON: timeout, process killed" '_worker_fixture
+  start=$(date +%s)
+  out=$(PATH="$TD/bin:$PATH" FAKE_MODE=timeout OW_WORKER_TIMEOUT_SEC=2 bash "$W" codex "$TD/wt" "$TD/runs" P1-chunk1 "$TD/prompt.md")
+  now=$(date +%s); el=$(( now - start ))   # bash 3.2 cannot parse $(( $(cmd) )) inside eval
+  echo "$out" | grep -q "^REASON: timeout" && [ $el -lt 15 ]'
+run "worker: --resume uses codex exec resume <id>, never --last" '_worker_fixture
+  PATH="$TD/bin:$PATH" FAKE_MODE=ok bash "$W" codex "$TD/wt" "$TD/runs" P1-chunk1 "$TD/prompt.md" --resume sess-codex-123 >/dev/null
+  a=$(cat "$FAKE_ARGV"); echo "$a" | grep -qE "^exec -C .* -s workspace-write --json -o .* resume sess-codex-123 -$" && ! echo "$a" | grep -q -- "--last"'
+run "worker: claude ok → argv has -p, --permission-mode acceptEdits, --add-dir, --output-format json" '_worker_fixture
+  out=$(PATH="$TD/bin:$PATH" FAKE_MODE=ok bash "$W" claude "$TD/wt" "$TD/runs" P1-chunk1 "$TD/prompt.md")
+  a=$(cat "$FAKE_ARGV")
+  echo "$a" | grep -q -- "-p" && echo "$a" | grep -q -- "--permission-mode acceptEdits" &&
+  echo "$a" | grep -q -- "--add-dir $TD/wt" && echo "$a" | grep -q -- "--output-format json" &&
+  ! echo "$a" | grep -q skip-permissions &&
+  echo "$out" | head -1 | grep -q "^STATUS: DONE$" && [ "$(cat "$TD/runs/P1-chunk1.session")" = "sess-claude-456" ]'
+run "worker: claude --resume passes --resume <id>" '_worker_fixture
+  PATH="$TD/bin:$PATH" FAKE_MODE=ok bash "$W" claude "$TD/wt" "$TD/runs" P1-chunk1 "$TD/prompt.md" --resume sess-claude-456 >/dev/null
+  grep -q -- "--resume sess-claude-456" "$FAKE_ARGV"'
+run "worker: model knob forwarded when set" '_worker_fixture
+  PATH="$TD/bin:$PATH" FAKE_MODE=ok AUTO_CODEX_MODEL=gpt-5-codex bash "$W" codex "$TD/wt" "$TD/runs" P1-chunk1 "$TD/prompt.md" >/dev/null
+  grep -q -- "-m gpt-5-codex" "$FAKE_ARGV"'
+run "worker: refuses-secret-prompt → exit 4, nothing dispatched" '_worker_fixture
+  printf "ctx\nANTHROPIC_API_KEY=sk-ant-xxx\n" > "$TD/prompt.md"
+  PATH="$TD/bin:$PATH" FAKE_MODE=ok bash "$W" codex "$TD/wt" "$TD/runs" P1-chunk1 "$TD/prompt.md" >/dev/null 2>&1; rc=$?
+  [ $rc -eq 4 ] && [ ! -e "$FAKE_ARGV" ]'
+run "worker: usage error → exit 3" 'bash "$W" >/dev/null 2>&1; [ $? -eq 3 ]'
+run "worker: owned manifest lists ow-worker.sh" '. scripts/ow-owned.sh; ow_owned_scripts | grep -qx ow-worker.sh'
+
+# ════════════════════════════════════════════════════════════════════════════
+# _shared/worker-cli.md — external worker fragment
+# ════════════════════════════════════════════════════════════════════════════
+WCLI=.ow/commands/_shared/worker-cli.md
+run "worker-cli: fragment exists"                       "[ -f $WCLI ]"
+run "worker-cli: always emits CHUNK block even for 1 chunk" "grep -q 'even when §2 laid out a single chunk' $WCLI"
+run "worker-cli: spawn = ow-worker.sh, not Agent tool"  "grep -q 'scripts/ow-worker.sh' $WCLI && grep -qi 'instead of the Agent tool' $WCLI"
+run "worker-cli: code-only rule 14 present"             "grep -q '^14\\.' $WCLI && grep -q 'never edit .docs/' $WCLI"
+run "worker-cli: forbids cat of raw log into context"   "grep -q 'tail -40' $WCLI && grep -qi 'never .cat. the events' $WCLI"
+run "worker-cli: progress line suffix documented"       "grep -q 'worker: codex · session:' $WCLI"
+run "worker-cli: orchestrator still runs EXIT_STATE"    "grep -q 'runs .EXIT_STATE. itself' $WCLI"
+run "worker-cli: vault writes stay with orchestrator"   "grep -q 'rule 9' $WCLI && grep -qi 'orchestrator performs' $WCLI"
+run "worker-cli: resume uses the chunk session file"    "grep -q -- '--resume' $WCLI && grep -q '\\.session' $WCLI && grep -q 'never .--last' $WCLI"
+run "worker-cli: same-host STOP documented"             "grep -qi 'same host' $WCLI"
+
+# ════════════════════════════════════════════════════════════════════════════
+# /ow-implement --auto · --codex · --claude  (+ _shared/auto-loop.md)
+# ════════════════════════════════════════════════════════════════════════════
+IMPL=.ow/commands/ow-implement.md; ALOOP=.ow/commands/_shared/auto-loop.md; PHZ=.ow/commands/_shared/phases.md
+run "impl-auto: trigger lists --auto --codex --claude" \
+  "grep -q -- '--auto ' $IMPL && grep -q -- '--codex ' $IMPL && grep -q -- '--claude ' $IMPL"
+run "impl-auto: fragment table points at auto-loop.md and worker-cli.md" \
+  "grep -q '_shared/auto-loop.md' $IMPL && grep -q '_shared/worker-cli.md' $IMPL"
+run "impl-auto: 2.7.1 sed strips the three new flags" \
+  "grep -q 's/\\[\\[:space:\\]\\]\\*--auto//g' $IMPL && grep -q 's/\\[\\[:space:\\]\\]\\*--codex//g; s/\\[\\[:space:\\]\\]\\*--claude//g' $IMPL"
+run "impl-auto: 2.7.1 resolves AUTO_MODE and WORKER" \
+  "grep -q '^AUTO_MODE=off' $IMPL && grep -q 'AUTO_MODE=on' $IMPL && grep -q '^WORKER=native' $IMPL && grep -q 'WORKER=codex' $IMPL && grep -q 'WORKER=claude' $IMPL"
+run "impl-auto: both worker flags → STOP" "grep -qi 'both --codex and --claude' $IMPL"
+run "impl-auto: Start now? skipped only under --auto" "grep -q 'AUTO_MODE=on. → skip the question' $IMPL"
+run "impl-auto: legacy BLOCKED line untouched" \
+  "grep -q 'BLOCKED. → stop, ask a human, never auto-retry' $IMPL && grep -q 'Never trust a delegated .STATUS: DONE. without running .EXIT_STATE. yourself' $IMPL"
+run "impl-auto: phases.md PLAN_ARG sed strips new flags" \
+  "grep -q 's/\\[\\[:space:\\]\\]\\*--auto//g' $PHZ"
+run "impl-auto: phases.md /clear advice carries the --auto exception" "grep -q 'except under .--auto' $PHZ"
+run "impl-auto: spec stays lean (<400 lines)" "[ \"\$(wc -l < $IMPL | tr -d ' ')\" -lt 400 ]"
+run "auto-loop: fragment exists with phase loop + fix loop" \
+  "[ -f $ALOOP ] && grep -q '^## 1. Phase loop' $ALOOP && grep -q '^## 2. Fix loop' $ALOOP"
+run "auto-loop: fix cap reads AUTO_MAX_FIX" "grep -q 'AUTO_MAX_FIX' $ALOOP"
+run "auto-loop: fix chunk STEPS: fix + EXIT_STATE = failing command" "grep -q 'STEPS: fix' $ALOOP && grep -q 'EXIT_STATE: <the command that failed>' $ALOOP"
+run "auto-loop: fix-log naming + severity P2" "grep -q -- '-<phase>-fix<N>.md' $ALOOP && grep -q 'severity: P2' $ALOOP"
+run "auto-loop: fix progress line shape" "grep -q 'P2 fix 1/2' $ALOOP && grep -q 'fixlog:' $ALOOP"
+run "auto-loop: BLOCKED → re-partition once → STOPPED, not a question" \
+  "grep -q 're-partition' $ALOOP && grep -q 'STOPPED: ' $ALOOP && grep -qi 'never waits for an answer' $ALOOP"
+run "auto-loop: only test/build failures enter the loop" "grep -qi 'only a failing .EXIT_STATE. or 5.0' $ALOOP"
+run "auto-loop: 40-line tail cap on failure output" "grep -q 'tail -40' $ALOOP"
+run "auto-loop: spawn cap counts fix chunks" "grep -q 'max(2 × N, N + 3)' $ALOOP && grep -qi 'fix chunks count' $ALOOP"
+run "auto-loop: --from-fix + --auto accepted" "grep -q -- '--from-fix' $ALOOP"
+run "auto-loop: Auto Decisions section defined" "grep -q '## Auto Decisions' $ALOOP"
+run "auto-loop: auto commit section with 3 commit points" \
+  "grep -q '^## 2.5 Auto commit' $ALOOP && grep -q 'feat(<area>): <plan title> — <Pn> (auto · plan/<slug>)' $ALOOP && grep -q 'fix(<area>):' $ALOOP && grep -q 'docs(vault): close plan <slug> (auto)' $ALOOP"
+run "auto-loop: main tree never git add -A, scoped paths only" \
+  "grep -q ' add -- ' $ALOOP && grep -qi 'never .git add -A. on the main tree' $ALOOP"
+run "auto-loop: commit failure → STOPPED: commit, no --no-verify" "grep -q 'STOPPED: commit' $ALOOP && grep -q -- 'never .--no-verify' $ALOOP"
+run "auto-loop: commit sha recorded on the progress line" "grep -q 'commit: <sha7>' $ALOOP && grep -q 'rev-parse --short HEAD' $ALOOP"
+run "auto-loop: no push, no /ow-git" "grep -qi 'never push' $ALOOP && grep -q 'never call ./ow-git' $ALOOP"
+run "impl-auto: 6.1/6.2/6.4 point at auto commit under --auto" \
+  "grep -c 'auto-loop.md. §2.5' $IMPL | grep -qE '^[2-9]'"
+
+# ════════════════════════════════════════════════════════════════════════════
+# /ow-plan + /ow-clarify under the /ow-auto grant
+# ════════════════════════════════════════════════════════════════════════════
+PLN=.ow/commands/ow-plan.md; CLR=.ow/commands/ow-clarify.md
+run "plan-auto: Phase 2 reads Clarifications under OW_AUTO_RUN" "grep -q 'OW_AUTO_RUN' $PLN && grep -q '## Clarifications' $PLN && grep -q '## Auto Decisions' $PLN"
+run "plan-auto: never-approve line kept, with the /ow-auto exception" \
+  "grep -q 'Never set .status: approved. on the user.s behalf' $PLN && grep -q 'approved_by: ow-auto' $PLN"
+run "clarify-auto: batch note present" "grep -q 'ow-auto' $CLR && grep -qi 'one batch' $CLR"
+
+# ════════════════════════════════════════════════════════════════════════════
+# /ow-auto spec
+# ════════════════════════════════════════════════════════════════════════════
+AUTO=.ow/commands/ow-auto.md
+run "ow-auto: spec exists with Phase 0 marker"           "[ -f $AUTO ] && grep -q 'OW-PHASE0' $AUTO"
+run "ow-auto: Phase 0 step-1 block identical to ow-archive" '
+  a=$(awk "/^# 1\\) resolve config/{on=1} on{print} /^export OW_CTX_LOADED=1/{if(on) exit}" .ow/commands/ow-auto.md)
+  b=$(awk "/^# 1\\) resolve config/{on=1} on{print} /^export OW_CTX_LOADED=1/{if(on) exit}" .ow/commands/ow-archive.md)
+  [ -n "$a" ] && [ "$a" = "$b" ]'
+run "ow-auto: trigger forms (PHASE · FEAT · brief · --codex · --claude · --worktree · --merge · --resume)" \
+  "grep -q '/ow-auto PHASE-1' $AUTO && grep -q '/ow-auto FEAT-' $AUTO && grep -q -- '--codex' $AUTO && grep -q -- '--claude' $AUTO && grep -q -- '--worktree' $AUTO && grep -q -- '--merge' $AUTO && grep -q -- '--resume <run-log>' $AUTO"
+run "ow-auto: same-host STOP + preflight before any write"  "grep -qi 'same host' $AUTO && grep -q 'ow-worker.sh. \$WORKER --preflight' $AUTO"
+run "ow-auto: queue from Scope In only, status≠done, Priority order" \
+  "grep -q '## 2. Scope' $AUTO && grep -q 'In' $AUTO && grep -q 'status: done' $AUTO && grep -qi 'priority' $AUTO"
+run "ow-auto: missing FEAT doc → stopped: FEAT doc missing"  "grep -q 'stopped: FEAT doc missing' $AUTO"
+run "ow-auto: Phase 1.5 clarify once as one batch"          "grep -q '^## Phase 1.5' $AUTO && grep -qi 'one batch' $AUTO && grep -q 'ow-clarify' $AUTO && grep -q 'Recommended' $AUTO"
+run "ow-auto: no questions after 1.5"                       "grep -qi 'no question reaches the user after Phase 1.5' $AUTO"
+run "ow-auto: run-log frontmatter + Queue table + Stops"    "grep -q 'type: auto-run' $AUTO && grep -q '^## Queue' $AUTO && grep -q '^## Stops' $AUTO && grep -q 'queued | planning | implementing | testing | done | stopped' $AUTO"
+run "ow-auto: run-log written before dispatch and after return" "grep -qi 'before the verb runs' $AUTO && grep -qi 'after it returns' $AUTO"
+run "ow-auto: grant frontmatter stamped on the plan"        "grep -q 'approved_by: ow-auto' $AUTO && grep -q 'auto_grant:' $AUTO && grep -q 'auto_brief:' $AUTO && grep -q 'auto_run:' $AUTO"
+run "ow-auto: exports OW_AUTO_RUN for /ow-plan"            "grep -q 'export OW_AUTO_RUN=' $AUTO"
+run "ow-auto: calls implement --auto with worker flag"      "grep -q -- '/ow-implement <plan> --auto' $AUTO"
+run "ow-auto: calls ow-test --no-merge unless merge granted" "grep -q -- '/ow-test <plan> --no-merge' $AUTO && grep -qi 'merge. in .auto_grant' $AUTO"
+run "ow-auto: test FAIL → fix-log → implement --from-fix --auto, capped" \
+  "grep -q -- '--from-fix <fix-log> --auto' $AUTO && grep -q 'AUTO_MAX_FIX' $AUTO"
+run "ow-auto: stopped item → continue independent items, dependents stopped" \
+  "grep -q 'stopped: depends on' $AUTO && grep -qi 'next item that does not depend' $AUTO"
+run "ow-auto: final status done | done-with-stops"          "grep -q 'done-with-stops' $AUTO"
+run "ow-auto: grant includes commit, item-close commit defined" \
+  "grep -q 'grant: \[plan, implement, commit\]' $AUTO && grep -q 'docs(vault): close <FEAT> (auto · <run-log slug>)' $AUTO && grep -qi 'never push' $AUTO"
+run "ow-auto: --resume on status: done is a no-op"          "grep -qi 'status: done. → report .nothing to resume' $AUTO"
+run "ow-auto: --resume never re-asks clarify, flags from run-log" "grep -qi 'never re-asks' $AUTO && grep -qi 'flags.*from the run-log frontmatter' $AUTO"
+run "ow-auto: usage reported unknown"                       "grep -q 'usage: unknown' $AUTO"
+run "ow-auto: Output + Never sections"                      "grep -q '^## Phase 7 — Output (' $AUTO && grep -q '^## Never' $AUTO"
+run "ow-auto: never reads raw worker logs into context"     "grep -qi 'never .cat. a worker log' $AUTO"
+
+# ════════════════════════════════════════════════════════════════════════════
+# /ow-auto — docs + packaging
+# ════════════════════════════════════════════════════════════════════════════
+run "ow-auto docs: usage/ow-auto.md exists with quickstart + resume + limits" \
+  "[ -f usage/ow-auto.md ] && grep -q -- '--codex' usage/ow-auto.md && grep -q -- '--resume' usage/ow-auto.md && grep -qi 'usage: unknown\|unknown' usage/ow-auto.md && grep -q '0.155.1' usage/ow-auto.md"
+run "ow-auto docs: usage/README.md lists it"          "grep -q 'ow-auto' usage/README.md"
+run "ow-auto docs: CLAUDE.md counts 22 + Delivery row" "grep -q '## All commands (22)' CLAUDE.md && grep -q '/ow-auto' CLAUDE.md"
+run "ow-auto docs: README counts 22"                   "grep -q '22 slash commands' README.md && grep -q '## 🎯 22 Commands' README.md && grep -q 'ow-auto' README.md"
+run "ow-auto docs: ow-help cheatsheet row"             "grep -q '| /ow-auto' .ow/commands/ow-help.md"
+run "ow-auto docs: AGENTS.md names /ow-auto and --claude worker" "grep -q 'ow-auto' AGENTS.md && grep -q -- '--claude' AGENTS.md"
+run "ow-auto docs: codex/README no longer claims no-subagents as the end of the story" "grep -q -- '--claude' codex/README.md"
+run "ow-auto docs: CHANGELOG 2.0.0 on top + version bumped" \
+  "head -12 CHANGELOG.md | grep -q '^## \[2.0.0\]' && yq -e '.ow.version == \"2.0.0\"' .ow.yml >/dev/null"
+
+run "worker: TERM to the runner kills the CLI too (no orphan writer)" '_worker_fixture
+  PATH="$TD/bin:$PATH" FAKE_MODE=timeout OW_WORKER_TIMEOUT_SEC=60 bash "$W" codex "$TD/wt" "$TD/runs" P1-chunk1 "$TD/prompt.md" >/dev/null 2>&1 &
+  wp=$!; sleep 2; kill -TERM $wp; sleep 2
+  ! pgrep -f "$TD/bin/codex" >/dev/null'
+run "worker: timeout kill reaches grandchildren" '_worker_fixture
+  export FAKE_SLEEP="$((40 + RANDOM % 40)).$RANDOM"
+  PATH="$TD/bin:$PATH" FAKE_MODE=nested OW_WORKER_TIMEOUT_SEC=2 bash "$W" codex "$TD/wt" "$TD/runs" P1-chunk1 "$TD/prompt.md" >/dev/null
+  sleep 1; ! pgrep -f "sleep $FAKE_SLEEP" >/dev/null'
+run "worker-cli: long chunks run in background, never inside a foreground tool timeout" \
+  "grep -q 'run_in_background' .ow/commands/_shared/worker-cli.md"
+run "auto-loop: commit is path-limited (never the whole index) + inline list excludes pre-run dirt" \
+  "grep -q 'commit -m .* -- <the same paths>' .ow/commands/_shared/auto-loop.md && grep -qi 'dirty before the run' .ow/commands/_shared/auto-loop.md"
+run "ow-auto: item-close commit is path-limited" "grep -q 'commit -m .* -- <the same paths>' .ow/commands/ow-auto.md"
+run "ow-auto: abandoned FEAT skipped, existing plan reused" \
+  "grep -q 'abandoned' .ow/commands/ow-auto.md && grep -qi 'existing plan' .ow/commands/ow-auto.md"
+run "ow-auto: --worktree without --merge stops dependents on unmerged code" "grep -qi 'unmerged' .ow/commands/ow-auto.md"
+
+# codex model alias ("sol" → newest listed *-sol in $CODEX_HOME/models_cache.json, fallback on rejection)
+_codex_cache() {
+  mkdir -p "$TD/ch"; export CODEX_HOME="$TD/ch"
+  printf '%s' '{"models":[{"slug":"gpt-7-sol","visibility":"hide"},{"slug":"gpt-5.6-sol","visibility":"list"},{"slug":"gpt-6.1-sol","visibility":"list"},{"slug":"gpt-6-luna","visibility":"list"},{"slug":"gpt-6-sol","visibility":"list"}]}' > "$TD/ch/models_cache.json"
+}
+run "worker: codex alias resolves to newest listed family model (hidden skipped)" '_worker_fixture; _codex_cache
+  out=$(PATH="$TD/bin:$PATH" FAKE_MODE=ok AUTO_CODEX_MODEL=sol bash "$W" codex "$TD/wt" "$TD/runs" P1-chunk1 "$TD/prompt.md")
+  grep -q -- "-m gpt-6.1-sol" "$FAKE_ARGV" && [ "$(cat "$TD/runs/P1-chunk1.model")" = gpt-6.1-sol ] &&
+  echo "$out" | head -1 | grep -q "^STATUS: DONE$"'
+run "worker: codex alias falls back when the account rejects the newest" '_worker_fixture; _codex_cache
+  out=$(PATH="$TD/bin:$PATH" FAKE_MODE=ok FAKE_REJECT=gpt-6.1-sol AUTO_CODEX_MODEL=sol bash "$W" codex "$TD/wt" "$TD/runs" P1-chunk1 "$TD/prompt.md")
+  grep -q -- "-m gpt-6-sol" "$FAKE_ARGV" && [ "$(cat "$TD/runs/P1-chunk1.model")" = gpt-6-sol ] &&
+  echo "$out" | head -1 | grep -q "^STATUS: DONE$"'
+run "worker: codex alias with no models cache → BLOCKED, nothing dispatched" '_worker_fixture; export CODEX_HOME="$TD/none"
+  out=$(PATH="$TD/bin:$PATH" FAKE_MODE=ok AUTO_CODEX_MODEL=sol bash "$W" codex "$TD/wt" "$TD/runs" P1-chunk1 "$TD/prompt.md")
+  echo "$out" | grep -q "^STATUS: BLOCKED$" && echo "$out" | grep -q "^REASON: model-alias" && [ ! -e "$FAKE_ARGV" ]'
+run "worker: full codex slug passes through, never retried" '_worker_fixture; _codex_cache
+  out=$(PATH="$TD/bin:$PATH" FAKE_MODE=ok FAKE_REJECT=gpt-6.1-sol AUTO_CODEX_MODEL=gpt-6.1-sol bash "$W" codex "$TD/wt" "$TD/runs" P1-chunk1 "$TD/prompt.md")
+  echo "$out" | grep -q "^REASON: exit-code 1" && grep -q -- "-m gpt-6.1-sol" "$FAKE_ARGV"'
 
 # ════════════════════════════════════════════════════════════════════════════
 # Summary

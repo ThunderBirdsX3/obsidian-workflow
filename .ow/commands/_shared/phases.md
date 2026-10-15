@@ -25,7 +25,7 @@ ow_resolve_plan() {
   set -- "$(find "$PLAN_DIR" -maxdepth 1 -name "*$1.md" 2>/dev/null | sort | tail -1)"   # find, not a glob: an unmatched glob aborts under zsh
   [ -n "$1" ] && [ -f "$1" ] && printf '%s' "$1"
 }
-PLAN_ARG=$(printf '%s' "$ARGUMENTS" | sed -E 's/[[:space:]]*--phase[[:space:]]+[A-Za-z0-9_-]+//g; s/[[:space:]]*--(no-)?worktree//g; s/^[[:space:]]+//; s/[[:space:]]+$//')
+PLAN_ARG=$(printf '%s' "$ARGUMENTS" | sed -E 's/[[:space:]]*--phase[[:space:]]+[A-Za-z0-9_-]+//g; s/[[:space:]]*--(no-)?worktree//g; s/[[:space:]]*--auto//g; s/[[:space:]]*--codex//g; s/[[:space:]]*--claude//g; s/^[[:space:]]+//; s/[[:space:]]+$//')
 PLAN_PATH=$(ow_resolve_plan "$PLAN_ARG")
 PHASE_ID=$(printf '%s' "$ARGUMENTS" | sed -nE 's/.*--phase[[:space:]]+([A-Za-z0-9_-]+).*/\1/p')
 [ -f "$PLAN_PATH" ] || { echo "FATAL: no plan resolves from: $PLAN_ARG"; exit 1; }
@@ -98,7 +98,7 @@ earlier one just wrote, which is what the order is for. Before starting, sum the
 ~120k ⇒ **warn**, never block:
 
 > This plan is ~`<sum>`k tokens of read set. Running it in one session risks compaction mid-run — one phase
-> per session with `/clear` between them is cheaper and safer: `/ow-implement <plan> --phase P1`
+> per session with `/clear` between them is cheaper and safer: `/ow-implement <plan> --phase P1` — except under `--auto`, which runs the phases back-to-back in one session and relies on `## Chunk Progress` + auto-compaction instead (`_shared/auto-loop.md` §1)
 
 ## 3. Read set + resume, per phase
 
@@ -123,7 +123,7 @@ of the current iteration (`$ARGUMENTS` carries no id in that case — the loop d
 
 ```bash
 . "$(git rev-parse --show-toplevel)/.ow/local/paths.env"   # $PLAN_DIR — ow_resolve_plan needs it
-PLAN_ARG=$(printf '%s' "$ARGUMENTS" | sed -E 's/[[:space:]]*--phase[[:space:]]+[A-Za-z0-9_-]+//g; s/[[:space:]]*--(no-)?worktree//g; s/^[[:space:]]+//; s/[[:space:]]+$//')
+PLAN_ARG=$(printf '%s' "$ARGUMENTS" | sed -E 's/[[:space:]]*--phase[[:space:]]+[A-Za-z0-9_-]+//g; s/[[:space:]]*--(no-)?worktree//g; s/[[:space:]]*--auto//g; s/[[:space:]]*--codex//g; s/[[:space:]]*--claude//g; s/^[[:space:]]+//; s/[[:space:]]+$//')
 PLAN_PATH=$(ow_resolve_plan "$PLAN_ARG")            # same resolver as §1 — re-paste it, fresh shell
 PHASE_ID="<the phase being executed right now>"     # --phase arg, or the run-all loop's current id
 [ -f "$PLAN_PATH" ] && [ -n "$PHASE_ID" ] || { echo "FATAL: phase gate has no target"; exit 1; }
@@ -156,7 +156,7 @@ Then:
   them yet), then continue into `/ow-implement` 6.2
 - Any row not yet `done` → the plan **stays** at `status: approved`; skip 6.2, and tell the user
   which phase is next: `/ow-implement <plan> --phase <next>`, 🔴 after a `/clear` — that is where the saving
-  comes from
+  comes from (except under `--auto`: the loop continues in-session)
 
 🔴 Never flip the plan's frontmatter `status: done` while one phase row is not `done` — `/ow-verify` and
 `$IMPL_STATUS` would both report work that was never run.

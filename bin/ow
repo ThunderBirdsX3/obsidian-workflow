@@ -147,7 +147,7 @@ cmd_doctor() {
   # degraded install this check exists to report. It MUST list every owned script, or
   # doctor reports "OK" while the runtime is short a helper. scripts/test.sh pins the
   # two lists equal so this copy can never drift from the manifest again.
-  [ -n "$owned_list" ] || owned_list="ow-paths.sh ow-safe-paths.sh ow-gitignore.sh ow-claude-md.sh ow-git-sync.sh ow-version.sh ow-owned.sh ow-frontends.sh ow-shims.sh ow-claude-manifest.sh ow-settings-merge.sh ow-config-merge.sh conformance-lint.sh ow-verify-vault-lang.sh ow-verify-vault-style.sh upgrade.sh"
+  [ -n "$owned_list" ] || owned_list="ow-paths.sh ow-safe-paths.sh ow-gitignore.sh ow-claude-md.sh ow-git-sync.sh ow-version.sh ow-owned.sh ow-frontends.sh ow-shims.sh ow-worker.sh ow-claude-manifest.sh ow-settings-merge.sh ow-config-merge.sh conformance-lint.sh ow-verify-vault-lang.sh ow-verify-vault-style.sh upgrade.sh"
   miss=""; n=0; for s in $owned_list; do n=$((n+1)); [ -f "scripts/$s" ] || miss="$miss $s"; done
   echo "  scripts/:         $([ -z "$miss" ] && echo "OK ($n runtime helpers)" || echo "(missing:$miss)")"
   echo "  bin/ow:     $([ -f bin/ow ] && echo OK || echo "(missing — run upgrade)")"

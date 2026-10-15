@@ -31,6 +31,10 @@ those specs. Invocation differs per tool:
 | Kimi Code | `/skill:ow-plan` |
 | Codex CLI | `codex run 'ow-plan'`, or just name the verb |
 
+`ow-auto <PHASE|FEAT|brief>` clarifies once, then runs `ow-plan` → `ow-implement --auto` → `ow-test` for every
+feature in the queue without further questions. On Codex, `--claude` dispatches each code chunk to the Claude CLI
+(`scripts/ow-worker.sh`); on Claude Code, `--codex` dispatches to the Codex CLI. No flag = native, as before.
+
 Do not paraphrase a spec from memory. Read the file and follow its Phase structure
 start to finish. Not sure which verb applies? Run `ow-help`.
 

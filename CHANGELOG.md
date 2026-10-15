@@ -3,6 +3,31 @@
 Format: [Keep a Changelog](https://keepachangelog.com). Versions: SemVer.
 Version marker: `ow.version` in `.ow.yml`.
 
+## [2.0.0] — 2026-10-15
+
+Major version for the new hands-off mode. No breaking change: every command run without the new flags behaves
+exactly as in 1.6.2, and an existing `.ow.yml` gains the optional `auto:` block on upgrade.
+
+### Added — `/ow-auto` + `/ow-implement --auto` · external worker `--codex` / `--claude`
+
+- `/ow-auto <PHASE|FEAT|brief>`: clarifies every queued item once (one batch), then runs `/ow-plan` →
+  `/ow-implement --auto` → `/ow-test --no-merge` per item with no further questions. State lives in a run-log under
+  `80-ImplementPlan`; an item that cannot finish is `stopped` and independent items continue. `--resume <run-log>`.
+- `/ow-implement --auto`: runs every plan phase in-session, skips "Start now?", and repairs a failing build/test
+  with at most `auto.max_fix_per_phase` fix chunks (each with a short fix-log). Ends with `STOPPED: <reason>`
+  instead of asking. Without the flag nothing changes — `BLOCKED → stop, ask a human` holds.
+- `--codex` / `--claude`: chunks run in the other vendor's CLI via `scripts/ow-worker.sh` (`codex exec -s
+  workspace-write` / `claude -p --permission-mode acceptEdits`); only the HANDOFF returns to the orchestrator, raw
+  output goes to `.ow/local/runs/`. Preflight (CLI + login) runs before any write; a failure never falls back silently.
+- Auto runs commit locally on their own: every closed plan phase, every passed fix, every closed plan and item
+  (`feat(…) (auto · plan/<slug>)` / `fix(…)` / `docs(vault): close …`). Scoped `git add -- <paths>` on the main
+  tree, never `add -A`, never push, never `/ow-git` — pushing stays the human's step.
+- `.ow.yml` block `auto:` (`max_fix_per_phase`, `worker_timeout_min`, `codex_model`, `claude_model`) — optional.
+  `codex_model` takes a full slug or a family alias (`sol`): the alias resolves to the newest listed model in
+  `~/.codex/models_cache.json` and falls back to the next one when the account rejects it.
+- Not in scope: durable runner outside the session, provider failover, parallel worktrees, token/cost caps
+  (reported `unknown`). Verified against `codex-cli 0.155.1`.
+
 ## [1.6.2] — 2026-10-15
 
 ### Changed — `/ow-implement` spec trimmed (399 → 362 lines)

@@ -144,6 +144,11 @@ _abspath() {
 PROJECT_NAME=$(get "project.name" "unknown-project")
 PROJECT_SLUG=$(get "project.slug" "unknown-project")
 PROJECT_LANG=$(get "project.language" "th")
+# /ow-auto caps + external worker models (spec: .ow/commands/ow-auto.md · _shared/auto-loop.md · _shared/worker-cli.md)
+AUTO_MAX_FIX=$(get "auto.max_fix_per_phase" "2")
+AUTO_TIMEOUT_MIN=$(get "auto.worker_timeout_min" "30")
+AUTO_CODEX_MODEL=$(get "auto.codex_model" "")
+AUTO_CLAUDE_MODEL=$(get "auto.claude_model" "")
 # Vault document language. Unset ⇒ inherits PROJECT_LANG (already resolved above),
 # so a project that never sets the key keeps its existing behaviour.
 VAULT_LANG=$(get "project.vault_language" "$PROJECT_LANG")
@@ -509,6 +514,10 @@ case "$MODE" in
     print_var COMMANDS_DIR_OVERRIDE "$COMMANDS_DIR_OVERRIDE"
     print_var ENABLED_AGENTS   "$ENABLED_AGENTS"
     print_var GUARDRAILS_JSON       "$GUARDRAILS_JSON"
+    print_var AUTO_MAX_FIX          "$AUTO_MAX_FIX"
+    print_var AUTO_TIMEOUT_MIN      "$AUTO_TIMEOUT_MIN"
+    print_var AUTO_CODEX_MODEL      "$AUTO_CODEX_MODEL"
+    print_var AUTO_CLAUDE_MODEL     "$AUTO_CLAUDE_MODEL"
     print_var TEMPLATE_CHAIN        "$TEMPLATE_CHAIN"
     print_var COMMAND_PREFIX        "$COMMAND_PREFIX"
     print_var VERIFICATION_MATRIX_JSON "$VERIFICATION_MATRIX_JSON"
@@ -542,6 +551,7 @@ case "$MODE" in
   "integrity_gate": $INTEGRITY_GATE_JSON,
   "test_credentials": $TEST_CREDENTIALS_JSON,
   "version_bump": $VERSION_BUMP_JSON,
+  "auto": {"max_fix_per_phase": $AUTO_MAX_FIX, "worker_timeout_min": $AUTO_TIMEOUT_MIN, "codex_model": "$AUTO_CODEX_MODEL", "claude_model": "$AUTO_CLAUDE_MODEL"},
   "git": $GIT_SYNC_JSON,
   "ow": {"version":"$OW_VERSION","source":"$OW_SOURCE","last_synced":"$OW_LAST_SYNC"},
   "subagents_enabled": "$ENABLED_AGENTS",

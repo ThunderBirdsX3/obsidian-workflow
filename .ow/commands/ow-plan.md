@@ -171,6 +171,11 @@ Ask only what the vault does not answer:
 - Constraints (deadline, which components must be reused, etc.)?
 - Does the design system still need a new component?
 
+🔴 **Invoked by `/ow-auto`** (`OW_AUTO_RUN` is set — it names the run-log) → **ask nothing**. The questions were
+asked once, before the run (`ow-auto.md` Phase 1.5): read `## Clarifications` in the FEAT doc and in the run-log and
+use those answers. A question neither answers → take the option you would have marked *Recommended*, and record it in
+the plan under `## Auto Decisions` (shape: `_shared/auto-loop.md` §4). Never stall waiting for a reply.
+
 ## Phase 2.5 — Break the work into phases (only when it earns it)
 
 A **phase** = one concern that executes to a verifiable end on its own, small enough that a fresh session
@@ -543,7 +548,9 @@ The doc list and plan path already live in the plan file — never repeat them i
 
 - Never touch code, never run build/test/lint in /ow-plan
 - Never spawn a subagent — the plan file is text only
-- Never set `status: approved` on the user's behalf — the user must do it
+- Never set `status: approved` on the user's behalf — the user must do it. The one exception is **`/ow-auto`**, which
+  approves under the grant the user gave by running it and stamps `approved_by: ow-auto` + `auto_brief:` into the
+  frontmatter (`ow-auto.md` Phase 3 step 2) — `/ow-plan` itself still never writes `approved`
 - Never add Implementation Steps outside the requested scope (no speculative abstraction/refactor)
 - Success Criteria must be observable outcomes that can really be checked, not broad goals
 - Never leave a step whose action is a bare "check/confirm/grep" for implement to investigate — resolve it at plan time → write it as fact+proof

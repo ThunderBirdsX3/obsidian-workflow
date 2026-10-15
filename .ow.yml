@@ -38,7 +38,7 @@ vault_path: docs/obsidian-vault
 # - `source`  = where /ow-sync pulls from
 # - `last_synced` = updated by /ow-sync Phase 6 + scripts/upgrade.sh
 ow:
-  version: "1.6.2"
+  version: "2.0.0"
   source: "https://github.com/ThunderBirdsX3/obsidian-workflow"
   last_synced: "2026-09-10"
 
@@ -188,3 +188,13 @@ integrity_gate:
 
 # Project rules registry (#17). Empty files ⇒ glob .ow/rules/*.md by applies_to.
 rules: { dir: ".ow/rules", files: [] }
+
+# /ow-auto + /ow-implement --auto — caps and external-worker settings.
+# Absent block ⇒ the defaults shown here. Unknown usage/cost is reported as `unknown`, never enforced.
+auto:
+  max_fix_per_phase: 2        # fix chunks per plan phase (and /ow-test fix rounds per item) before the item is marked stopped
+  worker_timeout_min: 30      # per chunk · exceeded ⇒ worker killed, STATUS: BLOCKED REASON: timeout
+  codex_model: ""             # "" = codex default · full slug (gpt-6-sol) = exactly that · family alias (sol | luna | terra)
+                              # = newest listed in ~/.codex/models_cache.json, next one if the account rejects it
+                              # · never mapped from subagents.*.model (those are Claude names)
+  claude_model: ""            # "" = claude default · used when the host is Codex and the worker is `claude -p`
