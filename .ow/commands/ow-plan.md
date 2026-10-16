@@ -300,7 +300,7 @@ The plan file is a vault document; the summary at the end is chat. They are **no
 |---|---|---|
 | Prose written into the plan file (Problem, Task, Goals, Non-goals, Steps, Risks, Success Criteria …) | `$VAULT_LANG` | Phase 3 (this phase) |
 | Headings, frontmatter keys+values, paths, IDs (`FR-###`, `T###`), code, proof commands | English — always | Phase 3 |
-| Questions asked to the user, the Phase 5 STOP message, the `## Output` summary | `$PROJECT_LANG` | Phase 2 · Phase 5 · `## Output` |
+| Every sentence said to the user in chat — questions, progress notes between tool calls, the Phase 5 STOP message, the `## Output` summary | `$PROJECT_LANG` | whole run |
 
 `$VAULT_LANG` unset in config ⇒ the resolver returns `$PROJECT_LANG`, so a project that never
 sets it keeps a single language everywhere. Never swap the two: a plan written in `$PROJECT_LANG`
@@ -509,7 +509,7 @@ During Phase 1, if you find:
 
 ## Phase 5 — STOP
 
-Show the plan file created + this message (render in `$PROJECT_LANG`):
+Show the plan file created + this message. The quoted text is the English source — translate every line into `$PROJECT_LANG` (paths, commands and `status:` values stay verbatim; never paste it as English):
 
 > Plan created: `<vault>/80-ImplementPlan/2026-05-20-1430-add-search-feature.md`
 >
@@ -535,7 +535,7 @@ If the plan has `worktree: true` → add a line:
 
 At the end of /ow-plan answer with **short, quick-to-read bullets** in the configured language (`$PROJECT_LANG` from the Phase 0 resolver — th default; `en` → answer in English). Only:
 
-- **Problem** — 1 line: what is broken/missing (taken from the plan's `## Problem` — restate it in `$PROJECT_LANG`; the plan file itself stays `$VAULT_LANG`)
+- **Problem** — 1 line: what is broken/missing (taken from the plan's `## Problem` — translate it into `$PROJECT_LANG`; the plan file itself stays `$VAULT_LANG`)
 - **What gets fixed** — 1-3 bullets: goal + the main changes (files/areas)
 - **Plan file** — the path created
 - **Phases** — only when the plan is phased: `P1 → P2 → …` with area + `est tokens` each, and any warning from 2.5.2; flat plan → drop the bullet

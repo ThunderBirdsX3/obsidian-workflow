@@ -11,6 +11,10 @@
 # against HEAD) — never touches pre-existing vault content (grandfathered per the
 # v1.4.0 vault-language-split changelog).
 #
+# Exempt (not counted as a violation): a foreign-language label / domain term kept verbatim —
+# inside `inline code`, a [[wikilink]], or a short quote ("..." / “...” of at most 4 words).
+# Everything else in the prose body must be vault_language.
+#
 # Skips (exit 0, no scan) when:
 #   - VAULT_LANG == PROJECT_LANG (nothing to enforce — same language throughout)
 #   - PROJECT_LANG's script isn't in the SCRIPT_RANGE map below (heuristic has no
@@ -81,8 +85,8 @@ fi
 # NUL-delimited (-z) and read whole-line: an Obsidian note is very often "My Note.md" or
 # a title in the vault language, and word-splitting or git's default path-quoting would
 # drop exactly those files — this gate would then report "clean" over unscanned prose.
-LIST_TMP="$(mktemp)"
-trap 'rm -f "$LIST_TMP"' EXIT
+LIST_TMP="$(mktemp)"; SCAN_TMP="$(mktemp)"
+trap 'rm -f "$LIST_TMP" "$SCAN_TMP"' EXIT
 { git -C "$ROOT" diff --name-only -z --diff-filter=ACMR HEAD 2>/dev/null
   git -C "$ROOT" ls-files --others --exclude-standard -z 2>/dev/null
 } | tr '\0' '\n' | sort -u > "$LIST_TMP"
@@ -102,15 +106,33 @@ while IFS= read -r f; do
   esac
 
   # strip frontmatter + code fences + headings — scan prose body only
-  hits=$(awk '
+  awk '
     NR==1 && /^---[[:space:]]*$/ { infm=1; next }
     infm && /^---[[:space:]]*$/  { infm=0; next }
     infm { next }
     /^[[:space:]]*```/ { incode = !incode; next }
     incode { next }
     /^[[:space:]]*#/ { next }
-    { print NR": "$0 }
-  ' "$abspath" | grep -E "$RANGE" 2>/dev/null)
+    {
+      # Exempt: a foreign-language LABEL / term kept verbatim — `inline code`, [[wikilink]],
+      # and a quoted string of at most 4 words. Stripped from the copy that is scanned; the
+      # printed line stays whole. A quote longer than 4 words is a sentence, so it is scanned.
+      rest = $0; scan = ""
+      while (match(rest, /`[^`]*`|\[\[[^]]*\]\]|"[^"]*"|“[^”]*”/)) {
+        tok = substr(rest, RSTART, RLENGTH)
+        scan = scan substr(rest, 1, RSTART - 1)
+        if (tok ~ /^[`\[]/ || split(tok, w, /[[:space:]]+/) <= 4) scan = scan " "
+        else scan = scan tok
+        rest = substr(rest, RSTART + RLENGTH)
+      }
+      scan = scan rest
+      print NR"\t"scan"\t"$0
+    }
+  ' "$abspath" > "$SCAN_TMP"
+  # range match stays in grep (codepoint ranges need its UTF-8 handling, not BSD awk's)
+  idx=$(cut -f2 "$SCAN_TMP" | grep -nE "$RANGE" 2>/dev/null | cut -d: -f1)
+  hits=""
+  [ -n "$idx" ] && hits=$(printf '%s\n' "$idx" | awk -F'\t' 'NR==FNR { want[$1]=1; next } (FNR in want) { print $1": "$3 }' - "$SCAN_TMP")
 
   if [ -n "$hits" ]; then
     FAIL=1

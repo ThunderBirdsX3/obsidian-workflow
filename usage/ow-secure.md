@@ -47,7 +47,7 @@ Verdict: REVIEW NEEDED (2 yellow)
 
 1. **Phase 1** — Secret scan (AWS, GitHub PAT, Anthropic/OpenAI keys, Slack, Google, generic) → BLOCK ถ้าเจอ
 2. **Phase 2** — PII scan in `docs/` (Thai citizen ID, phone, email, HN/VN/AN) → BLOCK ถ้าไม่ mask
-3. **Phase 2.5** — Vault language gate (#33): เมื่อ `vault_language != project.language` → grep ไฟล์ vault ที่ new/modified (diff since HEAD + untracked) หา script ของภาษาแชทที่หลุดเข้ามาใน prose → BLOCK ถ้าเจอ (`scripts/ow-verify-vault-lang.sh`)
+3. **Phase 2.5** — Vault language gate (#33): เมื่อ `vault_language != project.language` → grep ไฟล์ vault ที่ new/modified (diff since HEAD + untracked) หา script ของภาษาแชทที่หลุดเข้ามาใน prose → BLOCK ถ้าเจอ (`scripts/ow-verify-vault-lang.sh`) · ข้อยกเว้น: คำศัพท์/ชื่อ label ภาษาอื่นที่เก็บตามต้นฉบับไม่นับ — อยู่ใน `inline code`, `[[wikilink]]` หรือเครื่องหมายคำพูดสั้น ≤4 คำ
 4. **Phase 2.6** — Vault present-tense gate: เอกสารใน vault นอก `80-ImplementPlan` / `85-FixLog` / `90-TestPlan` / `95-Handoff` ต้องเขียนสถานะปัจจุบันอย่างเดียว → grep ไฟล์ vault ที่ new/modified หา "เดิม X → ใหม่ Y" / `changed from … to …` / หัวข้อ `## Changelog` → BLOCK ถ้าเจอ (`scripts/ow-verify-vault-style.sh` · สัญญาอยู่ที่ `.ow/commands/_shared/vault-doc-style.md`)
 5. **Phase 3** — Quoted-output masking check (fenced blocks ใน fix-log / test-plan / handoff)
 6. **Phase 4** — Public-repo guardrails (confidential tags, NDA, customer name)

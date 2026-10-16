@@ -3,6 +3,22 @@
 Format: [Keep a Changelog](https://keepachangelog.com). Versions: SemVer.
 Version marker: `ow.version` in `.ow.yml`.
 
+## [2.0.1] — 2026-10-16
+
+Patch. No breaking change.
+
+### Fixed — `/ow-plan` answered in English although `project.language` is `th`
+
+- The Phase 5 STOP message was an English quote the model pasted as-is, and the language rule covered only questions,
+  the STOP message and the final summary. Now every chat sentence of the run is `$PROJECT_LANG` (progress notes
+  between tool calls included); the quoted STOP text is marked as English source to translate, and the summary's
+  `Problem` line is translated, not restated from the plan file. The plan file body stays `$VAULT_LANG`.
+
+### Changed — vault-language gate tolerates verbatim labels
+
+- `ow-verify-vault-lang.sh` (`/ow-secure` Phase 2.5) no longer flags a foreign-language label / term kept verbatim:
+  `inline code`, `[[wikilink]]`, or a quoted string of at most 4 words. All other prose must still be `vault_language`.
+
 ## [2.0.0] — 2026-10-15
 
 Major version for the new hands-off mode. No breaking change: every command run without the new flags behaves

@@ -116,6 +116,10 @@ bash "$(git rev-parse --show-toplevel)/scripts/ow-verify-vault-lang.sh"
 Report findings → BLOCK if it exits non-zero (name `file:line`, the offending script,
 and `$VAULT_LANG` it should have been written in instead)
 
+Exempt (not a violation): a foreign-language label / domain term kept verbatim — inside
+`inline code`, a `[[wikilink]]`, or a short quote (`"…"` / `“…”`, at most 4 words). Prose
+outside those, and quotes longer than 4 words, count as violations.
+
 ## Phase 2.6 — Vault present-tense gate
 
 A vault doc states the project as it is now; the before/after of a change lives in the plan,

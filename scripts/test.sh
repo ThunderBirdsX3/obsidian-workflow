@@ -250,6 +250,20 @@ if [ -x scripts/ow-verify-vault-lang.sh ]; then
     cd '"$PWD"' >/dev/null; rm -rf "$d";
     [ "$rc" -eq 1 ] && printf "%s" "$out" | grep -q "BLOCK"'
 
+  run "label exemption: code/wikilink/short quote pass, long quote blocks" '
+    d=$(mktemp -d); cd "$d"; git init -q >/dev/null; mkdir -p docs/obsidian-vault/85-FixLog;
+    printf "project:\n  language: \"th\"\n  vault_language: \"en\"\n" > .ow.yml;
+    printf "worktrees/\n" > .gitignore;
+    git add -A >/dev/null; git commit -qm init >/dev/null;
+    printf -- "---\ntitle: t\n---\n# n\n\nLabel `ยืนยัน`, term \"ใบสั่งซื้อ\", link [[ใบเสร็จ]].\n" > docs/obsidian-vault/85-FixLog/ok.md;
+    git add -A >/dev/null;
+    out=$(OW_ROOT="$d" bash '"$PWD"'/scripts/ow-verify-vault-lang.sh 2>&1); rc1=$?;
+    printf -- "---\ntitle: t\n---\n# n\n\nSee \"หนึ่ง สอง สาม สี่ ห้า หก\" here.\n" > docs/obsidian-vault/85-FixLog/bad.md;
+    git add -A >/dev/null;
+    out=$(OW_ROOT="$d" bash '"$PWD"'/scripts/ow-verify-vault-lang.sh 2>&1); rc2=$?;
+    cd '"$PWD"' >/dev/null; rm -rf "$d";
+    [ "$rc1" -eq 0 ] && [ "$rc2" -eq 1 ] && printf "%s" "$out" | grep -q "bad.md" && ! printf "%s" "$out" | grep -q "ok.md"'
+
   run "scans notes whose name has a space or non-ASCII" '
     d=$(mktemp -d); cd "$d"; git init -q >/dev/null; mkdir -p docs/obsidian-vault/85-FixLog;
     printf "project:\n  language: \"th\"\n  vault_language: \"en\"\n" > .ow.yml;
@@ -2699,8 +2713,8 @@ run "ow-auto docs: README counts 22"                   "grep -q '22 slash comman
 run "ow-auto docs: ow-help cheatsheet row"             "grep -q '| /ow-auto' .ow/commands/ow-help.md"
 run "ow-auto docs: AGENTS.md names /ow-auto and --claude worker" "grep -q 'ow-auto' AGENTS.md && grep -q -- '--claude' AGENTS.md"
 run "ow-auto docs: codex/README no longer claims no-subagents as the end of the story" "grep -q -- '--claude' codex/README.md"
-run "ow-auto docs: CHANGELOG 2.0.0 on top + version bumped" \
-  "head -12 CHANGELOG.md | grep -q '^## \[2.0.0\]' && yq -e '.ow.version == \"2.0.0\"' .ow.yml >/dev/null"
+run "ow-auto docs: CHANGELOG 2.0.1 on top + version bumped" \
+  "head -12 CHANGELOG.md | grep -q '^## \[2.0.1\]' && yq -e '.ow.version == \"2.0.1\"' .ow.yml >/dev/null"
 
 run "worker: TERM to the runner kills the CLI too (no orphan writer)" '_worker_fixture
   PATH="$TD/bin:$PATH" FAKE_MODE=timeout OW_WORKER_TIMEOUT_SEC=60 bash "$W" codex "$TD/wt" "$TD/runs" P1-chunk1 "$TD/prompt.md" >/dev/null 2>&1 &
