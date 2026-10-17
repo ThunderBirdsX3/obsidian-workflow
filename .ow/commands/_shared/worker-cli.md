@@ -53,7 +53,7 @@ bash "$MAIN_ROOT/scripts/ow-worker.sh" "$WORKER" "$WORK_ROOT" "$RUN_DIR" "$TAG" 
 🔴 Run it **in the background** — Claude Code: the Bash tool with `run_in_background: true`, then read its stdout when
 the completion notice arrives; Codex: a shell call whose timeout is longer than `worker_timeout_min`. A chunk easily
 outlives the host's foreground tool timeout (2–10 min), and a call cut off by that timeout returns no `STATUS:` line.
-The script's own watchdog (`worker_timeout_min`) is the only timeout; never start another chunk or `EXIT_STATE` while
+The script's own watchdog (`worker_timeout_min`; `0` = no timeout, a hung worker then runs until the user stops it) is the only timeout; never start another chunk or `EXIT_STATE` while
 one is still running (killing the script kills its CLI tree too).
 instead of the Agent tool. Its stdout is **exactly** `STATUS:` + the 7 HANDOFF lines (a `BLOCKED` it raised itself —
 timeout, non-zero exit, no `STATUS:` line — adds one `REASON:` line after `STATUS:`) — treat it as the agent's
@@ -68,6 +68,21 @@ permissions to let it run the command.
 
 🔴 Context hygiene: the raw events / stdout / stderr live in `$RUN_DIR`. **Never `cat` the events or stderr file
 into your context** — if a `BLOCKED` needs diagnosis, `tail -40 "$RUN_DIR/$TAG.stderr"` is the ceiling.
+
+### 3.1 Quota exhausted — fall back to the host, retry the worker next chunk
+
+`REASON: quota-exhausted` (either backend — Codex on a Claude host, Claude on a Codex host — is out of credits / at its usage limit) is **not** a failed chunk. Under `--auto`
+(`AUTO_MODE=on`):
+
+1. Run the **same chunk** on the host instead — inline or native agent per `ow-implement.md` 3.0 — same prompt, same
+   `EXIT_STATE`. It does not count as a re-partition, a fix attempt or a `timeout`/`blocked` strike.
+   The worker may have edited files before it stopped: the host starts from the tree as it is and `EXIT_STATE` is the judge.
+2. The **next chunk tries the external worker again** (no sticky switch, no cool-down file): credits that came back
+   are used from the very next chunk. A refusal costs one fast failed call.
+3. Progress line suffix: `worker: native (<backend> quota)` for the fallback chunk (`codex quota` on a Claude host, `claude quota` on a Codex host).
+
+Without `--auto` the BLOCKED stands as written — ask the user. Preflight (`--preflight`) only checks the login, not the
+balance, so a drained account passes preflight and is caught here.
 
 ## 4. Progress line
 

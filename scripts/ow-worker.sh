@@ -15,8 +15,9 @@
 #
 # A process exit 0 with no STATUS line is reported as STATUS: BLOCKED REASON: no-status-line —
 # it is never promoted to DONE. Timeout / non-zero exit / unparsable JSON likewise → BLOCKED.
+# Credit / usage-limit exhaustion → BLOCKED with REASON: quota-exhausted (the caller falls back, see worker-cli.md §3.1).
 #
-# Knobs (env, or .ow/local/paths.env from Phase 0): AUTO_TIMEOUT_MIN (default 30),
+# Knobs (env, or .ow/local/paths.env from Phase 0): AUTO_TIMEOUT_MIN (default 30; 0 = no timeout),
 # AUTO_CODEX_MODEL, AUTO_CLAUDE_MODEL. OW_WORKER_TIMEOUT_SEC overrides minutes (tests).
 # Portable: bash 3.2 + BSD userland. No `timeout(1)` on macOS → own watchdog.
 
@@ -148,7 +149,8 @@ run_once() {
   TFLAG="$RUN_DIR/$TAG.timeout"; rm -f "$TFLAG"
   # Watchdog polls once a second and exits by itself as soon as the CLI is gone, so it
   # never has to be killed (killing it mid-sleep would race the flag write / orphan sleep).
-  ( i=0
+  ( [ "$TIMEOUT_SEC" -gt 0 ] || exit 0   # 0 = no timeout: nothing to watch
+    i=0
     while [ "$i" -lt "$TIMEOUT_SEC" ]; do
       sleep 1; kill -0 "$PID" 2>/dev/null || exit 0; i=$((i + 1))
     done
@@ -211,8 +213,21 @@ esac
 
 # ── emit RETURN PROTOCOL only ────────────────────────────────────────────────
 if [ $TIMED_OUT -eq 1 ]; then emit_blocked "timeout after ${TIMEOUT_SEC}s"; exit 0; fi
-if [ $RC -ne 0 ];        then emit_blocked "exit-code $RC";               exit 0; fi
-if ! grep -q '^STATUS:' "$LAST" 2>/dev/null; then emit_blocked "no-status-line"; exit 0; fi
+# credit / usage-limit exhaustion is its own reason: the orchestrator falls back to the host and tries this backend again next chunk.
+# Only the CLI's error records are scanned — the model's own prose could mention "quota" without the account being out.
+# Checked on a non-zero exit AND on a STATUS-less exit 0 (`claude -p` may report a limit as is_error with exit 0).
+is_quota() {
+  { cat "$ERR"; grep -E '"type":"(error|turn\.failed)"|"is_error":true' "$OUT"; } 2>/dev/null \
+    | grep -qiE 'usage.limit|insufficient.quota|out of credits|credit balance|exceeded your (current )?quota|quota (exceeded|exhausted)|purchase more credits|rate.limit'
+}
+if [ $RC -ne 0 ]; then
+  is_quota && { emit_blocked "quota-exhausted"; exit 0; }
+  emit_blocked "exit-code $RC"; exit 0
+fi
+if ! grep -q '^STATUS:' "$LAST" 2>/dev/null; then
+  is_quota && { emit_blocked "quota-exhausted"; exit 0; }
+  emit_blocked "no-status-line"; exit 0
+fi
 
 # from the LAST `STATUS:` line to EOF; then normalise to STATUS + exactly 7 fields
 tail_block=$(awk '/^STATUS:/{buf=""; on=1} on{buf=buf $0 "\n"} END{printf "%s", buf}' "$LAST")

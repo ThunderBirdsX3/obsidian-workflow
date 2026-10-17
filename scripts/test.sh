@@ -2513,7 +2513,10 @@ case "${FAKE_MODE:-ok}" in
   short)     printf 'STATUS: CONTINUE\nDONE: steps 1\nFILES: a.ts\n' > "$out" ;;
   no-status) printf 'I finished everything, trust me.\n' > "$out" ;;
   exit-fail) exit 1 ;;
+  quota)     echo '{"type":"error","message":"You have hit your usage limit. Purchase more credits."}'; exit 1 ;;
+  prose-quota) echo '{"type":"item.completed","text":"I added a quota check and a usage limit"}'; exit 1 ;;
   timeout)   sleep 30 ;;
+  slow-ok)   sleep 3; printf 'STATUS: DONE\nDONE: x\nFILES: a.ts\nDIGEST: (none)\nDECISIONS: (none)\nDEVIATIONS: (none)\nOPEN: (none)\nCONTEXT_GAPS: (none)\n' > "$out" ;;
   nested)    ( sleep "$FAKE_SLEEP"; : ) & wait ;;   # grandchild of the CLI process
 esac
 exit 0
@@ -2525,6 +2528,8 @@ echo "$@" > "$FAKE_ARGV"
 cat >/dev/null
 case "${FAKE_MODE:-ok}" in
   auth) echo "Not logged in" >&2; exit 1 ;;
+  quota) printf '{"type":"result","is_error":true,"result":"Claude AI usage limit reached"}\n'; exit 1 ;;
+  quota-exit0) printf '{"type":"result","is_error":true,"result":"Claude AI usage limit reached"}\n'; exit 0 ;;
   ok) printf '{"type":"result","session_id":"sess-claude-456","result":"work\\nSTATUS: DONE\\nDONE: steps 1-2\\nFILES: b.ts\\nDIGEST: (none)\\nDECISIONS: (none)\\nDEVIATIONS: (none)\\nOPEN: (none)\\nCONTEXT_GAPS: (none)"}\n' ;;
   preflight-ok) printf '{"type":"result","session_id":"x","result":"OK"}\n' ;;
 esac
@@ -2555,6 +2560,20 @@ run "worker: codex argv has -C wt, -s workspace-write, --json, -o, no dangerousl
   echo "$a" | grep -q -- "exec" && echo "$a" | grep -q -- "-C $TD/wt" &&
   echo "$a" | grep -q -- "-s workspace-write" && echo "$a" | grep -q -- "--json" &&
   echo "$a" | grep -q -- "-o $TD/runs/P1-chunk1.last.md" && ! echo "$a" | grep -q dangerously'
+run "worker: codex out of credits -> REASON: quota-exhausted" '_worker_fixture
+  out=$(PATH="$TD/bin:$PATH" FAKE_MODE=quota bash "$W" codex "$TD/wt" "$TD/runs" P1-chunk1 "$TD/prompt.md")
+  echo "$out" | head -1 | grep -q "STATUS: BLOCKED" && echo "$out" | grep -q "REASON: quota-exhausted"'
+run "worker: claude out of credits (exit 1) -> REASON: quota-exhausted" '_worker_fixture
+  out=$(PATH="$TD/bin:$PATH" FAKE_MODE=quota bash "$W" claude "$TD/wt" "$TD/runs" P1-chunk1 "$TD/prompt.md")
+  echo "$out" | head -1 | grep -q "STATUS: BLOCKED" && echo "$out" | grep -q "REASON: quota-exhausted"'
+run "worker: claude limit reported with exit 0 -> REASON: quota-exhausted" '_worker_fixture
+  out=$(PATH="$TD/bin:$PATH" FAKE_MODE=quota-exit0 bash "$W" claude "$TD/wt" "$TD/runs" P1-chunk1 "$TD/prompt.md")
+  echo "$out" | grep -q "REASON: quota-exhausted"'
+run "worker: model prose mentioning quota is NOT quota-exhausted" '_worker_fixture
+  out=$(PATH="$TD/bin:$PATH" FAKE_MODE=prose-quota bash "$W" codex "$TD/wt" "$TD/runs" P1-chunk1 "$TD/prompt.md")
+  echo "$out" | grep -q "REASON: exit-code 1" && ! echo "$out" | grep -q quota-exhausted'
+run "worker-cli: quota fallback documented (host reruns chunk, worker retried next chunk)" \
+  "grep -q 'quota-exhausted' .ow/commands/_shared/worker-cli.md && grep -q 'next chunk tries the external worker again' .ow/commands/_shared/worker-cli.md"
 run "worker: codex session id captured from events" '_worker_fixture
   PATH="$TD/bin:$PATH" FAKE_MODE=ok bash "$W" codex "$TD/wt" "$TD/runs" P1-chunk1 "$TD/prompt.md" >/dev/null
   [ "$(cat "$TD/runs/P1-chunk1.session")" = "sess-codex-123" ] && [ -s "$TD/runs/P1-chunk1.events.jsonl" ]'
@@ -2571,6 +2590,9 @@ run "worker: no STATUS line → STATUS: BLOCKED REASON: no-status-line" '_worker
 run "worker: exit≠0 → STATUS: BLOCKED REASON: exit-code" '_worker_fixture
   out=$(PATH="$TD/bin:$PATH" FAKE_MODE=exit-fail bash "$W" codex "$TD/wt" "$TD/runs" P1-chunk1 "$TD/prompt.md")
   echo "$out" | grep -q "^STATUS: BLOCKED$" && echo "$out" | grep -q "^REASON: exit-code 1"'
+run "worker: AUTO_TIMEOUT_MIN=0 -> no watchdog, slow worker is not killed" '_worker_fixture
+  out=$(PATH="$TD/bin:$PATH" FAKE_MODE=slow-ok AUTO_TIMEOUT_MIN=0 bash "$W" codex "$TD/wt" "$TD/runs" P1-chunk1 "$TD/prompt.md")
+  echo "$out" | head -1 | grep -q "STATUS: DONE"'
 run "worker: timeout → STATUS: BLOCKED REASON: timeout, process killed" '_worker_fixture
   start=$(date +%s)
   out=$(PATH="$TD/bin:$PATH" FAKE_MODE=timeout OW_WORKER_TIMEOUT_SEC=2 bash "$W" codex "$TD/wt" "$TD/runs" P1-chunk1 "$TD/prompt.md")
@@ -2713,8 +2735,8 @@ run "ow-auto docs: README counts 22"                   "grep -q '22 slash comman
 run "ow-auto docs: ow-help cheatsheet row"             "grep -q '| /ow-auto' .ow/commands/ow-help.md"
 run "ow-auto docs: AGENTS.md names /ow-auto and --claude worker" "grep -q 'ow-auto' AGENTS.md && grep -q -- '--claude' AGENTS.md"
 run "ow-auto docs: codex/README no longer claims no-subagents as the end of the story" "grep -q -- '--claude' codex/README.md"
-run "ow-auto docs: CHANGELOG 2.0.1 on top + version bumped" \
-  "head -12 CHANGELOG.md | grep -q '^## \[2.0.1\]' && yq -e '.ow.version == \"2.0.1\"' .ow.yml >/dev/null"
+run "ow-auto docs: CHANGELOG 2.1.0 on top + version bumped" \
+  "head -12 CHANGELOG.md | grep -q '^## \[2.1.0\]' && yq -e '.ow.version == \"2.1.0\"' .ow.yml >/dev/null"
 
 run "worker: TERM to the runner kills the CLI too (no orphan writer)" '_worker_fixture
   PATH="$TD/bin:$PATH" FAKE_MODE=timeout OW_WORKER_TIMEOUT_SEC=60 bash "$W" codex "$TD/wt" "$TD/runs" P1-chunk1 "$TD/prompt.md" >/dev/null 2>&1 &

@@ -3,6 +3,22 @@
 Format: [Keep a Changelog](https://keepachangelog.com). Versions: SemVer.
 Version marker: `ow.version` in `.ow.yml`.
 
+## [2.1.0] — 2026-10-17
+
+Minor. No breaking change.
+
+### Added — external worker out of credits → the host continues, the worker is retried next chunk
+
+- `ow-worker.sh` returns `STATUS: BLOCKED` + `REASON: quota-exhausted` when Codex or Claude reports an exhausted
+  balance / usage limit (error records and stderr only, never the model's prose; also when `claude -p` reports it
+  with exit 0). Under `--auto` the same chunk (or fix chunk) reruns on the host without consuming a fix attempt or a
+  timeout/blocked strike; the next chunk tries the worker again, so restored credits are used at once. Outside
+  `--auto` the BLOCKED stands. Spec: `_shared/worker-cli.md` §3.1, `_shared/auto-loop.md`.
+
+### Fixed — `auto.worker_timeout_min: 0` killed the worker immediately
+
+- `0` now means no timeout: the watchdog does not start.
+
 ## [2.0.1] — 2026-10-16
 
 Patch. No breaking change.

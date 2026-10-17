@@ -45,7 +45,7 @@ loop:
   3. you run EXIT_STATE yourself:
        pass → fix-log status: fixed + GREEN result · progress line (below) · continue the chunk loop
        fail → loop
-     worker returned BLOCKED → §3 at once (does not consume a fix attempt)
+     worker returned BLOCKED → §3 at once (does not consume a fix attempt) — except `REASON: quota-exhausted`: run the fix chunk on the host (`worker-cli.md` §3.1)
 ```
 
 Spawn cap: `max(2 × N, N + 3)` from `delegation.md` §6 — **fix chunks count** toward it; reaching it first ⇒ `STOPPED: spawn-cap`.
@@ -120,6 +120,8 @@ STOPPED: <reason> — <phase/chunk> — <one line of evidence> — next: <what a
 | 5.2 coverage gate: `PROD>0 && TEST==0` and no untestable reason fits | `coverage` |
 | scope would have to grow beyond the plan (`/ow-plan --revise` needed) | `scope` |
 | a §2.5 commit failed (hook / lock / conflict) | `commit` |
+
+`REASON: quota-exhausted` is not in this table — the chunk reruns on the host and the next chunk tries the worker again (`worker-cli.md` §3.1).
 
 Before the line: write the progress markers you have, leave fix-logs at their true status, and (worktree mode)
 **do not commit** a phase that did not pass its gates. The Phase 7 output carries the `STOPPED:` line last.

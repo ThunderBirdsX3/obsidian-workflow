@@ -66,9 +66,16 @@ session ตาย → `/ow-auto --resume <run-log>` ทำต่อจากแ�
 | key | default | ความหมาย |
 |---|---|---|
 | `max_fix_per_phase` | `2` | fix chunk ต่อ plan phase (และรอบแก้หลัง `/ow-test` ต่อ FEAT) |
-| `worker_timeout_min` | `30` | เวลาต่อ chunk ของ worker ภายนอก — เกิน → kill + BLOCKED |
+| `worker_timeout_min` | `30` | เวลาต่อ chunk ของ worker ภายนอก — เกิน → kill + BLOCKED · `0` = ไม่จำกัดเวลา |
 | `codex_model` | `""` | model ของ `codex exec` — ว่าง = default ของ codex · ชื่อเต็ม (`gpt-6-sol`) = ใช้ตัวนั้นตรงๆ · ชื่อตระกูล (`sol`) = ตัวล่าสุดที่ list ใน `~/.codex/models_cache.json` ถ้าบัญชีใช้ไม่ได้จะลองตัวถัดไป (สูงสุด 3) |
 | `claude_model` | `""` | model ของ `claude -p` (ว่าง = default ของ claude) |
+
+## เครดิต worker หมด
+
+- worker (`codex` / `claude`) ตอบว่าเครดิตหมดหรือชน usage limit → chunk นั้นถูกรันต่อโดย host เอง (Claude หรือ Codex แล้วแต่ใครสั่ง) ไม่ STOP และไม่นับเป็น fix attempt
+- chunk ถัดไปลอง worker ใหม่ทุกครั้ง — เครดิตกลับมาก็ใช้ต่อได้เอง
+- `## Chunk Progress` ขึ้น `worker: native (codex quota)` ให้เห็นว่า chunk ไหน fallback
+- ใช้เฉพาะ `--auto` — `/ow-implement --codex` เดี่ยว ๆ ยัง BLOCKED แล้วถามผู้ใช้
 
 ## สิ่งที่ไม่ทำ
 
