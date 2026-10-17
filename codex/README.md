@@ -20,5 +20,7 @@ them with `commands/<verb>.md`). They are also generated as skills under
   `.claude/agents/*.md` are plain markdown, readable whichever assistant is driving). To hand code work to a
   separate context anyway, run `ow-implement <plan> --claude` (or `ow-auto <target> --claude`): the chunk is
   executed by the Claude CLI through `scripts/ow-worker.sh`, and only its HANDOFF returns here.
+- `ow-auto` isolates its `/ow-plan` and `/ow-test` steps in subagents on Claude Code only; with no Agent tool here
+  they run inline.
 - Per-command and per-subagent model pins in `.ow.yml` are Claude Code
   features and are ignored here.

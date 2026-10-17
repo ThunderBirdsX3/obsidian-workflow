@@ -70,6 +70,12 @@ session ตาย → `/ow-auto --resume <run-log>` ทำต่อจากแ�
 | `codex_model` | `""` | model ของ `codex exec` — ว่าง = default ของ codex · ชื่อเต็ม (`gpt-6-sol`) = ใช้ตัวนั้นตรงๆ · ชื่อตระกูล (`sol`) = ตัวล่าสุดที่ list ใน `~/.codex/models_cache.json` ถ้าบัญชีใช้ไม่ได้จะลองตัวถัดไป (สูงสุด 3) |
 | `claude_model` | `""` | model ของ `claude -p` (ว่าง = default ของ claude) |
 
+## แยก context จาก session หลัก
+
+- `/ow-plan` และ `/ow-test` ของแต่ละ item รันใน subagent แยก (Agent tool) — session หลักได้รับแค่คำตอบ ≤5 บรรทัด ไม่เห็น plan body หรือ test log
+- `/ow-implement` (และรอบแก้ `--from-fix`) ยังรันใน session หลัก เพราะต้อง dispatch chunk เอง — ใช้ `--codex`/`--claude` เพื่อให้ตัวโค้ดอยู่นอก context
+- host ที่ไม่มี Agent tool รัน inline เหมือนเดิม
+
 ## เครดิต worker หมด
 
 - worker (`codex` / `claude`) ตอบว่าเครดิตหมดหรือชน usage limit → chunk นั้นถูกรันต่อโดย host เอง (Claude หรือ Codex แล้วแต่ใครสั่ง) ไม่ STOP และไม่นับเป็น fix attempt

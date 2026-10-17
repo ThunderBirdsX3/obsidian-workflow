@@ -174,6 +174,23 @@ two writes per step, never one at the end. `export OW_AUTO_RUN="<run-log path>"`
    Worktrees, dirty trees and in-progress fix-logs of a stopped item stay exactly as they are
 8. Queue exhausted → run-log `status: done` (no stops) or `done-with-stops`
 
+**Isolated steps** — step 1 (`/ow-plan`) and step 4 (`/ow-test`, plus the test-level fix-log write) each run in their own
+subagent (Agent tool, `general-purpose`; no agent file needed), so a plan body or a test log never enters this context.
+A host with no Agent tool runs them inline as before. Prompt, nothing more:
+
+```
+Run `<the verb line from step 1 / 4>` exactly as .ow/commands/<verb>.md specifies (read the spec first, every Phase).
+Env: OW_AUTO_RUN=<run-log path>. Ask nobody — nobody is there; follow the verb's own auto rules.
+Reply with at most 5 lines: RESULT: ok|stopped|fail · the file(s) you wrote (plan path / test report path) ·
+one line of evidence (the command you ran and its real pass/fail count) · STOPPED: <reason> if you stopped.
+Never paste logs, plan bodies or diffs into the reply.
+```
+
+🔴 The reply is a pointer, not proof: confirm the file exists and, for `/ow-test`, read only the report's verdict
+table before moving the Queue row. Step 3 (`/ow-implement`) stays in this context — it dispatches chunks itself
+(`--codex` / `--claude` worker, or native agents), and a subagent cannot spawn them. Fix rounds (`/ow-implement --from-fix`)
+likewise stay here; only the `/ow-test` re-run after them is isolated.
+
 🔴 Never `cat` a worker log, events file or stderr into this context — the verbs already hold the evidence they need
 and the run-log holds the paths. 🔴 Hold HANDOFF-sized facts between items, not plan bodies.
 

@@ -2593,6 +2593,8 @@ run "worker: exit≠0 → STATUS: BLOCKED REASON: exit-code" '_worker_fixture
 run "worker: AUTO_TIMEOUT_MIN=0 -> no watchdog, slow worker is not killed" '_worker_fixture
   out=$(PATH="$TD/bin:$PATH" FAKE_MODE=slow-ok AUTO_TIMEOUT_MIN=0 bash "$W" codex "$TD/wt" "$TD/runs" P1-chunk1 "$TD/prompt.md")
   echo "$out" | head -1 | grep -q "STATUS: DONE"'
+run "ow-auto: plan + test steps isolated in subagents, reply is a pointer not proof" \
+  "grep -q 'Isolated steps' .ow/commands/ow-auto.md && grep -q 'a pointer, not proof' .ow/commands/ow-auto.md && grep -q 'stays in this context' .ow/commands/ow-auto.md"
 run "worker: timeout → STATUS: BLOCKED REASON: timeout, process killed" '_worker_fixture
   start=$(date +%s)
   out=$(PATH="$TD/bin:$PATH" FAKE_MODE=timeout OW_WORKER_TIMEOUT_SEC=2 bash "$W" codex "$TD/wt" "$TD/runs" P1-chunk1 "$TD/prompt.md")
@@ -2735,8 +2737,8 @@ run "ow-auto docs: README counts 22"                   "grep -q '22 slash comman
 run "ow-auto docs: ow-help cheatsheet row"             "grep -q '| /ow-auto' .ow/commands/ow-help.md"
 run "ow-auto docs: AGENTS.md names /ow-auto and --claude worker" "grep -q 'ow-auto' AGENTS.md && grep -q -- '--claude' AGENTS.md"
 run "ow-auto docs: codex/README no longer claims no-subagents as the end of the story" "grep -q -- '--claude' codex/README.md"
-run "ow-auto docs: CHANGELOG 2.1.0 on top + version bumped" \
-  "head -12 CHANGELOG.md | grep -q '^## \[2.1.0\]' && yq -e '.ow.version == \"2.1.0\"' .ow.yml >/dev/null"
+run "ow-auto docs: CHANGELOG 2.2.0 on top + version bumped" \
+  "head -12 CHANGELOG.md | grep -q '^## \[2.2.0\]' && yq -e '.ow.version == \"2.2.0\"' .ow.yml >/dev/null"
 
 run "worker: TERM to the runner kills the CLI too (no orphan writer)" '_worker_fixture
   PATH="$TD/bin:$PATH" FAKE_MODE=timeout OW_WORKER_TIMEOUT_SEC=60 bash "$W" codex "$TD/wt" "$TD/runs" P1-chunk1 "$TD/prompt.md" >/dev/null 2>&1 &

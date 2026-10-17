@@ -3,6 +3,18 @@
 Format: [Keep a Changelog](https://keepachangelog.com). Versions: SemVer.
 Version marker: `ow.version` in `.ow.yml`.
 
+## [2.2.0] — 2026-10-17
+
+Minor. No breaking change.
+
+### Changed — `/ow-auto` runs `/ow-plan` and `/ow-test` in their own subagent
+
+- On Claude Code, each item's plan step and test step (plus the test-level fix-log write) run in a `general-purpose`
+  subagent, so a plan body or a test log never enters the orchestrator's context. The subagent replies with at most
+  5 lines (result, file paths, one line of evidence, `STOPPED:`). The orchestrator checks that the files exist and
+  reads only the test report's verdict table. `/ow-implement` and `--from-fix` stay in the orchestrator because they
+  dispatch chunks themselves. A host with no Agent tool (Codex) runs these steps inline, as before.
+
 ## [2.1.0] — 2026-10-17
 
 Minor. No breaking change.
