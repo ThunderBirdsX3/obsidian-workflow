@@ -21,7 +21,7 @@
 #                         (default: interactive picker; --yes uses "claude")
 #   --yes                 ข้ามคำถามทั้งหมด ใช้ default (= overwrite ไฟล์ที่มีอยู่)
 #   --force               re-run install ทับ project ที่ adopt แล้ว (implies --yes)
-#   --no-sample           ไม่คัดลอก sample vault ตอน greenfield
+#   --no-sample           (deprecated, no-op — installer never copies a sample vault)
 #   --dry-run             แสดงสิ่งที่จะทำ แต่ไม่จริง
 #
 # AI front-ends supported: see scripts/ow-frontends.sh — the ONE registry the
@@ -38,7 +38,6 @@ MODE="auto"
 AI_AGENTS=""                       # "" = ask interactively; "all" = all 5
 YES=0
 DRY_RUN=0
-NO_SAMPLE=0                        # --no-sample: never copy the sample vault (greenfield only)
 FORCE=0                            # --force: re-run install over an already-adopted project
 TARGET=""
 
@@ -72,7 +71,7 @@ while [[ $# -gt 0 ]]; do
     # `ow update` wants). Implies --yes: there is no one to answer the prompts.
     # .ow.yml is in the protected set either way, so config is never clobbered.
     --force) FORCE=1; YES=1; shift ;;
-    --no-sample) NO_SAMPLE=1; shift ;;
+    --no-sample) shift ;;   # deprecated no-op: sample vault is never copied
     --dry-run) DRY_RUN=1; shift ;;
     -h|--help)
       grep '^#' "$0" | head -35; exit 0 ;;
@@ -1155,19 +1154,11 @@ if [[ -z "$EXTERNAL_VAULT" ]]; then
     run "mkdir -p '$full_vault'"
   fi
 
-  # Copy sample only if greenfield + brand-new vault location + sample available.
-  # Source is the sample VAULT itself (docs/obsidian-vault/), not its parent docs/ —
-  # copying the parent lands the vault one level below $VAULT_PATH (docs/obsidian-vault/obsidian-vault/).
-  sample_vault="$TMP_DIR/docs/obsidian-vault"
-  if [[ $NO_SAMPLE -eq 0 && "$MODE" == "greenfield" && -d "$sample_vault" && -z "$(ls -A "$full_vault" 2>/dev/null)" ]]; then
-    log "Greenfield: copy sample Library Book Tracker → $VAULT_PATH/"
-    run "cp -r '$sample_vault/.' '$full_vault/'"
-  else
-    # Brownfield or non-empty vault — สร้างแค่ skeleton folders
-    for sub in 00-Index 10-PRD 20-Features 30-Roles 40-Functions 50-Phases 60-Flows 70-Reference 80-ImplementPlan 85-FixLog 90-TestPlan 95-Handoff; do
-      run "mkdir -p '$full_vault/$sub'"
-    done
-  fi
+  # Skeleton folders only — the Library Book Tracker sample vault (docs/obsidian-vault/ in
+  # the source repo) is the toolkit's own demo and must never land in a host project.
+  for sub in 00-Index 10-PRD 20-Features 30-Roles 40-Functions 50-Phases 60-Flows 70-Reference 80-ImplementPlan 85-FixLog 90-TestPlan 95-Handoff; do
+    run "mkdir -p '$full_vault/$sub'"
+  done
 fi
 
 # Persist VAULT_PATH to .ow.yml (replace default vault_path: docs) — relative or absolute

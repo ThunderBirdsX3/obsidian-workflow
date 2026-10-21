@@ -1272,38 +1272,19 @@ run "prune: idempotent — second run deletes nothing more" \
   "T=\$(mktemp -d); _prune_fixture \"\$T\"; a=\$(ls \"\$T/.claude/commands\" | wc -l); ( . scripts/ow-claude-manifest.sh; generate_shims \"\$T/.ow/commands\" \"\$T\" ow ) >/dev/null 2>&1; b=\$(ls \"\$T/.claude/commands\" | wc -l); rm -rf \"\$T\"; [ \"\$a\" -eq \"\$b\" ]"
 
 # ════════════════════════════════════════════════════════════════════════════
-# Section 27 — greenfield sample-vault copy lands AT $VAULT_PATH (not nested)
+# Section 27 — installer never copies the sample vault into a host project
 # ════════════════════════════════════════════════════════════════════════════
 echo ""
-printf "${c_bold}Section 27 — greenfield sample-vault copy${c_reset}\n"
+printf "${c_bold}Section 27 — no sample-vault copy${c_reset}\n"
 
-run "vaultcopy: install.sh sources the sample VAULT, not its parent docs/" \
-  "grep -qF 'sample_vault=\"\$TMP_DIR/docs/obsidian-vault\"' scripts/install.sh"
-run "vaultcopy: no copy from the docs/ parent survives" \
-  "! grep -qF -- '\$TMP_DIR/docs/.' scripts/install.sh"
-run "vaultcopy: existence guard checks the sample vault dir" \
-  "grep -qF '&& -d \"\$sample_vault\" &&' scripts/install.sh"
+run "vaultcopy: install.sh has no sample_vault copy" \
+  "! grep -q 'sample_vault' scripts/install.sh"
+run "vaultcopy: install.sh does not copy from the source docs/ tree" \
+  "! grep -qF 'TMP_DIR/docs' scripts/install.sh"
+run "vaultcopy: --no-sample still accepted (deprecated no-op)" \
+  "grep -qF -- '--no-sample) shift' scripts/install.sh"
 run "vaultcopy: sample vault exists in this repo" \
   "[ -d docs/obsidian-vault/00-Index ]"
-
-# behavioural: replay the installer's copy with the real repo layout
-_vault_sim() {                               # $1 = scratch root, $2 = VAULT_PATH
-  local tmp; tmp="$1/clone"
-  mkdir -p "$tmp"; cp -r docs "$tmp/docs"    # simulate `git clone` of this repo
-  local full_vault="$1/target/$2"; mkdir -p "$full_vault"
-  local sample_vault="$tmp/docs/obsidian-vault"
-  cp -r "$sample_vault/." "$full_vault/"
-  printf '%s' "$full_vault"
-}
-
-run "vaultcopy: choice A (docs/obsidian-vault) is not double-nested" \
-  "T=\$(mktemp -d); fv=\$(_vault_sim \"\$T\" docs/obsidian-vault); r=0; [ -d \"\$fv/obsidian-vault\" ] && r=1; rm -rf \"\$T\"; [ \$r -eq 0 ]"
-run "vaultcopy: choice A puts 00-Index directly under \$VAULT_PATH" \
-  "T=\$(mktemp -d); fv=\$(_vault_sim \"\$T\" docs/obsidian-vault); r=1; [ -f \"\$fv/00-Index/IMPLEMENTATION-STATUS.md\" ] && r=0; rm -rf \"\$T\"; [ \$r -eq 0 ]"
-run "vaultcopy: choice B (docs) puts 00-Index directly under \$VAULT_PATH" \
-  "T=\$(mktemp -d); fv=\$(_vault_sim \"\$T\" docs); r=1; [ -f \"\$fv/00-Index/IMPLEMENTATION-STATUS.md\" ] && r=0; rm -rf \"\$T\"; [ \$r -eq 0 ]"
-run "vaultcopy: dotfiles (.obsidian) come along" \
-  "T=\$(mktemp -d); fv=\$(_vault_sim \"\$T\" docs/obsidian-vault); r=1; [ -d \"\$fv/.obsidian\" ] && r=0; rm -rf \"\$T\"; [ \$r -eq 0 ]"
 run "vaultcopy: sample vault carries no removed-subsystem folder" \
   "[ ! -d docs/obsidian-vault/75-Checkins ]"
 
@@ -2780,8 +2761,8 @@ run "ow-auto docs: README counts 22"                   "grep -q '22 slash comman
 run "ow-auto docs: ow-help cheatsheet row"             "grep -q '| /ow-auto' .ow/commands/ow-help.md"
 run "ow-auto docs: AGENTS.md names /ow-auto and --claude worker" "grep -q 'ow-auto' AGENTS.md && grep -q -- '--claude' AGENTS.md"
 run "ow-auto docs: codex/README no longer claims no-subagents as the end of the story" "grep -q -- '--claude' codex/README.md"
-run "ow-auto docs: CHANGELOG 2.3.0 on top + version bumped" \
-  "grep -q '^## \[2.3.0\]' CHANGELOG.md && yq -e '.ow.version == \"2.3.0\"' .ow.yml >/dev/null"
+run "ow-auto docs: CHANGELOG 2.4.0 on top + version bumped" \
+  "grep -q '^## \[2.4.0\]' CHANGELOG.md && yq -e '.ow.version == \"2.4.0\"' .ow.yml >/dev/null"
 
 run "worker: TERM to the runner kills the CLI too (no orphan writer)" '_worker_fixture
   PATH="$TD/bin:$PATH" FAKE_MODE=timeout OW_WORKER_TIMEOUT_SEC=60 bash "$W" codex "$TD/wt" "$TD/runs" P1-chunk1 "$TD/prompt.md" >/dev/null 2>&1 &

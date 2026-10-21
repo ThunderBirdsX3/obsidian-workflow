@@ -3,6 +3,16 @@
 Format: [Keep a Changelog](https://keepachangelog.com). Versions: SemVer.
 Version marker: `ow.version` in `.ow.yml`.
 
+## [2.4.0] — 2026-10-21
+
+Minor. Behaviour change for new installs only; existing projects are untouched.
+
+### Changed — installer no longer copies the sample vault
+
+- A greenfield install used to copy the Library Book Tracker sample vault (`docs/obsidian-vault/` of this repo) into the new project. That is the toolkit's own demo, not project data, so it no longer ships: greenfield now creates the empty numbered skeleton folders only, same as brownfield.
+- `--no-sample` is still accepted so existing scripts keep working, but it is now a no-op.
+- Smoke test Section 27 now asserts the installer has no sample-vault copy instead of checking where the copy lands.
+
 ## [2.3.0] — 2026-10-21
 
 Minor. No breaking change: upgrade migrates the old layout.

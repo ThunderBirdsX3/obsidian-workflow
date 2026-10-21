@@ -45,7 +45,6 @@ COMMANDS (source checkout only — bootstrap new projects from a obsidian-workfl
                              (claude, codex, google, gpt, glm, cline, kimi; default: interactive)
   init [...] --force         Re-run over an already-adopted project without prompting
                              (.ow.yml is protected — never overwritten)
-  init [...] --no-sample     Skip the greenfield sample vault
   update                     Re-run install over the current project (alias-ish of upgrade)
   test                       Run obsidian-workflow's own smoke tests
   sync                       (use /ow-sync in Claude Code, or 'ow upgrade')

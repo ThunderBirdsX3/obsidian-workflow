@@ -40,7 +40,6 @@ git commit -m "feat: initial obsidian-workflow release v0.2.0
 - 4 always-on subagents (docs · verifier · security · gh-issue); ตัวเฉพาะทางสร้างต่อ project ด้วย /ow-agent create
 - 7 AI front-ends (Claude/Codex/Gemini/GPT/GLM/Cline/Kimi)
 - Vault holds text only — command output is quoted into the doc, never stored as a file
-- Sample Library Book Tracker vault
 - 301 smoke tests passing"
 
 # Push

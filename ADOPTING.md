@@ -67,7 +67,7 @@ bash <(curl -fsSL <obsidian-workflow-installer-url>) --mode auto   # <obsidian-w
       `scripts/ow-owned.sh`).
 - [ ] `.ow/` — core machinery (commands, templates, policies, version pin) **and `.ow/rules/` with starter `<area>.md` scaffolds for the enabled areas** (git-tracked; idempotent, never overwrites yours).
 - [ ] AI front-end shims (command shims + a baseline set of always-on agent docs).
-- [ ] A docs vault skeleton (numbered folders) — only created if absent; sample content only for greenfield.
+- [ ] A docs vault skeleton (numbered folders) — only created if absent; no sample content is ever copied.
 - [ ] `.gitignore` — a **marker-delimited managed block** (obsidian-workflow-internal paths only: per-machine
       runtime state, worktrees, sync backups). install/upgrade MERGE this block and **never touch your
       existing lines** — a brownfield `.gitignore` is preserved in full. Stack/OS/editor ignores

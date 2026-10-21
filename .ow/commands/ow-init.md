@@ -109,7 +109,7 @@ Choose (1/2/3) [default: 2 brownfield]:
 
 What each mode means:
 
-- **greenfield** — may remove unneeded existing scaffolding, copies the sample vault, creates the vault skeleton
+- **greenfield** — may remove unneeded existing scaffolding, creates the vault skeleton (never copies the sample vault)
 - **brownfield** — **never touches** what exists; adds only `.ow/` (machinery + commands/), `.claude/`, and a vault skeleton (new, or in a sub-folder)
 - **adopt-vault** — brownfield + uses the vault path the user names (the existing `docs/`); creates no new vault
 
