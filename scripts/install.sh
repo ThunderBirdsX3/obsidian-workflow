@@ -685,8 +685,32 @@ fi
 # หลัง /ow-init detect stack แล้ว body จึงตรงกับ stack จริงของ project ไม่ใช่ของกลาง
 ALWAYS_ON_AGENTS=(docs verifier security gh-issue)
 
+# Helper: install the always-on agent bodies into .ow/subagents/ — the source of truth for every
+# front-end (.claude/agents/ only links to it). Written only where the destination is
+# obsidian-workflow's, decided by SIGNATURE and never by filename: a project may own an agent called
+# backend.md and it is kept, not replaced.
+install_ow_subagents() {
+  local src="$TMP_DIR/.ow/subagents" a cur copied=() kept=()
+  [[ -d "$src" ]] || src="$TMP_DIR/.claude/agents"   # tags from before the move
+  [[ -d "$src" ]] || return 0
+  [[ $DRY_RUN -eq 1 ]] && { echo "DRY-RUN: install always-on agents → .ow/subagents/"; return 0; }
+  mkdir -p "$TARGET/.ow/subagents"
+  ow_adopt_agents "$TARGET"
+  for a in ${OW_ALWAYS_ON_AGENTS:-${ALWAYS_ON_AGENTS[*]}}; do
+    [[ -f "$src/$a.md" ]] || continue
+    cur="$(ow_agent_file "$TARGET" "$a" || true)"
+    if [[ -n "$cur" ]] && ! ow_is_owned_agent "$cur"; then kept+=("$a"); continue; fi
+    backup_before_overwrite ".ow/subagents/$a.md"
+    cp "$src/$a.md" "$TARGET/.ow/subagents/"
+    copied+=("$a")
+  done
+  log "  agents: ${copied[*]:-none} → .ow/subagents/"
+  [[ ${#kept[@]} -gt 0 ]] && warn "  kept project-owned agents — obsidian-workflow's NOT installed: ${kept[*]} (rename or delete yours and re-run to take obsidian-workflow's)"
+  return 0
+}
+
 # Helper: per-file SELECTIVE MERGE of .claude/ (issues #3/#8).
-# Overwrites ONLY the files obsidian-workflow owns (generated shims + always-on agents +
+# Overwrites ONLY the files obsidian-workflow owns (generated shims + agent symlinks +
 # settings.json). NEVER rm -rf's the tree, NEVER touches settings.local.json, user
 # hooks, MCP permission files, or project-enabled (specialized) agent docs.
 install_claude_selective() {
@@ -730,30 +754,22 @@ install_claude_selective() {
     fi
   fi
 
-  # agents — write only where the destination is obsidian-workflow's, decided by SIGNATURE and never
-  # by filename: a project may own an agent called backend.md and it is kept, not replaced.
-  # adopt_existing_claude already offered keep/remove for it before this ran.
-  local copied=() kept=()
-  for a in ${OW_ALWAYS_ON_AGENTS:-${ALWAYS_ON_AGENTS[*]}}; do
-    if [[ -f "$src/agents/$a.md" ]]; then
-      if [[ -e "$dst/agents/$a.md" ]] && ! ow_is_owned_agent "$dst/agents/$a.md"; then
-        kept+=("$a")
-        continue
-      fi
-      backup_before_overwrite ".claude/agents/$a.md"
-      run "cp '$src/agents/$a.md' '$dst/agents/'"
-      copied+=("$a")
-    fi
-  done
-  log "  merged: .claude/ (shims generated + always-on agents: ${copied[*]:-none}; user settings/hooks/agents preserved)"
-  [[ ${#kept[@]} -gt 0 ]] && warn "  kept project-owned agents — obsidian-workflow's NOT installed: ${kept[*]} (rename or delete yours and re-run to take obsidian-workflow's)"
+  # agents — the bodies are installed by install_ow_subagents into .ow/subagents/; here only the
+  # .claude/agents symlinks are made (an owned real file from the old layout moves over first).
+  if [[ $DRY_RUN -eq 1 ]]; then
+    echo "DRY-RUN: link .claude/agents/<a>.md -> .ow/subagents/<a>.md"
+  else
+    ow_adopt_agents "$TARGET"
+    ow_link_agents "$TARGET" || warn "  some .claude/agents files are project-owned and were not linked"
+  fi
+  log "  merged: .claude/ (shims generated + agents linked from .ow/subagents; user settings/hooks/agents preserved)"
 
   # Enabled ⟺ present ⟺ spawnable. Only /ow-agent writes a specialized body, so install
   # cannot materialize one — but a brownfield .ow.yml that already enables
   # backend/frontend/... would otherwise carry a flag with nothing behind it in silence.
   # Name it instead, and name the one command that fixes it.
   if [[ $DRY_RUN -eq 1 ]]; then
-    echo "DRY-RUN: verify every enabled subagent has a body under .claude/agents/"
+    echo "DRY-RUN: verify every enabled subagent has a body under .ow/subagents/"
   elif command -v verify_enabled_agents >/dev/null 2>&1; then
     verify_enabled_agents "$TARGET" \
       || warn "  an enabled subagent has no body — create it with /ow-agent create <name>"
@@ -917,6 +933,8 @@ RULESTUB
   [[ ${#created[@]} -gt 0 ]] && log "  scaffolded rules: ${created[*]} (.ow/rules/ — fill in or delete)"
   return 0
 }
+
+install_ow_subagents
 
 log "Installing AI agent shims: $AI_AGENTS"
 IFS=',' read -ra AI_LIST <<< "$AI_AGENTS"

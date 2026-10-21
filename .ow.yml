@@ -38,13 +38,13 @@ vault_path: docs/obsidian-vault
 # - `source`  = where /ow-sync pulls from
 # - `last_synced` = updated by /ow-sync Phase 6 + scripts/upgrade.sh
 ow:
-  version: "2.2.0"
+  version: "2.3.0"
   source: "https://github.com/ThunderBirdsX3/obsidian-workflow"
   last_synced: "2026-09-10"
 
 # Subagents enabled for this project + the AI model each one runs on.
 # /ow-init asks which ones; toggle `enabled` on/off and set `model` here.
-# Files live in .claude/agents/<name>.md
+# Files live in .ow/subagents/<name>.md (.claude/agents/<name>.md links to it)
 #
 # 🔴 Only the four always-on bodies ship with obsidian-workflow. The specialized rows below are
 # NAMES, not files: enabling one does nothing until `/ow-agent create <name>` writes the

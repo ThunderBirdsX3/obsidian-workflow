@@ -70,14 +70,14 @@ run "AGENTS.md exists"             '[ -f AGENTS.md ]'
 run "AI-README.md exists"          '[ -f AI-README.md ]'
 # Counts the SHIPPED body set. obsidian-workflow ships exactly the always-on four; every specialized
 # agent is written per project by /ow-agent create, so this must stay 4 and AI-README must say so.
-run "AI-README agent count synced" 'n=$(ls .claude/agents/*.md 2>/dev/null | wc -l | tr -d " "); grep -q "($n agents" AI-README.md'
+run "AI-README agent count synced" 'n=$(ls .ow/subagents/*.md 2>/dev/null | wc -l | tr -d " "); grep -q "($n agents" AI-README.md'
 run "README.md exists"             '[ -f README.md ]'
 
 # ════════════════════════════════════════════════════════════════════════════
 # Test 2: Folder structure
 # ════════════════════════════════════════════════════════════════════════════
 printf "\n${c_bold}Section 2 — Folder structure${c_reset}\n"
-for d in .ow/commands .claude/commands .claude/agents .ow/templates .ow/rules scripts bin .agents/skills docs/obsidian-vault/00-Index docs/obsidian-vault/10-PRD docs/obsidian-vault/20-Features docs/obsidian-vault/30-Roles docs/obsidian-vault/40-Functions docs/obsidian-vault/50-Phases docs/obsidian-vault/60-Flows docs/obsidian-vault/70-Reference docs/obsidian-vault/80-ImplementPlan docs/obsidian-vault/85-FixLog docs/obsidian-vault/90-TestPlan docs/obsidian-vault/95-Handoff; do
+for d in .ow/commands .claude/commands .ow/subagents .ow/templates .ow/rules scripts bin .agents/skills docs/obsidian-vault/00-Index docs/obsidian-vault/10-PRD docs/obsidian-vault/20-Features docs/obsidian-vault/30-Roles docs/obsidian-vault/40-Functions docs/obsidian-vault/50-Phases docs/obsidian-vault/60-Flows docs/obsidian-vault/70-Reference docs/obsidian-vault/80-ImplementPlan docs/obsidian-vault/85-FixLog docs/obsidian-vault/90-TestPlan docs/obsidian-vault/95-Handoff; do
   run "dir $d"                     "[ -d $d ]"
 done
 # v0.4: root `templates/` is OPTIONAL — only created when project customizes templates
@@ -113,7 +113,7 @@ done
 # Test 5: Subagents
 # ════════════════════════════════════════════════════════════════════════════
 printf "\n${c_bold}Section 5 — Subagents${c_reset}\n"
-for agent_file in .claude/agents/*.md; do
+for agent_file in .ow/subagents/*.md; do
   agent_name=$(basename "$agent_file" .md)
   run "frontmatter: $agent_name"   "head -1 $agent_file | grep -q '^---$'"
   run "name field: $agent_name"    "grep -q '^name:' $agent_file"
@@ -461,8 +461,8 @@ run "spec: ow-triage-issues"      '[ -f .ow/commands/ow-triage-issues.md ]'
 run "spec: ow-fix-issue"          '[ -f .ow/commands/ow-fix-issue.md ]'
 run "shim: ow-triage-issues"      '[ -f .claude/commands/ow-triage-issues.md ]'
 run "shim: ow-fix-issue"          '[ -f .claude/commands/ow-fix-issue.md ]'
-run "gh-issue agent exists"        '[ -f .claude/agents/gh-issue.md ]'
-run "gh-issue read-only"           'grep -q "READ ONLY\|read-only" .claude/agents/gh-issue.md'
+run "gh-issue agent exists"        '[ -f .ow/subagents/gh-issue.md ]'
+run "gh-issue read-only"           'grep -q "READ ONLY\|read-only" .ow/subagents/gh-issue.md'
 run "fix-issue no-push rule"       'grep -q "Never push" .ow/commands/ow-fix-issue.md'
 run "triage frozen pool"           'grep -q "Freeze snapshot" .ow/commands/ow-triage-issues.md'
 run "triage no re-query rule"      'grep -q "Never re-run .gh issue list. after Phase 1.3" .ow/commands/ow-triage-issues.md'
@@ -717,12 +717,12 @@ run "model: enabled detection reads map .enabled" \
 
 # shipped agent frontmatter matches the documented defaults. Only the always-on four ship:
 # backend/frontend/mobile/design/test-runner are written per project by /ow-agent create.
-run "model: security.md ships opus"      'grep -qx "model: opus" .claude/agents/security.md'
-run "model: docs.md ships sonnet"        'grep -qx "model: sonnet" .claude/agents/docs.md'
-run "model: verifier.md ships sonnet"    'grep -qx "model: sonnet" .claude/agents/verifier.md'
-run "model: gh-issue.md ships haiku"     'grep -qx "model: haiku" .claude/agents/gh-issue.md'
+run "model: security.md ships opus"      'grep -qx "model: opus" .ow/subagents/security.md'
+run "model: docs.md ships sonnet"        'grep -qx "model: sonnet" .ow/subagents/docs.md'
+run "model: verifier.md ships sonnet"    'grep -qx "model: sonnet" .ow/subagents/verifier.md'
+run "model: gh-issue.md ships haiku"     'grep -qx "model: haiku" .ow/subagents/gh-issue.md'
 run "model: no pinned claude-sonnet-4-6 left in agents" \
-  '! grep -rqx "model: claude-sonnet-4-6" .claude/agents/'
+  '! grep -rqx "model: claude-sonnet-4-6" .ow/subagents/'
 
 # apply_agent_models — function + wiring
 run "model: apply_agent_models defined"  'grep -q "^apply_agent_models()" scripts/ow-claude-manifest.sh'
@@ -1122,13 +1122,13 @@ printf "${c_bold}Section 20 — CONTEXT_REFS conditional vault reads${c_reset}\n
 # can come from. The escape hatch is what makes the split safe: a skipped doc may still be
 # read, but never silently — so the worst case is old behavior plus one `context gap:` line.
 for a in docs; do
-  run "ctxrefs: $a §3 has ALWAYS block"       "grep -qF '**ALWAYS' .claude/agents/$a.md"
-  run "ctxrefs: $a §3 has CONDITIONAL block"  "grep -qF '**CONDITIONAL' .claude/agents/$a.md"
-  run "ctxrefs: $a reads CONTEXT_REFS"        "grep -qF 'CONTEXT_REFS' .claude/agents/$a.md"
+  run "ctxrefs: $a §3 has ALWAYS block"       "grep -qF '**ALWAYS' .ow/subagents/$a.md"
+  run "ctxrefs: $a §3 has CONDITIONAL block"  "grep -qF '**CONDITIONAL' .ow/subagents/$a.md"
+  run "ctxrefs: $a reads CONTEXT_REFS"        "grep -qF 'CONTEXT_REFS' .ow/subagents/$a.md"
   run "ctxrefs: $a skip is escalatable not silent" \
-    "grep -qF 'CONTEXT_SKIPPED' .claude/agents/$a.md && grep -qF 'context gap:' .claude/agents/$a.md"
+    "grep -qF 'CONTEXT_SKIPPED' .ow/subagents/$a.md && grep -qF 'context gap:' .ow/subagents/$a.md"
   run "ctxrefs: $a fail-safe = read all when no CONTEXT_REFS" \
-    "grep -qF 'fail-safe = read everything' .claude/agents/$a.md"
+    "grep -qF 'fail-safe = read everything' .ow/subagents/$a.md"
 done
 
 # A doc the agent only WRITES at the end must not sit in its pre-code ALWAYS list.
@@ -1137,7 +1137,7 @@ done
 run "ctxrefs: template ALWAYS block excludes IMPLEMENTATION-STATUS" \
   "! sed -n '/\*\*ALWAYS/,/\*\*CONDITIONAL/p' .ow/commands/ow-agent.md | grep -q IMPLEMENTATION-STATUS"
 run "ctxrefs: docs agent KEEPS IMPLEMENTATION-STATUS as always-read" \
-  "sed -n '/\*\*ALWAYS/,/\*\*CONDITIONAL/p' .claude/agents/docs.md | grep -q IMPLEMENTATION-STATUS"
+  "sed -n '/\*\*ALWAYS/,/\*\*CONDITIONAL/p' .ow/subagents/docs.md | grep -q IMPLEMENTATION-STATUS"
 
 # orchestrator side — both lines ALWAYS emitted, never omitted (absent line = read-all)
 run "ctxrefs: ow-implement emits CONTEXT_REFS line" \
@@ -1383,7 +1383,7 @@ run "chunk: ow-agent §3 template maps ALWAYS list to READ_FULL + READ_NAMED" \
 
 # ── the shipped agent + the template every created one comes from mirror the contract ──
 run "chunk: shipped docs agent carries the §0 CHUNK contract" \
-  "grep -q 'CHUNK n/N' .claude/agents/docs.md && grep -q 'READ_FULL' .claude/agents/docs.md"
+  "grep -q 'CHUNK n/N' .ow/subagents/docs.md && grep -q 'READ_FULL' .ow/subagents/docs.md"
 run "chunk: the create template carries the §0 CHUNK contract" \
   "grep -q 'CHUNK n/N' .ow/commands/ow-agent.md && grep -q 'READ_FULL' .ow/commands/ow-agent.md"
 
@@ -1999,13 +1999,13 @@ run "check 11[behavioral]: silent without ow-implement.md" '
 # The bug this pins: a config flag that promises an agent Claude Code cannot spawn.
 # Before v1.10.0 install shipped 9 bodies and back-filled from a library; now it ships 4
 # and /ow-agent create writes the rest, so the SAME lie has to be caught a new way —
-# enabled with no file under .claude/agents/ must be reported, never silently filled.
+# enabled with no file under .ow/subagents/ must be reported, never silently filled.
 printf "\n${c_bold}Section 35 — specialized agents (created, not shipped)${c_reset}\n"
 run "agents: ships exactly the always-on four" '
-  n=$(ls .claude/agents/*.md 2>/dev/null | wc -l | tr -d " "); [ "$n" = 4 ]'
+  n=$(ls .ow/subagents/*.md 2>/dev/null | wc -l | tr -d " "); [ "$n" = 4 ]'
 run "agents: no specialized body is shipped" '
   for a in backend frontend mobile design test-runner; do
-    [ -e ".claude/agents/$a.md" ] && exit 1; done; exit 0'
+    [ -e ".ow/subagents/$a.md" ] && exit 1; done; exit 0'
 run "agents: library writer is GONE"          '! grep -q "install_agent_library" scripts/ow-claude-manifest.sh scripts/install.sh scripts/upgrade.sh'
 run "agents: no .ow/agents in the repo"  '[ ! -e .ow/agents ]'
 run "agents: enabled-set reader defined"      'grep -q "^ow_enabled_agents()" scripts/ow-claude-manifest.sh'
@@ -2034,7 +2034,7 @@ run "agents: enable flips the flag BEFORE writing the body" '
   f=.ow/commands/ow-agent.md
   flag=$(grep -n "flip the flag" "$f" | head -1 | cut -d: -f1)
   read=$(grep -n "read the flag back" "$f" | head -1 | cut -d: -f1)
-  cp=$(grep -n "cp \"\$SRC\" \"\$ROOT/.claude/agents" "$f" | head -1 | cut -d: -f1)
+  cp=$(grep -n "cp \"\$SRC\" \"\$ROOT/.ow/subagents" "$f" | head -1 | cut -d: -f1)
   [ -n "$flag" ] && [ -n "$read" ] && [ -n "$cp" ] && [ "$flag" -lt "$read" ] && [ "$read" -lt "$cp" ]'
 run "agents: enable aborts without writing"    'grep -q "Nothing was written" .ow/commands/ow-agent.md'
 # Prose alone let `disable docs` succeed while install/upgrade put the body straight back —
@@ -2074,6 +2074,50 @@ run "agents[behavioral]: nothing ever overwrites a created body" '
   printf "subagents:\n  backend:     { enabled: true, model: sonnet }\n" > "$d/.ow.yml";
   ( . scripts/ow-claude-manifest.sh; verify_enabled_agents "$d" ) >/dev/null 2>&1;
   r=1; grep -qx "CREATED BY THIS PROJECT" "$d/.claude/agents/backend.md" && r=0; rm -rf "$d"; [ "$r" = 0 ]'
+# ── agent bodies live in .ow/subagents/; .claude/agents/ is only symlinks to them ────────────
+run "subagents: shipped bodies are real files in .ow/subagents" 'for a in docs verifier security gh-issue; do [ -f .ow/subagents/$a.md ] && [ ! -L .ow/subagents/$a.md ] || exit 1; done'
+run "subagents: .claude/agents entries are relative links"      'for a in docs verifier security gh-issue; do [ "$(readlink .claude/agents/$a.md)" = "../../.ow/subagents/$a.md" ] || exit 1; done'
+run "subagents: .ow/subagents is a protected path"              '. scripts/ow-safe-paths.sh && ow_safe_paths | grep -qx ".ow/subagents"'
+run "subagents: /ow-agent links after writing"                  'grep -q "ow_link_agents" .ow/commands/ow-agent.md'
+run "subagents[behavioral]: link makes a resolving relative symlink" '
+  d=$(mktemp -d); mkdir -p "$d/.ow/subagents"; printf "x\n" > "$d/.ow/subagents/backend.md";
+  ( . scripts/ow-claude-manifest.sh; ow_link_agents "$d" ) >/dev/null 2>&1;
+  r=1; [ -L "$d/.claude/agents/backend.md" ] && [ "$(readlink "$d/.claude/agents/backend.md")" = "../../.ow/subagents/backend.md" ] && [ -f "$d/.claude/agents/backend.md" ] && r=0;
+  rm -rf "$d"; [ "$r" = 0 ]'
+run "subagents[behavioral]: link keeps a differing project file and says so" '
+  d=$(mktemp -d); mkdir -p "$d/.ow/subagents" "$d/.claude/agents"; printf "ours\n" > "$d/.ow/subagents/backend.md"; printf "theirs\n" > "$d/.claude/agents/backend.md";
+  out=$( . scripts/ow-claude-manifest.sh; ow_link_agents "$d" 2>&1 ); rc=$?;
+  r=1; [ "$rc" != 0 ] && [ ! -L "$d/.claude/agents/backend.md" ] && grep -qx "theirs" "$d/.claude/agents/backend.md" && echo "$out" | grep -q "differs" && r=0;
+  rm -rf "$d"; [ "$r" = 0 ]'
+run "subagents[behavioral]: link drops a link whose body is gone" '
+  d=$(mktemp -d); mkdir -p "$d/.ow/subagents"; printf "x\n" > "$d/.ow/subagents/backend.md";
+  ( . scripts/ow-claude-manifest.sh; ow_link_agents "$d"; rm "$d/.ow/subagents/backend.md"; ow_link_agents "$d" ) >/dev/null 2>&1;
+  r=1; [ ! -e "$d/.claude/agents/backend.md" ] && [ ! -L "$d/.claude/agents/backend.md" ] && r=0; rm -rf "$d"; [ "$r" = 0 ]'
+run "subagents[behavioral]: adopt moves an owned file, leaves a project-owned one" '
+  d=$(mktemp -d); mkdir -p "$d/.claude/agents"; printf -- "---\nname: backend\n---\n## §0. Context (injected — authoritative)\n" > "$d/.claude/agents/backend.md"; printf -- "---\nname: foo\n---\nmine\n" > "$d/.claude/agents/foo.md";
+  ( . scripts/ow-claude-manifest.sh; ow_adopt_agents "$d"; ow_link_agents "$d" ) >/dev/null 2>&1;
+  r=1; [ -f "$d/.ow/subagents/backend.md" ] && [ ! -L "$d/.ow/subagents/backend.md" ] && [ -L "$d/.claude/agents/backend.md" ] && [ -f "$d/.claude/agents/foo.md" ] && [ ! -L "$d/.claude/agents/foo.md" ] && [ ! -e "$d/.ow/subagents/foo.md" ] && r=0;
+  rm -rf "$d"; [ "$r" = 0 ]'
+run "subagents[behavioral]: a body in .ow/subagents satisfies the enabled check" '
+  d=$(mktemp -d); mkdir -p "$d/.ow/subagents"; printf -- "---\nname: backend\n---\n" > "$d/.ow/subagents/backend.md";
+  printf "subagents:\n  backend:     { enabled: true, model: sonnet }\n" > "$d/.ow.yml";
+  ( . scripts/ow-claude-manifest.sh; verify_enabled_agents "$d" ) >/dev/null 2>&1; r=$?; rm -rf "$d"; [ "$r" = 0 ]'
+run "subagents[behavioral]: model sync edits the source, link survives" '
+  d=$(mktemp -d); mkdir -p "$d/.ow/subagents"; printf -- "---\nname: backend\nmodel: opus\n---\n" > "$d/.ow/subagents/backend.md";
+  ( . scripts/ow-claude-manifest.sh; ow_link_agents "$d"; apply_agent_models "$d" ) >/dev/null 2>&1;
+  r=1; [ -L "$d/.claude/agents/backend.md" ] && grep -qx "model: sonnet" "$d/.ow/subagents/backend.md" && r=0; rm -rf "$d"; [ "$r" = 0 ]'
+run "regen[behavioral]: ow-regen rebuilds shims + agent links on a clone with .claude gone" '
+  d=$(mktemp -d); cp -R .ow .ow.yml scripts "$d/" && rm -rf "$d/.ow/local";
+  ( cd "$d" && bash scripts/ow-regen.sh ) >/dev/null 2>&1; rc=$?;
+  r=1; [ "$rc" = 0 ] && [ -f "$d/.claude/commands/ow-plan.md" ] && [ -f "$d/.claude/agents/docs.md" ] && [ -L "$d/.claude/agents/docs.md" ] && r=0; rm -rf "$d"; [ "$r" = 0 ]'
+run "upgrade[behavioral]: old layout migrates — owned file adopted, project file kept, shipped body refreshed" '
+  d=$(mktemp -d); cp -R .ow .ow.yml scripts bin "$d/" && rm -rf "$d/.ow/subagents" "$d/.ow/local"; mkdir -p "$d/.claude/agents";
+  for a in docs verifier security gh-issue; do cp .ow/subagents/$a.md "$d/.claude/agents/"; done;
+  echo "# stale" >> "$d/.claude/agents/docs.md";
+  printf -- "---\nname: backend\n---\n## §0. Context (injected — authoritative)\n" > "$d/.claude/agents/backend.md"; printf -- "---\nname: foo\n---\nmine\n" > "$d/.claude/agents/foo.md";
+  ( cd "$d" && git init -q . && bash scripts/upgrade.sh --source "'"$PWD"'" ) >/dev/null 2>&1;
+  r=1; [ -L "$d/.claude/agents/backend.md" ] && [ -f "$d/.ow/subagents/backend.md" ] && [ -f "$d/.claude/agents/foo.md" ] && [ ! -L "$d/.claude/agents/foo.md" ] \
+    && ! grep -q "^# stale" "$d/.ow/subagents/docs.md" && [ -L "$d/.claude/agents/docs.md" ] && r=0; rm -rf "$d"; [ "$r" = 0 ]'
 # /ow-agent create is now the ONLY source of a specialized body — the phases that make it
 # more than a template fill-in must exist, or every created agent is generic again.
 run "create: detects the stack before asking"  'grep -q "Detect the stack FIRST" .ow/commands/ow-agent.md'
@@ -2085,7 +2129,7 @@ run "create: bakes the stack, never the paths" 'grep -q "The stack is baked; the
 run "create: never writes the ownership signature" '
   grep -q "Never write the .<!-- obsidian-workflow:agent. signature" .ow/commands/ow-agent.md'
 run "agents: only the shipped four carry the signature" '
-  n=$(grep -l "^<!-- obsidian-workflow:agent" .claude/agents/*.md | wc -l | tr -d " "); [ "$n" = 4 ]'
+  n=$(grep -l "^<!-- obsidian-workflow:agent" .ow/subagents/*.md | wc -l | tr -d " "); [ "$n" = 4 ]'
 run "suggest: grounded in code AND vault signals" '
   grep -q "Gather signals (both halves" .ow/commands/ow-agent.md'
 run "suggest: never writes or enables"         'grep -q "never writes an agent itself" .ow/commands/ow-agent.md'
@@ -2106,8 +2150,8 @@ run "design: audit score formula survived the move" '
 # obsidian-workflow's by NAME, so install overwrote it with no backup and no prompt, then the lint
 # failed it for a missing §0 and aborted the install after the whole tree was written.
 printf "\n${c_bold}Section 36 — agent ownership by signature${c_reset}\n"
-run "sig: every shipped agent is signed"     'for f in .claude/agents/*.md; do grep -q "^<!-- obsidian-workflow:agent" "$f" || exit 1; done'
-run "sig: signature sits below frontmatter"  'for f in .claude/agents/*.md; do head -1 "$f" | grep -q "^---$" || exit 1; done'
+run "sig: every shipped agent is signed"     'for f in .ow/subagents/*.md; do grep -q "^<!-- obsidian-workflow:agent" "$f" || exit 1; done'
+run "sig: signature sits below frontmatter"  'for f in .ow/subagents/*.md; do head -1 "$f" | grep -q "^---$" || exit 1; done'
 run "sig: manifest helper defined"           '. scripts/ow-claude-manifest.sh && command -v ow_is_owned_agent >/dev/null'
 run "sig: lint decides by signature"         'grep -q "_agent_is_ow_owned" scripts/conformance-lint.sh'
 run "sig: both copies spell it identically"  'grep -qF "obsidian-workflow:agent" scripts/conformance-lint.sh && grep -qF "obsidian-workflow:agent" scripts/ow-claude-manifest.sh && grep -qF "## §0. Context (injected — authoritative)" scripts/conformance-lint.sh && grep -qF "## §0. Context (injected — authoritative)" scripts/ow-claude-manifest.sh'
@@ -2251,7 +2295,7 @@ run "changelog: has a section for the shipped version" '
   grep -q "^## \[$shipped\]" CHANGELOG.md || { echo "CHANGELOG.md has no ## [$shipped] section"; exit 1; }'
 run "changelog: newest section IS the shipped version" '
   shipped=$(awk "/^ow:/{b=1;next} /^[a-zA-Z_]/{b=0} b && /^  version:/{gsub(/[ \"]/,\"\"); sub(/^version:/,\"\"); print; exit}" .ow.yml)
-  top=$(grep -m1 "^## \[" CHANGELOG.md | sed "s/^## \[//; s/\].*//")
+  top=$(grep "^## \[" CHANGELOG.md | grep -v "^## \[Unreleased\]" | head -1 | sed "s/^## \[//; s/\].*//")
   [ "$top" = "$shipped" ] || { echo "CHANGELOG top is [$top] but .ow.yml ships $shipped"; exit 1; }'
 run "tombstones: since <= the shipped ow.version" '
   . scripts/ow-owned.sh
@@ -2309,13 +2353,12 @@ run "retire[behavioral]: upgrade removes + backs up the snapshot" '
 # Section 40 — shipped pointers resolve · project identity · dead code · sync scope
 # ════════════════════════════════════════════════════════════════════════════
 printf "\n${c_bold}Section 40 — shipped-pointer + identity + dead-code debts${c_reset}\n"
-run "ptr: no dangling EVIDENCE-PATHS in agents" '! grep -rq "EVIDENCE-PATHS" .claude/agents/'
-run "ptr: agents carry no evidence pointer"     '! grep -rq "ow-evidence" .claude/agents/'
+run "ptr: no dangling EVIDENCE-PATHS in agents" '! grep -rq "EVIDENCE-PATHS" .ow/subagents/'
+run "ptr: agents carry no evidence pointer"     '! grep -rq "ow-evidence" .ow/subagents/'
 run "ptr: gitignore comment pointer resolves"   '. scripts/ow-gitignore.sh; p=$(ow_gitignore_block | grep -oE "\.ow/[A-Za-z0-9_./-]+\.md" | head -1); [ -z "$p" ] || [ -f "$p" ]'
 run "ptr: lint check 7 covers .ow paths"  'grep -q "templates|workflows|rules" scripts/conformance-lint.sh'
 run "ptr[behavioral]: check 7 fails on a repo-only agent pointer" '
-  d=$(mktemp -d); cp -R .ow "$d/"; mkdir -p "$d/.claude"; cp -R .claude/agents "$d/.claude/";
-  printf "\nSee \140.ow/commands/ow-nope.md\140 for nothing\n" >> "$d/.claude/agents/verifier.md";
+  d=$(mktemp -d); cp -R .ow "$d/"; printf "\nSee \140.ow/commands/ow-nope.md\140 for nothing\n" >> "$d/.ow/subagents/verifier.md";
   bash scripts/conformance-lint.sh "$d" >/tmp/ow-c7.$$ 2>&1; r=$?; rm -rf "$d";
   grep -q "check 7" /tmp/ow-c7.$$; g=$?; rm -f /tmp/ow-c7.$$;
   [ "$r" -ne 0 ] && [ "$g" -eq 0 ]'
@@ -2333,8 +2376,8 @@ run "sync: snapshot paths are the shipped set"  'grep -q "^SNAPSHOT_PATHS=(templ
 # guarantees as every other retirement: gone from the source, removed on upgrade, rollback-able.
 run "wf: workflows dir is gone from the source"    '[ ! -d .ow/workflows ]'
 run "wf: legacy obsidian templates are gone"       '[ ! -e .ow/templates/init.md ] && [ ! -e .ow/templates/obsidian-context.md ] && [ ! -e .ow/templates/obsidian-work-note.md ]'
-run "wf: no spec/agent points at the retired files" '! grep -rq "obsidian-context\|obsidian-work-note\|00-Agent-Context" .ow/commands .claude/agents .ow/templates'
-run "wf: no reference to a command file that never shipped" '! grep -rqE "commands/(plan-work|fix-bug|verify-work|understand-task|build-feature|write-document|test-report|handoff-report|init)\.md" .ow/commands .ow/templates .claude/agents'
+run "wf: no spec/agent points at the retired files" '! grep -rq "obsidian-context\|obsidian-work-note\|00-Agent-Context" .ow/commands .ow/subagents .ow/templates'
+run "wf: no reference to a command file that never shipped" '! grep -rqE "commands/(plan-work|fix-bug|verify-work|understand-task|build-feature|write-document|test-report|handoff-report|init)\.md" .ow/commands .ow/templates .ow/subagents'
 run "wf: installer no longer copies workflows"     '! grep -q "\.ow/workflows" scripts/install.sh'
 run "wf: retirement is version-gated"              'grep -q "_ow_ver_lt \"\$current_version\" \"2.1.0\"" scripts/upgrade.sh'
 run "wf: retirement backs up first"                'grep -q "BACKUP_DIR/.ow/workflows" scripts/upgrade.sh'
@@ -2444,9 +2487,9 @@ run "coding-discipline: untestable list appears once" \
   "[ \"\$(grep -rlF 'pure styling/layout' .ow/commands/ | wc -l | tr -d ' ')\" -eq 1 ]"
 # the dangling citations that made this fragment necessary must never come back
 run "coding-discipline: no OW § citation anywhere in shipped specs" \
-  "! grep -rqE 'OW (Standard )?§' .ow/commands/ .claude/agents/"
+  "! grep -rqE 'OW (Standard )?§' .ow/commands/ .ow/subagents/"
 run "coding-discipline: no CLAUDE.md/AGENTS.md mandate citation" \
-  "! grep -rqE '(CLAUDE|AGENTS)\.md[^.]{0,30}mandate' .ow/commands/ .claude/agents/"
+  "! grep -rqE '(CLAUDE|AGENTS)\.md[^.]{0,30}mandate' .ow/commands/ .ow/subagents/"
 run "coding-discipline: conformance-lint check 12 exists" \
   "grep -qF 'check 12' scripts/conformance-lint.sh"
 # ownership contract (same as check 4): a project's own agent is a note, never an install-abort
@@ -2737,8 +2780,8 @@ run "ow-auto docs: README counts 22"                   "grep -q '22 slash comman
 run "ow-auto docs: ow-help cheatsheet row"             "grep -q '| /ow-auto' .ow/commands/ow-help.md"
 run "ow-auto docs: AGENTS.md names /ow-auto and --claude worker" "grep -q 'ow-auto' AGENTS.md && grep -q -- '--claude' AGENTS.md"
 run "ow-auto docs: codex/README no longer claims no-subagents as the end of the story" "grep -q -- '--claude' codex/README.md"
-run "ow-auto docs: CHANGELOG 2.2.0 on top + version bumped" \
-  "head -12 CHANGELOG.md | grep -q '^## \[2.2.0\]' && yq -e '.ow.version == \"2.2.0\"' .ow.yml >/dev/null"
+run "ow-auto docs: CHANGELOG 2.3.0 on top + version bumped" \
+  "grep -q '^## \[2.3.0\]' CHANGELOG.md && yq -e '.ow.version == \"2.3.0\"' .ow.yml >/dev/null"
 
 run "worker: TERM to the runner kills the CLI too (no orphan writer)" '_worker_fixture
   PATH="$TD/bin:$PATH" FAKE_MODE=timeout OW_WORKER_TIMEOUT_SEC=60 bash "$W" codex "$TD/wt" "$TD/runs" P1-chunk1 "$TD/prompt.md" >/dev/null 2>&1 &

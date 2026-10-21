@@ -133,11 +133,11 @@ spawn ไม่แชร์ context ⇒ agent เริ่มจากศูน�
 
 | `subagent_target` | rules ที่ใช้ (inline) / agent ที่ spawn (delegate) |
 |---|---|
-| `backend` | `.claude/agents/backend.md` |
-| `frontend` | `.claude/agents/frontend.md` |
-| `mobile` | `.claude/agents/mobile.md` |
-| `docs` | `.claude/agents/docs.md` |
-| `design` | `.claude/agents/design.md` |
+| `backend` | `.ow/subagents/backend.md` |
+| `frontend` | `.ow/subagents/frontend.md` |
+| `mobile` | `.ow/subagents/mobile.md` |
+| `docs` | `.ow/subagents/docs.md` |
+| `design` | `.ow/subagents/design.md` |
 | `all` | sequence: backend → frontend → mobile → docs |
 
 🔴 **มีแน่ๆ ตัวเดียวคือ `docs`** — ที่เหลือเป็น agent ที่ project สร้างเองด้วย `/ow-agent create <name>`
@@ -195,7 +195,7 @@ plan: subagent_target: all
 - 🚫 **ห้ามเพิ่ม abstraction/config/feature** ที่ plan ไม่ได้ระบุ (minimum correct change)
 - 🚫 **ห้าม refactor ไฟล์นอก scope** ของ plan
 - ⚠️ Design system gate: ถ้าต้อง component ใหม่ → STOP → ต้องรัน `/ow-design component <name>` ก่อน
-- ⚠️ Test creation **mandatory** ถ้า production code change — ดู `.claude/agents/{backend,frontend,mobile}.md` §5.1
+- ⚠️ Test creation **mandatory** ถ้า production code change — ดู `.ow/subagents/{backend,frontend,mobile}.md` §5.1
 - 💡 ทุก changed line ต้อง trace กลับไปยัง step ใน plan หรือ success criteria ได้
 - 💡 ถ้า test fail: schema/mock outdated → แก้ test; regression/wrong logic → แก้ code (ห้ามลด assertion)
 - 💡 plan ที่มี `source_fix:` (มาจาก `/ow-plan fix:<slug>`) → fix-log ต้นทางถูกปิด `status: fixed` อัตโนมัติตอน done (Phase 6.5) — ไม่ต้องไปปิดมือ (#30)
@@ -204,7 +204,7 @@ plan: subagent_target: all
 
 - ก่อน `/ow-implement`: [/ow-plan](./ow-plan.md) (บังคับ) — plan ต้อง approved
 - หลัง `/ow-implement`: [/ow-test](./ow-test.md), [/ow-secure](./ow-secure.md), [/ow-verify](./ow-verify.md)
-- Subagent specs: [`.claude/agents/{backend,frontend,mobile,docs,design}.md`](../.claude/agents/)
+- Subagent specs: [`.ow/subagents/{backend,frontend,mobile,docs,design}.md`](../.ow/subagents/)
 
 ## FAQ
 

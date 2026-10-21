@@ -19,7 +19,7 @@ is `_shared/delegation.md`, read in full first. Nothing below restates it.
 
 ## 1. Mode: external worker forces delegated mode
 
-3.0's inline/delegate judgment is replaced: the work **is delegated**, to the external CLI. `.claude/agents/<area>.md`
+3.0's inline/delegate judgment is replaced: the work **is delegated**, to the external CLI. `.ow/subagents/<area>.md`
 may be absent — that is fine; the worker reads the area rules from the `RULES(<area>)` line of the PROJECT CONTEXT
 block (it has a shell and can open those files). Everything else in 3.0 (area gates, rules, 3.1 rules) still applies.
 

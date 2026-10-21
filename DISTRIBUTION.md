@@ -134,11 +134,17 @@ ow upgrade --dry-run
 ow upgrade --rollback
 ```
 
+เครื่องใหม่ที่ clone project ซึ่ง gitignore `.claude/` หรือ `.agents/` — สร้าง shim / agent symlink / skill ใหม่จาก `.ow/` โดยไม่ต้องมี network:
+
+```bash
+ow regen                  # = bash scripts/ow-regen.sh — อ่าน ai_agents จาก .ow.yml
+```
+
 `upgrade` **ห้ามแตะ**: `templates/`, `docs/`, `.ow.yml`, `.ow/local/`, `CLAUDE.md`, `AI-README.md`, `README.md`
 **แทนที่ทั้ง dir**: `.ow/commands/`, `.ow/templates/`, `codex/`, `gemini/`, `gpt/`, `glm/`, `prompts/`
 **merge ทีละไฟล์ (ไม่เคย `rm -rf` ทั้ง dir)**:
 - `.claude/commands/` — regenerate shim + prune shim ของ command ที่ถูกลบ
-- `.claude/agents/` — เขียนทับเฉพาะ **always-on 4 ตัว** และตัดสินจาก **signature ไม่ใช่ชื่อไฟล์** ⇒ agent ที่
+- `.ow/subagents/` (+ symlink `.claude/agents/` ชี้มา) — เขียนทับเฉพาะ **always-on 4 ตัว** และตัดสินจาก **signature ไม่ใช่ชื่อไฟล์** ⇒ agent ที่
   project เขียนเอง (`/ow-agent create`) และ agent ชื่อซ้ำที่ project เป็นเจ้าของ ไม่เคยถูกแตะ
 - `.claude/settings.json` — merge เฉพาะ key ที่ obsidian-workflow เป็นเจ้าของ (`$schema` · `permissions.allow` ·
   `env.OW_*`) hooks/deny/ask/env ของ host อยู่ครบ · `settings.local.json` ไม่แตะเลย

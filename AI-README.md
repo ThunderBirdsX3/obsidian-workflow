@@ -131,7 +131,7 @@ Task: ...
 
 ## Sub-agents
 
-Claude Code อ่าน `.claude/agents/*.md` ซึ่งเก็บเฉพาะ agent ที่ **มีตัวตนจริง**
+body ของ agent อยู่ที่ `.ow/subagents/*.md` (committed) ส่วน `.claude/agents/*.md` เป็น symlink ชี้มาที่นี่ — Claude Code อ่านผ่าน link (เครื่องใหม่รัน `ow regen` เพื่อสร้าง link) เก็บเฉพาะ agent ที่ **มีตัวตนจริง**
 obsidian-workflow ship มาแค่ always-on **(4 agents** — docs/verifier/security/gh-issue) เท่านั้น
 
 agent เฉพาะทาง (`backend` `frontend` `mobile` `design` `test-runner` หรือชื่อที่ project ตั้งเอง) **ไม่ได้ ship มา** —

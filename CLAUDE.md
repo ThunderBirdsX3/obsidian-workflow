@@ -70,7 +70,7 @@ Language follows `project.language` (`$PROJECT_LANG`, default `th`) — write so
 |---|---|
 | Chat / reports / questions to the user | `project.language` (`$PROJECT_LANG`) |
 | Files under `vault_path`, every folder | `project.vault_language` — unset ⇒ falls back to `project.language` (`$VAULT_LANG`) |
-| Code comments · frontmatter · commit messages · `.ow/commands` · `.claude/agents` | English |
+| Code comments · frontmatter · commit messages · `.ow/commands` · `.ow/subagents` | English |
 <!-- OW END: workflow -->
 
 ## Design spec for obsidian-workflow's own development (`.superpowers/`)

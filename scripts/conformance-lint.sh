@@ -57,7 +57,10 @@ set -uo pipefail
 ROOT="${1:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
 CMDS="$ROOT/.ow/commands"
 FRAG="$CMDS/_shared"
-AGENTS="$ROOT/.claude/agents"
+# Agent bodies live in .ow/subagents (.claude/agents only symlinks to it); older trees keep them
+# directly in .claude/agents. AGENTS_X also holds a project's OWN real agent files; its symlinks
+# into .ow/subagents are skipped below so nothing is checked twice.
+AGENTS="$ROOT/.ow/subagents"; AGENTS_X="$ROOT/.claude/agents"
 # Agent NAMES obsidian-workflow ships — the always-on four, and only those. Specialized agents
 # (backend/frontend/mobile/design/test-runner) are written per project by /ow-agent create
 # and are NOT shipped names, so owning one is normal and must not raise the collision note.
@@ -99,8 +102,9 @@ fi
 
 # ── check 2: no obsidian-vault runtime-path literal in executable blocks ──────
 hits=""
-for f in "$CMDS"/*.md "$FRAG"/*.md "$AGENTS"/*.md; do
+for f in "$CMDS"/*.md "$FRAG"/*.md "$AGENTS"/*.md "$AGENTS_X"/*.md; do
   [ -e "$f" ] || continue
+  [ -L "${f}" ] && continue
   if _bash_lines "$f" | grep -c 'docs/obsidian-vault' >/dev/null; then hits="$hits $(basename "$f")"; fi
 done
 [ -z "$hits" ] && okk "check 2: no obsidian-vault runtime literal in executable blocks" \
@@ -124,10 +128,11 @@ done
 # lacks §0 is fatal — only obsidian-workflow writes the signature, so that is a shipped-tree defect.
 # A project's own agent is a NOTE whatever it is called: a gate that aborts an install over
 # a file obsidian-workflow never wrote is a false gate, and install has no rollback.
-if [ -d "$AGENTS" ]; then
+if [ -d "$AGENTS" ] || [ -d "$AGENTS_X" ]; then
   missing=""; user_missing=""; shadowed=""
-  for f in "$AGENTS"/*.md; do
+  for f in "$AGENTS"/*.md "$AGENTS_X"/*.md; do
     [ -e "$f" ] || continue
+    [ -L "$f" ] && continue
     base="$(basename "$f" .md)"
     if _agent_is_ow_owned "$f"; then
       grep -qE '^## §0\.' "$f" || missing="$missing $(basename "$f")"
@@ -144,8 +149,9 @@ fi
 
 # ── check 5: no binary/artifact WRITE under the vault ────────────────────────
 hits=""
-for f in "$CMDS"/*.md "$FRAG"/*.md "$AGENTS"/*.md; do
+for f in "$CMDS"/*.md "$FRAG"/*.md "$AGENTS"/*.md "$AGENTS_X"/*.md; do
   [ -e "$f" ] || continue
+  [ -L "${f}" ] && continue
   if grep -qE 'mkdir -p "\$VAULT_ABS[^"]*(artifact|screenshot|capture)|> *"\$VAULT_ABS[^"]*\.(png|jpe?g|zip|har|trace|log|txt|json)' "$f"; then
     hits="$hits $(basename "$f")"
   fi
@@ -156,8 +162,9 @@ done
 # ── check 6: no reference to the retired evidence/upload subsystem ───────────
 if [ -d "$CMDS" ]; then
   hits=""
-  for f in "$CMDS"/*.md "$FRAG"/*.md "$AGENTS"/*.md; do
+  for f in "$CMDS"/*.md "$FRAG"/*.md "$AGENTS"/*.md "$AGENTS_X"/*.md; do
     [ -e "$f" ] || continue
+    [ -L "$f" ] && continue
     if grep -qE 'ow-(evidence|upload)|upload-evidence|EVIDENCE\.md|EVIDENCE_(RAW|CURATED)_ROOT|OW-EVIDENCE:START|test-artifacts/' "$f"; then
       hits="$hits $(basename "$f")"
     fi
@@ -172,8 +179,9 @@ fi
 # a dangling reference is fatal — the same class of failure as check 1.
 if [ -d "$CMDS" ]; then
   hits=""
-  for f in "$CMDS"/*.md "$FRAG"/*.md "$AGENTS"/*.md; do
+  for f in "$CMDS"/*.md "$FRAG"/*.md "$AGENTS"/*.md "$AGENTS_X"/*.md; do
     [ -e "$f" ] || continue
+    [ -L "$f" ] && continue
     for ref in $(grep -oE '_shared/[A-Za-z0-9_.-]+\.md' "$f" | sort -u); do
       [ -f "$CMDS/$ref" ] || hits="$hits $(basename "$f")→$ref"
     done
@@ -288,19 +296,20 @@ fi
 # agent — at a rule they cannot open. The rule then has no home: nobody can change it, nobody can
 # check it, and every verb drifts to its own reading of it. Cross-verb rules live in a `_shared/`
 # fragment that check 7 already proves resolves; this check makes the ONLY way to cite one be that
-# resolvable pointer. `.claude/agents` is scanned too — an agent prompt is executable text as much
+# resolvable pointer. `.ow/subagents` is scanned too — an agent prompt is executable text as much
 # as a spec is.
 # 🔴 Same ownership contract as check 4: a project's OWN agent is a note, never a failure — an
 # install must not abort over a file obsidian-workflow never wrote. Ownership is proven by content.
 _auth_hits=""; _auth_notes=""
-for _af in "$CMDS"/*.md "$FRAG"/*.md "$AGENTS"/*.md; do
+for _af in "$CMDS"/*.md "$FRAG"/*.md "$AGENTS"/*.md "$AGENTS_X"/*.md; do
   [ -f "$_af" ] || continue
+  [ -L "${_af}" ] && continue
   # `OW §<n>` / `OW Standard §…` — the retired standard document; nothing resolves it any more
   # `<doc> mandate` where <doc> is CLAUDE.md/AGENTS.md — those files carry no numbered mandate
   _h=$(grep -nE 'OW (Standard )?§|(CLAUDE|AGENTS)\.md[^.]{0,30}mandate' "$_af" 2>/dev/null | head -1)
   [ -n "$_h" ] || continue
   case "$_af" in
-    "$AGENTS"/*) _agent_is_ow_owned "$_af" \
+    "$AGENTS"/*|"$AGENTS_X"/*) _agent_is_ow_owned "$_af" \
         || { _auth_notes="$_auth_notes $(basename "$_af")"; continue; } ;;
   esac
   _auth_hits="$_auth_hits

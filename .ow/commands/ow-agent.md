@@ -13,7 +13,10 @@ Manage subagents: list/enable/disable + **create new agents specialized to the r
 > project invents — is **written by `/ow-agent create <name>` against the stack this project actually runs**,
 > once `/ow-init` has detected it and a PRD/SRS exists.
 
-🔴 **Enabled ⟺ a file in `.claude/agents/` ⟺ spawnable — one condition, and this command is its only writer.**
+🔴 **Enabled ⟺ a file in `.ow/subagents/` ⟺ spawnable — one condition, and this command is its only writer.**
+`.ow/subagents/<name>.md` is the one real file (committed — a clone gets it). `.claude/agents/<name>.md` is only a
+symlink to it, made by `ow_link_agents` (scripts/ow-claude-manifest.sh) — never write or edit a body through `.claude/`.
+After any write below, run `. scripts/ow-claude-manifest.sh && ow_link_agents "$ROOT"`.
 A `subagents.<name>` flag with no body behind it promises an agent Claude Code cannot spawn; install/upgrade
 report that combination and never quietly fill it in (only a body written against a real stack is worth having).
 
@@ -63,7 +66,7 @@ FRESH SHELL — Phase 0's exports are gone — so it re-hydrates first, then ass
 
 ```bash
 eval "$(bash "$(git rev-parse --show-toplevel)/scripts/ow-paths.sh" --shell)"
-ls .claude/agents/*.md          # every agent that EXISTS — exactly what Claude Code can spawn
+ls .ow/subagents/*.md          # every agent that EXISTS (linked into .claude/agents/ for Claude Code to spawn)
 yq '.subagents' .ow.yml   # the flags — a name here with no file above is NOT created yet
 bash "$(git rev-parse --show-toplevel)/scripts/ow-paths.sh" --agent-models   # name<TAB>model
 ```
@@ -72,7 +75,7 @@ Show a table. **State** is the whole point of it — three values, never collaps
 
 | State | means | fix |
 |---|---|---|
-| `✓ live` | flag on **and** a body in `.claude/agents/` | — |
+| `✓ live` | flag on **and** a body in `.ow/subagents/` | — |
 | `— not created` | flag on/off, no body: a name, not an agent | `/ow-agent create <name>` |
 | `✗ broken` | flag **on**, no body — the config is promising a spawn that cannot happen | `/ow-agent create <name>` |
 
@@ -94,7 +97,7 @@ test-runner    — not created   sonnet   —            —            no E2E r
 
 ## Phase 1 — `list` / `enable` / `disable`
 
-`.claude/agents/<name>.md` present ⟺ the agent is spawnable ⟺ `subagents.<name>` is on.
+`.ow/subagents/<name>.md` present ⟺ the agent is spawnable ⟺ `subagents.<name>` is on.
 `enable` moves BOTH sides or neither — a flag with no agent body is a config that lies.
 
 `enable` never *authors* a body — it only turns on one that already exists here: the file
@@ -103,9 +106,9 @@ never been created cannot be enabled**, and the command says so and stops rather
 copying in a generic stand-in: an agent that does not know this project's stack is worse
 than no agent, because the orchestrator will trust it.
 
-`list` reads the config and `.claude/agents/`, and shows each agent's resolved model
+`list` reads the config and `.ow/subagents/`, and shows each agent's resolved model
 (`bash scripts/ow-paths.sh --agent-models`) beside the 3-state above. An agent enabled in
-config with no file under `.claude/agents/` is reported **broken**, never as enabled.
+config with no file under `.ow/subagents/` is reported **broken**, never as enabled.
 
 ### enable
 
@@ -115,8 +118,8 @@ ROOT="$(git rev-parse --show-toplevel)"; NAME="<name>"
 #    sources are this project's own: the file `/ow-agent create` wrote, and the dated backup
 #    `disable` leaves behind.
 SRC=""
-for c in "$ROOT/.claude/agents/$NAME.md" \
-         "$(ls -t "$ROOT/.claude/agents/$NAME.md.bak-"* 2>/dev/null | head -1)"; do
+for c in "$ROOT/.ow/subagents/$NAME.md" \
+         "$(ls -t "$ROOT/.ow/subagents/$NAME.md.bak-"* 2>/dev/null | head -1)"; do
   [ -n "$c" ] && [ -f "$c" ] && { SRC="$c"; break; }
 done
 [ -n "$SRC" ] || {
@@ -146,11 +149,12 @@ if ! bash "$ROOT/scripts/ow-paths.sh" --subagents 2>/dev/null | grep -qx "$NAME"
   echo "       Nothing was written — the project is unchanged."; exit 1
 fi
 # 4) NOW the body, so config and file move together or neither does
-[ -f "$ROOT/.claude/agents/$NAME.md" ] || cp "$SRC" "$ROOT/.claude/agents/$NAME.md"
-# 5) post-condition — enable is done only when the agent is actually spawnable
-[ -f "$ROOT/.claude/agents/$NAME.md" ] || { echo "FATAL: $NAME still not spawnable"; exit 1; }
-# 6) sync the agent's model: frontmatter to whatever config now resolves to
 . "$ROOT/scripts/ow-claude-manifest.sh"
+[ -f "$ROOT/.ow/subagents/$NAME.md" ] || cp "$SRC" "$ROOT/.ow/subagents/$NAME.md"
+ow_link_agents "$ROOT"
+# 5) post-condition — enable is done only when the agent is actually spawnable
+[ -f "$ROOT/.ow/subagents/$NAME.md" ] || { echo "FATAL: $NAME still not spawnable"; exit 1; }
+# 6) sync the agent's model: frontmatter to whatever config now resolves to
 apply_agent_models "$ROOT"
 ```
 
@@ -172,10 +176,12 @@ sed -i.bak -E \
 rm -f "$ROOT/.ow.yml.bak"
 bash "$ROOT/scripts/ow-paths.sh" --subagents 2>/dev/null | grep -qx "$NAME" && {
   echo "FATAL: $NAME is still enabled in .ow.yml — set it to \`{ enabled: false }\` by hand"; exit 1; }
-# the body goes too: Claude Code spawns whatever sits in .claude/agents/, so a flag on
-# its own disables nothing. Dated backup, because the file may have been regenerated.
-[ -f "$ROOT/.claude/agents/$NAME.md" ] && mv "$ROOT/.claude/agents/$NAME.md" \
-  "$ROOT/.claude/agents/$NAME.md.bak-$(date +%Y%m%d)"
+# the body goes too: Claude Code spawns whatever is linked in .claude/agents/, so a flag on
+# its own disables nothing. Dated backup, because the file may have been regenerated;
+# ow_link_agents then drops the now-dangling link.
+[ -f "$ROOT/.ow/subagents/$NAME.md" ] && mv "$ROOT/.ow/subagents/$NAME.md" \
+  "$ROOT/.ow/subagents/$NAME.md.bak-$(date +%Y%m%d)"
+. "$ROOT/scripts/ow-claude-manifest.sh"; ow_link_agents "$ROOT"
 ```
 
 The always-on four (`docs` `verifier` `security` `gh-issue`) have no off switch: `disable`
@@ -270,7 +276,7 @@ Each gate is written as a **STOP condition**, in the shape `<observable situatio
 
 ### 2.5 Generate the agent file
 
-Path: `.claude/agents/<name>.md`
+Path: `.ow/subagents/<name>.md` (then `ow_link_agents` makes `.claude/agents/<name>.md` a symlink to it)
 
 🔴 **Where the project-specificity goes — the one rule that keeps this safe:**
 
@@ -439,7 +445,7 @@ Do this when:
 - `/ow-agent audit` reported a defect
 
 Process:
-1. Read the existing `.claude/agents/<name>.md`. Absent ⇒ there is nothing to regenerate:
+1. Read the existing `.ow/subagents/<name>.md`. Absent ⇒ there is nothing to regenerate:
    **STOP** — the agent is disabled or was never created. Tell the user which, and name the
    fix (`/ow-agent enable <name>` when a `.bak-<date>` exists, otherwise
    `/ow-agent create <name>`).
@@ -453,7 +459,7 @@ Process:
    block is authoritative / absent ⇒ STOP / no bash tool" + carries the `LANG` / `VAULT_LANG`
    bullet.
 5. Show the diff → confirm → write. Back up the old body as
-   `.claude/agents/<name>.md.bak-<date>` (gitignored) — that backup is also what
+   `.ow/subagents/<name>.md.bak-<date>` (gitignored) — that backup is also what
    `/ow-agent enable` reads if the agent is later disabled and re-enabled.
 
 > Paths, submodules, verification roots and rule files are resolved at runtime by the
@@ -480,7 +486,7 @@ grep -rl -iE "ETL|pipeline|warehouse|dbt|airflow"  "$VAULT_ABS"/{10-PRD,20-Featu
 grep -rl -iE "deploy|kubernetes|terraform|infra"   "$VAULT_ABS"/{10-PRD,70-Reference}/*.md 2>/dev/null
 grep -rl -iE "e2e|playwright|maestro|smoke test"   "$VAULT_ABS"/90-TestPlan/*.md 2>/dev/null
 # — what already exists, so nothing is proposed twice
-ls "$ROOT/.claude/agents/"*.md 2>/dev/null
+ls "$ROOT/.ow/subagents/"*.md 2>/dev/null
 ```
 
 ### 4.2 Map signals → agent
@@ -559,7 +565,7 @@ At the end of /ow-agent answer with **short, quick-to-read bullets** in the conf
 
 - **What was done** — which agent was created/enabled/disabled/regenerated + the model set
 - **Stack the body was written against** (`create`/`regenerate` only) — what §2.1 detected and the user confirmed
-- **Files** — `.claude/agents/<name>.md` written/edited + the `.ow.yml` flag
+- **Files** — `.ow/subagents/<name>.md` written/edited + the `.ow.yml` flag
 - **Check** — audit result (§0 header, `LANG`/`VAULT_LANG` bullet, §1 names a stack, §2 bakes no paths, gates complete)
 - **Next** — enabled-with-no-body names still to create, or suggestions not acted on (if any)
 

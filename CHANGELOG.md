@@ -3,6 +3,21 @@
 Format: [Keep a Changelog](https://keepachangelog.com). Versions: SemVer.
 Version marker: `ow.version` in `.ow.yml`.
 
+## [2.3.0] — 2026-10-21
+
+Minor. No breaking change: upgrade migrates the old layout.
+
+### Changed — agent bodies move to `.ow/subagents/`; `.claude/agents/` becomes symlinks
+
+- The four always-on bodies and every `/ow-agent create` body are real files in `.ow/subagents/` (committed). `.claude/agents/<name>.md` is a relative symlink to it (`ow_link_agents` in `scripts/ow-claude-manifest.sh`), so a clone that ignores `.claude/` loses nothing, and other front-ends read the same bodies (`AGENTS.md` persona map now points at `.ow/subagents/`).
+- install / upgrade write the bodies to `.ow/subagents/` for every project (codex-only included) and link them when `claude` is enabled. Upgrade migrates the old layout: an owned real file in `.claude/agents/` (by signature) moves over; a project's own agent stays put; a differing same-name real file is kept with a WARN. `--rollback` covers `.ow/subagents`.
+- `/ow-agent` create / enable / disable write `.ow/subagents/` and re-link. `apply_agent_models`, `verify_enabled_agents`, `conformance-lint.sh`, `ow doctor` follow the new path. `.ow/subagents` joins the protected paths (`ow-safe-paths.sh`, `/ow-sync`).
+- Name is `subagents`, not `agents`: `.ow/agents/` is the retired specialized-body library (v1.10.0).
+
+### Added — `ow regen` (`scripts/ow-regen.sh`)
+
+- Offline rebuild of the generated front-end files on a fresh clone: reads `ai_agents` from `.ow.yml`, then writes `.claude/commands/` shims + `.claude/agents/` links (claude), `.agents/skills/` (codex / cline / kimi), `<folder>/prompts/router.md` (router front-ends). No network, no version bump, user-owned files kept. Needs `yq`. Listed in `ow-owned.sh`, so upgrade ships it to projects.
+
 ## [2.2.0] — 2026-10-17
 
 Minor. No breaking change.

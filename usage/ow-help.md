@@ -33,7 +33,7 @@
 /ow-help <command>                # อธิบาย command ตัวนั้น (เช่น /ow-help plan)
 /ow-help workflow                 # workflows ที่พบบ่อย
 /ow-help workflow <name>          # workflow card เฉพาะ (new-project, bug-fix, daily, design, brownfield-adopt, submodule)
-/ow-help search <keyword>         # ค้น keyword ใน commands/*.md + .claude/agents/*.md
+/ow-help search <keyword>         # ค้น keyword ใน commands/*.md + .ow/subagents/*.md
 /ow-help cheatsheet               # ตาราง 1 หน้า — command × ใช้เมื่อ × ผลลัพธ์
 /ow-help tree                     # decision tree "ถ้า X → ใช้ Y"
 ```
@@ -45,7 +45,7 @@
 3. **Phase 2** — "อธิบาย command เฉพาะ" (อ่าน `.ow/commands/<cmd>.md` แล้วสรุป)
 4. **Phase 3** — "workflows" (แสดง workflow cards)
 5. **Phase 4** — "cheatsheet" (ตาราง 1 หน้า)
-6. **Phase 5** — "search" (grep ใน .ow/commands/ + .claude/agents/)
+6. **Phase 5** — "search" (grep ใน .ow/commands/ + .ow/subagents/)
 
 ## Output ที่ได้
 

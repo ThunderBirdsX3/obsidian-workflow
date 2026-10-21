@@ -175,6 +175,7 @@ PROTECTED=(
   scripts                         # ow-paths.sh + upgrade.sh
   .ow.yml
   .ow/local
+  .ow/subagents                   # agent bodies (.claude/agents only links here)
   CLAUDE.md
   AI-README.md
   README.md
@@ -198,10 +199,10 @@ test -d "$STAGE/repo/.ow/commands" || { echo "ERROR: obsidian-workflow repo miss
 # Snapshot paths that get synced (FLAT under .ow/) — REPLACE list matches the note above
 SNAPSHOT_PATHS=(templates commands)
 # No `agents` entry: obsidian-workflow ships no specialized agent body to snapshot. The four always-on
-# bodies are refreshed under .claude/agents/ by install/upgrade (by SIGNATURE, see
+# bodies are refreshed under .ow/subagents/ by install/upgrade (by SIGNATURE, see
 # ow-claude-manifest.sh), and every specialized body is written by `/ow-agent create <name>`
 # against this project's own stack — syncing would overwrite a project's own agent with a
-# generic one. The consumer's .claude/agents/ is PROTECTED above and never touched here.
+# generic one. The consumer's .ow/subagents/ is PROTECTED above and never touched here.
 snapshot_src() { echo ".ow/$1"; }
 
 # Atomic swap — back up the current state (all of .ow/ except local/ + *.backup-*)

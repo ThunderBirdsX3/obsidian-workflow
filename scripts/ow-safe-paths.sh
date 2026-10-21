@@ -36,6 +36,7 @@ ow_safe_paths() {
   printf '%s\n' \
     ".ow.yml" \
     ".ow/rules" \
+    ".ow/subagents" \
     ".ow/local" \
     "commands" \
     "templates" \

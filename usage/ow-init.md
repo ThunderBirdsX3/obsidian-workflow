@@ -63,7 +63,7 @@
 
 - `<vault_path>/` (12 folders ครบ — `00-Index/`, `10-PRD/`, …, `95-Handoff/`)
 - `.ow.yml` (gitTracked — shared กับ team)
-- `.claude/commands/`, `.claude/agents/` (จาก installer)
+- `.claude/commands/`, `.ow/subagents/` (จาก installer)
 - (brownfield) PRD draft จาก README ใน `docs/obsidian-vault/10-PRD/PRD-<slug>.md`
 
 ## Vault location options (Phase 1.2)
@@ -129,3 +129,6 @@ A: มันไม่ได้ ship มา — รัน [/ow-agent suggest](./o
 
 **Q: ผม clone repo ที่ทีมงาน adopt obsidian-workflow ไว้แล้ว ต้องรัน init ใหม่ทั้งหมดไหม?**
 A: ไม่ต้อง — config มีแค่ `.ow.yml` ซึ่งอยู่ใน repo แล้ว (`.ow/local/` สร้างเองตอนรันคำสั่งแรก) ที่ต้องเติมเองมีแค่ไฟล์ env ของ test credentials (gitignored)
+
+**Q: clone มาแล้ว `/ow-*` ไม่ขึ้น / agent ไม่เจอ (เพราะ `.claude/` ถูก gitignore)?**
+A: `.claude/commands/` (shim) กับ `.agents/skills/` generate จาก `.ow/commands/` ส่วน `.claude/agents/` เป็น symlink ชี้ `.ow/subagents/` — รัน `ow regen` (หรือ `bash scripts/ow-regen.sh`) ครั้งเดียว มันอ่าน `ai_agents` ใน `.ow.yml` แล้วสร้างให้เฉพาะ front-end ที่เปิดไว้ ไม่ต้องใช้เน็ต ไม่แตะ `.ow/` กับ `.ow.yml` (ต้องมี `yq`). ต้อง commit `.ow/` (รวม `.ow/subagents/`) และ `scripts/` ไว้

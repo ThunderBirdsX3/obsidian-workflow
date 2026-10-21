@@ -156,7 +156,7 @@ source, and a blank role there means ask the user, never invent one to unblock t
 Run the tasks below yourself, or delegate them to the `test-runner` agent — **whichever fits this run**.
 Same trade-off as `/ow-implement` 3.0, nothing here forces either one:
 
-🔴 `test-runner` is **created per project**, not shipped — `.claude/agents/test-runner.md` absent ⇒ run
+🔴 `test-runner` is **created per project**, not shipped — `.ow/subagents/test-runner.md` absent ⇒ run
 inline. That is the normal case on a project that has not run `/ow-agent create test-runner`, not a
 failure: the tasks and gates below are identical either way.
 

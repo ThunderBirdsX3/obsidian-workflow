@@ -123,5 +123,5 @@
 - [Multi-AI guide](../AI-README.md) — Claude/Codex/Gemini/GPT/GLM/Cline/Kimi
 - [Changelog](../CHANGELOG.md)
 - Command source-of-truth: [`../.ow/commands/ow-*.md`](../.ow/commands/)
-- Subagent specs: [`../.claude/agents/*.md`](../.claude/agents/) — always-on 4 ตัวที่ ship มา + ที่ `/ow-agent create` เขียนไว้
+- Subagent specs: [`../.ow/subagents/*.md`](../.ow/subagents/) — always-on 4 ตัวที่ ship มา + ที่ `/ow-agent create` เขียนไว้
 - Templates: [`../.ow/templates/*.md`](../.ow/templates/) — layer override ของ project อยู่ที่ `templates/` ที่ root (สร้างเองเมื่ออยาก customize)

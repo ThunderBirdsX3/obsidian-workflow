@@ -123,7 +123,7 @@ Project rules live in `.ow/rules/<area>.md` with front-matter `applies_to: [<are
 
 These tools have no user-definable subagents, so use persona switching: when the work
 enters a domain, say which persona you are acting as and follow that file's scope and
-gates. The persona definitions live in `.claude/agents/*.md` and are readable by any
+gates. The persona definitions live in `.ow/subagents/*.md` and are readable by any
 tool regardless of which assistant is driving:
 
 Always present: `docs.md` (vault) · `verifier.md` (test/lint/build) · `security.md`

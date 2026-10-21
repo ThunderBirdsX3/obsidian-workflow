@@ -61,6 +61,8 @@ bash <(curl -fsSL https://raw.githubusercontent.com/ThunderBirdsX3/obsidian-work
 ow doctor     # health check
 ```
 
+> clone project ที่ gitignore `.claude/` / `.agents/` มา? รัน `ow regen` ครั้งเดียว — สร้าง `.claude/commands/`, symlink `.claude/agents/` → `.ow/subagents/` และ `.agents/skills/` ใหม่ตาม `ai_agents` ใน `.ow.yml` (offline, ต้องมี `yq`)
+
 > `ow test` (smoke tests) เป็นคำสั่งของ **source checkout** เท่านั้น — ไม่ได้ติดตั้งในโปรเจกต์ของคุณ ใช้ `ow doctor` เพื่อ verify install
 
 ---

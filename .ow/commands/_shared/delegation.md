@@ -100,7 +100,7 @@ Worktree mode → append the WORKTREE block from `_shared/worktree.md` §3 right
 Appended to the PROJECT CONTEXT (+ WORKTREE) block — same channel, no extra one.
 **1 chunk → emit nothing** ⇒ the agent does the whole plan (same fail-safe as the `CONTEXT_REFS` 3-state)
 
-🔴 **This block is the real contract** — `.claude/agents/{backend,frontend,mobile,design}.md` are written by
+🔴 **This block is the real contract** — `.ow/subagents/{backend,frontend,mobile,design}.md` are written by
 `/ow-agent create` against this project and install/upgrade **must not overwrite** them
 (`ow-claude-manifest.sh` refreshes only the always-on four) ⇒ an agent written before this contract
 existed, or not yet regenerated, must work correctly from this block alone. The RETURN PROTOCOL therefore

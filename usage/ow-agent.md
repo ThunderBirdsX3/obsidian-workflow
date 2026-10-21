@@ -56,7 +56,7 @@ install/upgrade จะรายงานให้เห็น ไม่เติ
 
 ## ขั้นตอนภายใน (Phase summary)
 
-1. **Phase 0** — Resolve state (ls `.claude/agents/`, `yq` `.subagents`) → ตาราง 3 สถานะ
+1. **Phase 0** — Resolve state (ls `.ow/subagents/`, `yq` `.subagents`) → ตาราง 3 สถานะ
 2. **Phase 1** — `list`/`enable`/`disable` (flag + body ต้องขยับพร้อมกันเสมอ)
 3. **Phase 2** — `create`: 2.1 detect stack จาก manifest จริง → 2.2 อ่าน `.ow/rules/` + vault →
    2.3 ถามเฉพาะที่ repo ตอบเองไม่ได้ → 2.4 ปั้น gates ตาม taxonomy → 2.5 เขียนไฟล์
@@ -66,8 +66,8 @@ install/upgrade จะรายงานให้เห็น ไม่เติ
 
 ## Output ที่ได้
 
-- `.claude/agents/<name>.md` (สร้างใหม่หรือ regenerate)
-- `.claude/agents/<name>.md.bak-<date>` (backup ก่อน regenerate, gitignored)
+- `.ow/subagents/<name>.md` (สร้างใหม่หรือ regenerate) — ไฟล์จริงที่ commit; `.claude/agents/<name>.md` เป็นแค่ symlink ชี้มา (สร้างอัตโนมัติหลังเขียน)
+- `.ow/subagents/<name>.md.bak-<date>` (backup ก่อน regenerate, gitignored)
 - `.ow.yml` update `subagents.<name>` (enabled + optional `model` — ดู "AI model ต่อ agent" ด้านล่าง)
 
 ## Agent structure (ที่ generate)
@@ -106,7 +106,7 @@ Never section
   → detect stack (pyproject.toml: dbt-core, apache-airflow)
   → อ่าน .ow/rules/ + vault docs ที่เกี่ยว
   → ถามเฉพาะที่ repo ตอบเองไม่ได้ (role, owned paths, gates เพิ่มเติม, tools)
-  → generate .claude/agents/data-pipeline.md
+  → generate .ow/subagents/data-pipeline.md
   → update .ow.yml subagents.data-pipeline: true
 ```
 
@@ -148,7 +148,7 @@ subagents:
 
 - `model` รับ **family alias** (`opus | sonnet | haiku`) ไม่ระบุ version → track รุ่นล่าสุดอัตโนมัติ (หรือ pin full id เช่น `claude-opus-4-8` ได้)
 - ค่าผิด → fallback เป็น default + WARN
-- ค่าถูก **sync ลง `.claude/agents/<name>.md` frontmatter อัตโนมัติ** โดย install / upgrade / `/ow-sync` / `/ow-agent` — **ห้ามแก้ `model:` ในไฟล์ agent เอง** (จะโดนทับ)
+- ค่าถูก **sync ลง `.ow/subagents/<name>.md` frontmatter อัตโนมัติ** โดย install / upgrade / `/ow-sync` / `/ow-agent` — **ห้ามแก้ `model:` ในไฟล์ agent เอง** (จะโดนทับ)
 - ดู model ที่ resolve แล้ว: `bash scripts/ow-paths.sh --agent-models`
 
 ## Gotchas / ข้อควรระวัง
@@ -167,15 +167,15 @@ subagents:
 
 - ก่อน `/ow-agent`: [`/ow-init`](./ow-init.md), [`/ow-new`](./ow-new.md), [`/ow-doc`](./ow-doc.md) (ให้มี vault context ก่อน)
 - หลัง `/ow-agent create`: ทดลองด้วย [`/ow-implement`](./ow-implement.md) (set `subagent_target: <name>` ใน plan)
-- Subagent specs: [`.claude/agents/*.md`](../.claude/agents/)
+- Subagent specs: [`.ow/subagents/*.md`](../.ow/subagents/)
 
 ## FAQ
 
 **Q: agent ที่ create มา ใช้กับ Codex/Gemini ได้ไหม?**
-A: Subagent เป็น Claude Code-specific (`.claude/agents/`) — Cline/Kimi/Codex ใช้ `AGENTS.md` + `.agents/skills/`, Gemini/GPT/GLM ใช้ `<tool>/prompts/` แทน
+A: body อยู่ที่ `.ow/subagents/` (ไม่ผูกกับ tool) แต่ตอนนี้มีแค่ Claude Code ที่ spawn ได้ผ่าน symlink `.claude/agents/` — Cline/Kimi/Codex ใช้ `AGENTS.md` + `.agents/skills/`, Gemini/GPT/GLM ใช้ `<tool>/prompts/` แทน
 
 **Q: `disable` ทำอะไรกับไฟล์ agent?**
-A: ย้ายออกเป็น `.claude/agents/<name>.md.bak-<date>` พร้อมกับ set `subagents.<name>: false` — ต้องย้ายทั้งสองข้าง เพราะ Claude Code spawn ทุกไฟล์ที่อยู่ใน `.claude/agents/` การปิดแค่ flag จึงไม่ได้ปิดอะไรเลย. `.bak-<date>` คือแหล่งที่ `enable` อ่านกลับ — เปิดใหม่ได้ตลอด (ไฟล์ backup gitignored)
+A: ย้ายออกเป็น `.ow/subagents/<name>.md.bak-<date>` พร้อมกับ set `subagents.<name>: false` และลบ symlink ใน `.claude/agents/` — ต้องขยับทั้งสองข้าง เพราะ Claude Code spawn ทุกไฟล์ที่ link อยู่ใน `.claude/agents/` การปิดแค่ flag จึงไม่ได้ปิดอะไรเลย. `.bak-<date>` คือแหล่งที่ `enable` อ่านกลับ — เปิดใหม่ได้ตลอด (ไฟล์ backup gitignored)
 
 **Q: always-on 4 ตัว disable ได้ไหม?**
 A: ไม่ได้ — `disable` ปฏิเสธ เพราะ install/upgrade คัดลอก body กลับมาทุกรอบ แต่ไม่มีอะไรเขียน `.ow.yml` (อยู่ใน SAFE_PATHS) ⇒ ถ้าปล่อยให้ปิด flag ได้ จะได้ config ที่บอกปิดแต่ agent ยัง spawn ได้
@@ -186,4 +186,10 @@ A: body นั้นคือ template ที่ใส่ชื่อเข้�
 
 **Q: upgrade มาจากเวอร์ชันเก่าที่เคยมี `.ow/agents/` — ของเดิมหายไหม?**
 A: `.ow/agents/` (library ของ body ที่เคย ship) ถูกเลิกใช้และลบทิ้ง โดย backup ไว้ก่อนและ `--rollback` ได้
-แต่ **agent ที่ enable ไว้จริงไม่โดนแตะ** — มันอยู่ที่ `.claude/agents/` ซึ่ง upgrade ไม่เคยเขียนทับ
+แต่ **agent ที่ enable ไว้จริงไม่โดนแตะ** — มันอยู่ที่ `.ow/subagents/` ซึ่ง upgrade ไม่เคยเขียนทับ
+
+**Q: ทำไม body อยู่ `.ow/subagents/` ไม่ใช่ `.claude/agents/`?**
+A: ให้ `.claude/` เป็นของที่ generate ได้ทั้งหมด (ignore ได้) และให้ tool อื่นอ่าน body ชุดเดียวกันได้ (`AGENTS.md` ชี้ไปที่ `.ow/subagents/`). `.claude/agents/<name>.md` เป็น symlink แบบ relative (`../../.ow/subagents/<name>.md`) — แก้ที่ `.ow/subagents/` ที่เดียว. เครื่องใหม่หลัง clone รัน `ow regen` เพื่อสร้าง link
+
+**Q: upgrade มาจาก layout เก่า (body อยู่ `.claude/agents/` เป็นไฟล์จริง) ต้องทำอะไร?**
+A: ไม่ต้อง — `ow upgrade` ย้ายไฟล์ที่ obsidian-workflow เป็นเจ้าของ (ตัดสินจาก signature / `§0` header) ไปไว้ `.ow/subagents/` แล้วสร้าง symlink แทน (backup ก่อนใน `.ow.backup-*`, `--rollback` ได้). agent ที่ project เขียนเองและไม่มี signature ยังเป็นไฟล์จริงใน `.claude/agents/` ที่เดิม ไม่ถูกแตะ; ถ้าชื่อซ้ำกับ body ใน `.ow/subagents/` แต่เนื้อหาต่าง จะเก็บไฟล์ของคุณไว้และแจ้ง WARN

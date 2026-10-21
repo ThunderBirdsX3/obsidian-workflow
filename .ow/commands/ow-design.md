@@ -89,7 +89,7 @@ touching a DS file, in EITHER mode. It is the command's own spec, not an agent's
 project by `/ow-agent create design` and may not exist here, and even when it does it executes exactly that
 fragment. 🔴 **Running inline** — read that fragment plus every file `bash scripts/ow-paths.sh --rules design`
 names, *before* touching a DS file; the action blocks below tell you what to produce either way.
-`.claude/agents/design.md` absent ⇒ inline is the only mode, and that is normal, not a failure. 🔴 **Delegating** — prepend the authoritative PROJECT CONTEXT block assembled from
+`.ow/subagents/design.md` absent ⇒ inline is the only mode, and that is normal, not a failure. 🔴 **Delegating** — prepend the authoritative PROJECT CONTEXT block assembled from
 the Phase-0 resolved vars (the agent has no bash tool — assemble it exactly as
 `.ow/commands/_shared/delegation.md` §3, with `AREA=design`).
 

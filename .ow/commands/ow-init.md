@@ -310,7 +310,7 @@ ls docs/ | wc -l                    # expect ≥ 12 folders
 test -f .ow.yml && echo OK
 test -f CLAUDE.md && echo OK
 ls .claude/commands | grep -c '^ow-'  # expect ≥ 13
-ls .claude/agents | wc -l           # expect 4 (the always-on set — specialized agents are created later)
+ls .ow/subagents | wc -l           # expect 4 (the always-on set — specialized agents are created later)
 test -d .ow/commands && test -d .ow/templates && echo OK
 ```
 

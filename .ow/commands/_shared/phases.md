@@ -78,7 +78,7 @@ With `--phase <id>`:
 5. Scope for the whole run = **that phase's section only** — its `context_refs`, Affected Files,
    Implementation Steps, Test Plan, Success Criteria, owned docs
 6. 🔴 **The phase row's `area` is the area for this run** — it replaces the plan's `subagent_target`
-   everywhere that value is read: the `/ow-implement` 3.0 table (which `.claude/agents/<area>.md` and which
+   everywhere that value is read: the `/ow-implement` 3.0 table (which `.ow/subagents/<area>.md` and which
    rules apply), the Phase 4 design-system gate, `ow-paths.sh --rules <area>`, and `AREA` in
    `delegation.md` §3. A phased plan spanning areas carries `subagent_target: all` in its frontmatter, and
    `all` resolves no agent file, fires no DS gate and matches no rule set — reading it instead of the row's

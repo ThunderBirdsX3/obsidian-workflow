@@ -74,7 +74,7 @@ err()  { printf "${c_red}  ✗${c_reset} %s\n" "$*" >&2; }
 # a host's custom scripts (never backed up because never touched) are not wiped.
 ROLLBACK_PATHS=(
   .ow/commands .claude/commands .claude/agents .claude/settings.json
-  .ow/templates
+  .ow/templates .ow/subagents
   # retired paths — listed so a --rollback after the removal migration puts them back
   .ow/workflows
   .ow/STANDARD.md .ow/UPDATE-POLICY.md .ow/VERSION
@@ -238,7 +238,7 @@ DIFF_REPORT=$(mktemp)
     _diff_ai="$_diff_ai $_aip"
   done < <(ow_frontend_all_paths)
   # shellcheck disable=SC2086
-  for item in .ow/commands .claude/commands .claude/agents .ow/templates scripts bin $_diff_ai; do
+  for item in .ow/commands .claude/commands .claude/agents .ow/subagents .ow/templates scripts bin $_diff_ai; do
     if [ -d "$STAGE/$item" ]; then
       if [ -d "./$item" ]; then
         diff -rq "./$item" "$STAGE/$item" 2>/dev/null || true
@@ -348,7 +348,7 @@ if [ "$DRY_RUN" -eq 1 ]; then
     fi
   done
   if claude_is_enabled; then
-    printf "  would selectively merge: .claude/commands (regenerated shims + prune shims of removed commands), .claude/agents (always-on only: %s), .claude/settings.json (owned keys merged: \$schema + permissions.allow + env.OW_*; your hooks/deny/ask/env kept)\n" "$OW_ALWAYS_ON_AGENTS"
+    printf "  would selectively merge: .claude/commands (regenerated shims + prune shims of removed commands), .ow/subagents (always-on only: %s; .claude/agents symlinks to it), .claude/settings.json (owned keys merged: \$schema + permissions.allow + env.OW_*; your hooks/deny/ask/env kept)\n" "$OW_ALWAYS_ON_AGENTS"
   else
     printf "  would SKIP .claude/ (claude not in ai_agents)\n"
   fi
@@ -466,6 +466,30 @@ for p in "${REPLACE_PATHS[@]}"; do
   fi
 done
 
+# ── agent bodies: .ow/subagents/ is the source of truth for EVERY front-end ──
+# .claude/agents/ only holds symlinks to it (linked below when claude is enabled). Adopt the old
+# layout first (an owned real file in .claude/agents/ moves over), then refresh the always-on
+# bodies by signature — never by filename.
+for p in .ow/subagents .claude/agents; do
+  if [ -e "$p" ]; then
+    mkdir -p "$BACKUP_DIR/$(dirname "$p")"
+    cp -R "$p" "$BACKUP_DIR/$p"
+  fi
+done
+mkdir -p .ow/subagents
+ow_adopt_agents "."
+_ag_src="$STAGE/.ow/subagents"; [ -d "$_ag_src" ] || _ag_src="$STAGE/.claude/agents"   # pre-move tags
+for a in $OW_ALWAYS_ON_AGENTS; do
+  [ -f "$_ag_src/$a.md" ] || continue
+  _ag_cur="$(ow_agent_file "." "$a" || true)"
+  if [ -n "$_ag_cur" ] && ! ow_is_owned_agent "$_ag_cur"; then
+    warn "kept project-owned $_ag_cur — obsidian-workflow's not installed"
+    continue
+  fi
+  cp "$_ag_src/$a.md" ".ow/subagents/$a.md"
+done
+ok "Updated always-on agents in .ow/subagents ($OW_ALWAYS_ON_AGENTS); specialized/project agents left untouched"
+
 # ── selective .claude merge (#3) — only when claude is an enabled AI ──
 # Overwrite ONLY obsidian-workflow-owned files (generated shims + always-on agents); settings.json
 # is MERGED key-by-key, never overwritten. NEVER rm -rf .claude/* — preserve
@@ -485,17 +509,8 @@ if claude_is_enabled; then
     generate_shims ".ow/commands" "." "ow"
     ok "Regenerated .claude/commands shims (override-first; shims of removed commands pruned)"
   fi
-  # always-on agents: overwrite only the ones obsidian-workflow wrote, decided by signature and never
-  # by filename — a project's own agent under a shipped name is kept and reported.
-  for a in $OW_ALWAYS_ON_AGENTS; do
-    [ -f "$STAGE/.claude/agents/$a.md" ] || continue
-    if [ -e ".claude/agents/$a.md" ] && ! ow_is_owned_agent ".claude/agents/$a.md"; then
-      warn "kept project-owned .claude/agents/$a.md — obsidian-workflow's not installed"
-      continue
-    fi
-    cp "$STAGE/.claude/agents/$a.md" ".claude/agents/$a.md"
-  done
-  ok "Updated always-on agents ($OW_ALWAYS_ON_AGENTS); specialized/project agents left untouched"
+  ow_link_agents "." || warn "some .claude/agents files are project-owned and were not linked (see above)"
+  ok "Linked .claude/agents -> .ow/subagents"
   # Specialized bodies are created per-project by /ow-agent, never shipped, so there is
   # nothing to refresh here — only the one lie left to catch: a config that enables an
   # agent with no body behind it. Name it; the fix is a command upgrade must not run for

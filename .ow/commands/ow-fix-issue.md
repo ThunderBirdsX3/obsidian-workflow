@@ -318,7 +318,7 @@ where one plan on one tree is sequential work.
 **N = 1 approved group → your judgment**, same trade-off as `/ow-implement` 3.0: a spawn shares no context
 with you and pays a cold-cache write, which a one-file P3 fix rarely earns back; a long diagnose → red test →
 fix → green loop usually does. Running it inline means **you** work inside that group's `<WORKTREE_DIR>`, read
-`.claude/agents/<area>.md` **if that file exists** + the `RULES(...)` files, and carry steps 1-14 of `_shared/fix-issue-fix-flow.md` yourself.
+`.ow/subagents/<area>.md` **if that file exists** + the `RULES(...)` files, and carry steps 1-14 of `_shared/fix-issue-fix-flow.md` yourself.
 🔴 Only `docs` is guaranteed to be there — every other area agent is one this project wrote with
 `/ow-agent create`, so an absent file means inline, not a blocked run.
 

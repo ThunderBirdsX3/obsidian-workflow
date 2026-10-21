@@ -83,7 +83,7 @@ bash <(curl -fsSL <obsidian-workflow-installer-url>) --mode auto   # <obsidian-w
 > file** (`<!-- obsidian-workflow:agent -->`, or the `§0` header obsidian-workflow writes) — never by filename, so
 > your own `.claude/agents/backend.md` stays yours — and obsidian-workflow ships no specialized body at all now, so
 > it installs none of its own under
-> that name. Anything the installer does overwrite is copied first to
+> that name. obsidian-workflow's own agent bodies live in `.ow/subagents/`; `.claude/agents/` only holds symlinks to them. Anything the installer does overwrite is copied first to
 > `.ow/backups/install-<timestamp>/`; undo by hand with
 > `cp -R .ow/backups/install-<timestamp>/. .`
 
@@ -172,6 +172,7 @@ find "$VAULT_ABS" -type f \( -name '*.png' -o -name '*.jpg' -o -name '*.har' \
 
 ### 5.6 Additional teammates on an already-adopted repo
 - [ ] A new teammate who clones the repo already has everything obsidian-workflow reads — config is `.ow.yml` only. They should NOT re-run init; `.ow/local/` is recreated on the first command run. Only the test-credentials env file (gitignored) has to be filled in by hand.
+- [ ] **If `.claude/` and/or `.agents/` are gitignored** in your repo, commit `.ow/` (including `.ow/subagents/`) and `scripts/`, then on each fresh clone run `ow regen` (or `bash scripts/ow-regen.sh`). It reads `ai_agents` from `.ow.yml` and rebuilds the command shims (`.claude/commands/`), the agent symlinks (`.claude/agents/` → `.ow/subagents/`) and the skills (`.agents/skills/`) — offline, no version bump, user-owned files untouched. Needs `yq`.
 
 ### 5.5 Gitignore hygiene
 - [ ] Remove any leftover artifact-store ignore rules (e.g. `test-artifacts/`) that no longer correspond to anything obsidian-workflow writes.

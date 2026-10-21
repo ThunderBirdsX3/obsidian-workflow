@@ -159,7 +159,7 @@ case " $ARGUMENTS " in *" --codex "*" --claude "*|*" --claude "*" --codex "*) ec
 `subagent_target` names the **area** the work belongs to ⇒ which rules and gates apply. It is **not** an
 order to spawn. 🔴 Phased run → the running phase's `area` replaces it everywhere below (`phases.md` §2.6):
 
-area rules = `.claude/agents/<subagent_target>.md` (`backend` · `frontend` · `mobile` · `docs` · `design`) — apply them
+area rules = `.ow/subagents/<subagent_target>.md` (`backend` · `frontend` · `mobile` · `docs` · `design`) — apply them
 inline, or spawn that agent · `all` = the areas the plan actually touches, in order backend → frontend → mobile → docs
 
 🔴 **Only `docs` is guaranteed to exist.** Every other row is an agent this project creates with
@@ -179,7 +179,7 @@ here forces either one: judge it as you would any other task, with the real trad
 - one plan on one tree is **sequential work** ⇒ one worker at a time (inline, or one agent), never a fan-out
 
 **Running it inline** — these come with it (the agent file would otherwise have carried them):
-1. Read `.claude/agents/<area>.md` gates **if that file exists** + every file the resolver's `--rules <area>`
+1. Read `.ow/subagents/<area>.md` gates **if that file exists** + every file the resolver's `--rules <area>`
    names, before code (🔴 a registered rule that fails to resolve is a STOP-RISK: `bash scripts/ow-paths.sh --rules-validate`)
 2. Read the plan's FN/FEAT docs, the existing code/tests it names, and the conditional refs the include-when
    table in `.ow/commands/_shared/context-refs.md` judges relevant (**uncertain ⇒ read it** — a wrong skip costs more)
@@ -373,7 +373,7 @@ Answer with **short bullets, quick to read**, in the configured language (`$PROJ
 
 - Never implement if the plan is not `approved` · never change scope without revising the plan first (`/ow-plan --revise`)
 - 🔴 Never read `subagent_target` as an order to spawn — it names the **area's rules**; how the work runs is a judgment call (3.0), and no phase may make either mode mandatory
-- 🔴 Never drop an area gate because the work ran inline — inline means **you** read `.claude/agents/<area>.md` + its rules and enforce them (3.0)
+- 🔴 Never drop an area gate because the work ran inline — inline means **you** read `.ow/subagents/<area>.md` + its rules and enforce them (3.0)
 - 🔴 Never run an inline plan without writing `## Step Progress` as you go (3.3) — a dead session then leaves zero recoverable state
 - 🔴 Never resume from a progress marker without first re-running the `exit:` of the last ticked line (1.2) — a marker whose code was reverted is worse than no marker
 - Never fake a test/build result — the pass/fail count must parse from real stdout; cannot parse → `?/?` + `parse-failed: true`, never guess
