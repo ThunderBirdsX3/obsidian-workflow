@@ -176,7 +176,9 @@ two writes per step, never one at the end. `export OW_AUTO_RUN="<run-log path>"`
 
 **Isolated steps** — step 1 (`/ow-plan`) and step 4 (`/ow-test`, plus the test-level fix-log write) each run in their own
 subagent (Agent tool, `general-purpose`; no agent file needed), so a plan body or a test log never enters this context.
-A host with no Agent tool runs them inline as before. Prompt, nothing more:
+A host with no Agent tool runs them inline as before. 🔴 Model: the shim's `model:` pin only applies when a human types
+the slash command, so pass it yourself — `bash scripts/ow-paths.sh --command-model <verb>` → `inherit` (or empty / error)
+⇒ omit `model`; `opus|sonnet|haiku` ⇒ pass as-is; a full `claude-*` id ⇒ pass the family word it contains. Prompt, nothing more:
 
 ```
 Run `<the verb line from step 1 / 4>` exactly as .ow/commands/<verb>.md specifies (read the spec first, every Phase).

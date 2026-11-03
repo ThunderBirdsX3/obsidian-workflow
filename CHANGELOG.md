@@ -3,6 +3,16 @@
 Format: [Keep a Changelog](https://keepachangelog.com). Versions: SemVer.
 Version marker: `ow.version` in `.ow.yml`.
 
+## [2.4.1] — 2026-11-03
+
+Patch. No config change needed.
+
+### Fixed — `/ow-auto` subagents follow the per-command model
+
+- `/ow-auto` runs `/ow-plan` and `/ow-test` in their own subagent, but never passed a `model`, so both ran on the session model (e.g. opus) whatever `commands.overrides.<verb>` said — the shim's `model:` pin only applies when a human types the slash command.
+- The spec now resolves the model with `scripts/ow-paths.sh --command-model <verb>` and passes it to the Agent tool: `inherit` ⇒ no pin, `opus|sonnet|haiku` as-is, a full `claude-*` id ⇒ its family word.
+- `/ow-implement` and fix rounds still run in the host context, so they stay on the session model.
+
 ## [2.4.0] — 2026-10-21
 
 Minor. Behaviour change for new installs only; existing projects are untouched.

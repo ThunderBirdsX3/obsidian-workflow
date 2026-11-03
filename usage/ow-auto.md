@@ -72,7 +72,7 @@ session ตาย → `/ow-auto --resume <run-log>` ทำต่อจากแ�
 
 ## แยก context จาก session หลัก
 
-- `/ow-plan` และ `/ow-test` ของแต่ละ item รันใน subagent แยก (Agent tool) — session หลักได้รับแค่คำตอบ ≤5 บรรทัด ไม่เห็น plan body หรือ test log
+- `/ow-plan` และ `/ow-test` ของแต่ละ item รันใน subagent แยก (Agent tool) — session หลักได้รับแค่คำตอบ ≤5 บรรทัด ไม่เห็น plan body หรือ test log · subagent ใช้ model ตาม `commands.overrides.<verb>` ใน `.ow.yml` (`inherit` = model ของ session)
 - `/ow-implement` (และรอบแก้ `--from-fix`) ยังรันใน session หลัก เพราะต้อง dispatch chunk เอง — ใช้ `--codex`/`--claude` เพื่อให้ตัวโค้ดอยู่นอก context
 - host ที่ไม่มี Agent tool รัน inline เหมือนเดิม
 
