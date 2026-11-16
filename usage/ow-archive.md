@@ -1,12 +1,12 @@
 # /ow-archive
 
-> **ย้าย plan/fix-log ที่เสร็จแล้วเข้า `archive/`** — เก็บ `80-ImplementPlan` / `85-FixLog` ให้สั้น โดยไม่ลบประวัติ
+> **ย้าย plan/fix-log/test-plan ที่เสร็จแล้วเข้า `archive/`** — เก็บ `80-ImplementPlan` / `85-FixLog` / `90-TestPlan` ให้สั้น โดยไม่ลบประวัติ
 
 [← กลับ usage/README](./README.md) · [Full spec: `.ow/commands/ow-archive.md`](../.ow/commands/ow-archive.md)
 
 ## เมื่อไหร่ใช้
 
-- plan/fix-log เก่าเกลื่อน `80-ImplementPlan`/`85-FixLog` — อยากเก็บให้เรียบ
+- plan/fix-log/test-plan เก่าเกลื่อน `80-ImplementPlan`/`85-FixLog`/`90-TestPlan` — อยากเก็บให้เรียบ
 - ปิด phase/release แล้ว — อยากรวม plan ของ phase นั้นไว้ด้วยกัน (`--into phase1`)
 - ทำความสะอาดก่อน handoff/release — ไม่ต้องการให้ list งานปนกับงานเก่า
 
@@ -16,10 +16,11 @@
 /ow-archive
 ```
 
-ย้าย**ทุกไฟล์**ใน `80-ImplementPlan/` และ `85-FixLog/` (ที่ยังไม่ใช่ archive) เข้า `archive/<วันนี้>/`:
+ย้าย**ทุกไฟล์**ใน `80-ImplementPlan/`, `85-FixLog/` และ `90-TestPlan/` (ที่ยังไม่ใช่ archive; ไม่แตะ `_README.md`) เข้า `archive/<วันนี้>/`:
 ```
 docs/obsidian-vault/80-ImplementPlan/archive/2026-09-22/2026-05-21-1430-add-search.md
 docs/obsidian-vault/85-FixLog/archive/2026-09-22/2026-05-21-1430-search-stuck.md
+docs/obsidian-vault/90-TestPlan/archive/2026-09-22/TP-MemberSearch.md
 ```
 
 ตั้งชื่อ subfolder เอง:
@@ -40,7 +41,7 @@ docs/obsidian-vault/85-FixLog/archive/2026-09-22/2026-05-21-1430-search-stuck.md
 
 ## ขั้นตอนภายใน (Phase summary)
 
-1. **Phase 1** — รวมไฟล์ทั้งหมดใน `$PLAN_DIR` + `$FIX_DIR` (ไม่นับที่อยู่ใน `archive/` แล้ว)
+1. **Phase 1** — รวมไฟล์ทั้งหมดใน `$PLAN_DIR` + `$FIX_DIR` + `$TEST_DIR` (ไม่นับที่อยู่ใน `archive/` แล้ว)
 2. **Phase 2** — หา subfolder ปลายทาง (`<name>`/`--into <name>` หรือ default = วันที่วันนี้)
 3. **Phase 3** — ถาม y/n ยืนยันครั้งเดียว แล้ว `git mv` เข้า `archive/<name>/`
 4. **Phase 4** — ไล่แก้ลิงก์ที่ยังชี้ path เก่า (MOC, IMPLEMENTATION-STATUS, plan/fix-log อื่นที่ reference กัน)
@@ -48,11 +49,11 @@ docs/obsidian-vault/85-FixLog/archive/2026-09-22/2026-05-21-1430-search-stuck.md
 ## Gotchas / ข้อควรระวัง
 
 - 🚫 **ไม่ลบไฟล์** — ย้ายที่อย่างเดียว เนื้อหา/frontmatter ไม่ถูกแก้
-- 🚫 ไม่แตะไฟล์นอก `80-ImplementPlan` / `85-FixLog`
+- 🚫 ไม่แตะไฟล์นอก `80-ImplementPlan` / `85-FixLog` / `90-TestPlan`
 - 🚫 ปลายทางมีไฟล์ชื่อซ้ำอยู่แล้ว → หยุดถามก่อน ไม่ทับ
 - 💡 archive ไม่เปลี่ยน `status` ให้ — ถ้าอยากปิดสถานะด้วยต้องบอกแยก
 
 ## Related
 
-- ก่อน archive: `/ow-plan`, `/ow-fix` (สร้างไฟล์ที่จะ archive)
-- Vault path: `docs/obsidian-vault/80-ImplementPlan/archive/`, `docs/obsidian-vault/85-FixLog/archive/`
+- ก่อน archive: `/ow-plan`, `/ow-fix`, `/ow-test` (สร้างไฟล์ที่จะ archive)
+- Vault path: `docs/obsidian-vault/80-ImplementPlan/archive/`, `docs/obsidian-vault/85-FixLog/archive/`, `docs/obsidian-vault/90-TestPlan/archive/`

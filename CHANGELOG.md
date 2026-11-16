@@ -3,6 +3,16 @@
 Format: [Keep a Changelog](https://keepachangelog.com). Versions: SemVer.
 Version marker: `ow.version` in `.ow.yml`.
 
+## [2.5.0] — 2026-11-16
+
+Minor. No config change needed.
+
+### Changed — `/ow-archive` also archives test plans
+
+- `/ow-archive` used to move only `$PLAN_DIR` and `$FIX_DIR` files. It now also moves `$TEST_DIR` (90-TestPlan) files into `$TEST_DIR/archive/<name>/`, using the same subfolder name as the plans and fix-logs.
+- `_README.md` in each of the three folders is skipped — it is folder documentation, not a finished artifact.
+- `usage/ow-archive.md` and `usage/README.md` updated to match.
+
 ## [2.4.1] — 2026-11-03
 
 Patch. No config change needed.

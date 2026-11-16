@@ -1,11 +1,11 @@
 ---
-description: Archive plan/fix-log files into an archive/ subfolder inside 80-ImplementPlan or 85-FixLog
+description: Archive plan/fix-log/test-plan files into an archive/ subfolder inside 80-ImplementPlan, 85-FixLog or 90-TestPlan
 ---
 
-# /ow-archive — archive plan/fix-log files
+# /ow-archive — archive plan/fix-log/test-plan files
 
-Moves finished plan and fix-log files out of the working list into
-`$PLAN_DIR/archive/<name>/` or `$FIX_DIR/archive/<name>/`, keeping the vault's
+Moves finished plan, fix-log and test-plan files out of the working list into
+`$PLAN_DIR/archive/<name>/`, `$FIX_DIR/archive/<name>/` or `$TEST_DIR/archive/<name>/`, keeping the vault's
 active folders short without deleting history.
 
 ## Phase 0 — Load Context (MANDATORY — before every other phase)
@@ -40,17 +40,17 @@ FRESH SHELL — Phase 0's exports are gone — so it re-hydrates first, then ass
 ## Trigger
 
 ```
-/ow-archive                          # archive EVERY file in $PLAN_DIR + $FIX_DIR, folder = today ($TODAY)
+/ow-archive                          # archive EVERY file in $PLAN_DIR + $FIX_DIR + $TEST_DIR, folder = today ($TODAY)
 /ow-archive <name>                   # same, custom subfolder, e.g. phase1, 2026-Q3, released-v2
 /ow-archive --into <name>            # explicit flag form of the same
 ```
 
 Only argument accepted is the destination subfolder name — no file selection, no filtering.
-Every file directly under `$PLAN_DIR` and `$FIX_DIR` (excluding anything already under `archive/`) is moved.
+Every file directly under `$PLAN_DIR`, `$FIX_DIR` and `$TEST_DIR` (excluding `_README.md` and anything already under `archive/`) is moved.
 
 ## Phase 1 — Resolve target list
 
-List every file directly under `$PLAN_DIR` and `$FIX_DIR`, excluding anything already under an `archive/` subfolder (skip those — already archived). Empty result (nothing to archive) → say so, stop, no prompt.
+List every file directly under `$PLAN_DIR`, `$FIX_DIR` and `$TEST_DIR`, excluding each folder's `_README.md` and anything already under an `archive/` subfolder (skip those — already archived). Empty result (nothing to archive) → say so, stop, no prompt.
 
 ## Phase 2 — Resolve subfolder name
 
@@ -59,7 +59,7 @@ List every file directly under `$PLAN_DIR` and `$FIX_DIR`, excluding anything al
 | `<name>` or `--into <name>` given | Sanitize to `[a-z0-9-]` (lowercase, spaces → `-`); reject empty after sanitizing |
 | Not given | `$TODAY` (`YYYY-MM-DD`, from Phase 0) |
 
-Target dir: `$PLAN_DIR/archive/<name>/` for plan files, `$FIX_DIR/archive/<name>/` for fix-logs — each file goes to the archive dir matching the folder it currently lives in. Create the dir if missing.
+Target dir: `$PLAN_DIR/archive/<name>/` for plan files, `$FIX_DIR/archive/<name>/` for fix-logs, `$TEST_DIR/archive/<name>/` for test plans — each file goes to the archive dir matching the folder it currently lives in. Create the dir if missing.
 
 ## Phase 3 — Move + confirm
 
@@ -72,7 +72,7 @@ Then, per file:
 ## Phase 4 — Fix links
 
 After moving:
-1. `grep -rl "<old-relative-path>"` across `$VAULT_ABS` (MOCs, `00-Index/IMPLEMENTATION-STATUS.md`, other plans/fix-logs that reference this one) → update each match to the new path
+1. `grep -rl "<old-relative-path>"` across `$VAULT_ABS` (MOCs, `00-Index/IMPLEMENTATION-STATUS.md`, other plans/fix-logs/test-plans that reference this one) → update each match to the new path
 2. If nothing references the file, skip silently
 
 ## Output (short bullets, in `$PROJECT_LANG`)
@@ -83,7 +83,7 @@ After moving:
 
 ## Never
 
-- Never archive a file outside `$PLAN_DIR` / `$FIX_DIR`
+- Never archive a file outside `$PLAN_DIR` / `$FIX_DIR` / `$TEST_DIR`
 - Never delete a file — archive only moves it
 - Never rewrite file content or bump frontmatter `version`/`status` — archiving is a location change only
 - Never silently overwrite an existing file at the destination — if the basename already exists there, **STOP** and ask

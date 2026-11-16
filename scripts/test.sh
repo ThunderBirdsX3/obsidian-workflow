@@ -2761,8 +2761,8 @@ run "ow-auto docs: README counts 22"                   "grep -q '22 slash comman
 run "ow-auto docs: ow-help cheatsheet row"             "grep -q '| /ow-auto' .ow/commands/ow-help.md"
 run "ow-auto docs: AGENTS.md names /ow-auto and --claude worker" "grep -q 'ow-auto' AGENTS.md && grep -q -- '--claude' AGENTS.md"
 run "ow-auto docs: codex/README no longer claims no-subagents as the end of the story" "grep -q -- '--claude' codex/README.md"
-run "ow-auto docs: CHANGELOG 2.4.1 on top + version bumped" \
-  "grep -q '^## \[2.4.1\]' CHANGELOG.md && yq -e '.ow.version == \"2.4.1\"' .ow.yml >/dev/null"
+run "ow-auto docs: CHANGELOG 2.5.0 on top + version bumped" \
+  "grep -q '^## \[2.5.0\]' CHANGELOG.md && yq -e '.ow.version == \"2.5.0\"' .ow.yml >/dev/null"
 
 run "worker: TERM to the runner kills the CLI too (no orphan writer)" '_worker_fixture
   PATH="$TD/bin:$PATH" FAKE_MODE=timeout OW_WORKER_TIMEOUT_SEC=60 bash "$W" codex "$TD/wt" "$TD/runs" P1-chunk1 "$TD/prompt.md" >/dev/null 2>&1 &
