@@ -45,12 +45,17 @@ fi
 
 ## 2. Close it
 
-`$FIXLOG` found and its `status` is not yet `fixed`/`wont-fix`:
+`$FIXLOG` found and its `status` is not yet `fixed`/`wont-fix` — in this order:
 
-1. Frontmatter (surgical **Edit**): `status: fixed` · `fixed_commit: pending`
+1. Tick only the checkboxes **actually proven** in the fix-log's `## Test Cases` (+ `## Success Criteria` if
+   present) — map them to the build/test run (5.0) + the red→green run in this implement; an unproven item stays
+   `[ ]` + a note (🔴 never tick blindly)
+2. Run the 6.0 gate on the fix-log itself, as its own command, **before** step 3 — never batched after the flip:
+   ```bash
+   type open_boxes >/dev/null 2>&1 || { echo "FATAL: open_boxes undefined — re-paste it from ow-implement.md §6.0"; exit 1; }
+   n=$(open_boxes < "$FIXLOG"); [ "$n" = 0 ] || { echo "🛑 STOP: $n open box(es) in $FIXLOG — finish or report them; status stays in-progress"; exit 1; }
+   ```
+3. Only after step 2 exits 0 — frontmatter (surgical **Edit**): `status: fixed` · `fixed_commit: pending`
    (🔴 the real sha is filled by `/ow-git --bump` Phase 8.6 — `/ow-implement` does not commit to the main tree
    itself; **never** write a HEAD sha that is not yet this work's commit = no fake results) ·
    leave `fixed_in_version` for `/ow-git` to stamp
-2. Tick only the checkboxes **actually proven** in the fix-log's `## Test Cases` (+ `## Success Criteria` if
-   present) — map them to the build/test run (5.0) + the red→green run in this implement; an unproven item stays
-   `[ ]` + a note (🔴 never tick blindly)

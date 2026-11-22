@@ -7,8 +7,8 @@ This fragment is authoritative for the phase gate, the per-phase done-gate, and 
 `/ow-implement` must not restate these rules.
 
 A **phase** is the unit of work: `/ow-implement <plan> --phase P2` runs exactly one, no flag runs them all in
-order. The point is context — one phase's read set was measured against an executor's budget, so a session
-that reads two phases' worth has already lost the saving the breakdown existed to produce.
+order. Each phase's read set (`context_refs`) is measured against an executor's budget, so a phase is also the
+unit to split a session on — `--phase <id>` + `/clear` is the saving when a phase is over `PHASE_BUDGET`; otherwise one session runs them all.
 
 ## 1. Resolve the target phase
 
@@ -47,16 +47,16 @@ into the context this phase was sized against — the exact cost the breakdown e
 full. `Read` takes `offset`/`limit`, so read only the slices this run needs:
 
 ```bash
-grep -n '^## Shared Contract\|^## Phases\|^### Phase \|^## Design System\|^## Verification' "$PLAN_PATH"
+grep -n '^## \|^### Phase ' "$PLAN_PATH"
 # → the line numbers that bound (a) the shared header and (b) each phase section
 ```
 
 Then **two Reads, not one**:
 1. **Shared header** — `Read(PLAN_PATH, offset=1, limit=<first "### Phase " line - 1>)`: frontmatter, Problem,
-   Task, Goals, Non-goals, Doc Gaps, `## Shared Contract`, the `## Phases` table. Every gate in §2 reads from here
+   Goals, Non-goals, Doc Gaps, `## Shared Contract`, the `## Phases` table (an older plan may still carry Task — read it if present). Every gate in §2 reads from here
 2. **This phase only** — `Read(PLAN_PATH, offset=<its "### Phase <id>" line>, limit=<next "### Phase " or
    "## " line − that line>)`. Plus, at the end of the file, the plan-level `## Design System Compliance` /
-   `## Verification` / `## Risks` / `## Approvals` when a gate actually needs them
+   `## Risks` when a gate actually needs them
 
 🔴 Never read another phase's section "for context" — if this phase genuinely needs something from a sibling,
 that value belongs in `## Shared Contract`, which you already hold. Needing more than the contract means the
@@ -91,14 +91,14 @@ With `--phase <id>`:
 🔴 Never edit a file or a vault doc another phase owns. The phase sections were partitioned so that no file
 belongs to two of them; reaching across is a double-edit and a merge conflict waiting to happen.
 
-Without `--phase` on a phased plan → run **every** phase in `## Phases` order: for each one, items 1-7 above
+Without `--phase` on a phased plan → run **every** phase in `## Phases` order, skipping rows already `done` and starting at the first row not `done` (so a re-run after a crash resumes; an explicit `--phase <done id>` keeps its item-2 STOP): for each one, items 1-7 above
 and then `/ow-implement` Phases 3 → 6.1 in full, before moving to the next. 🔴 A phase is finished — gates,
 contract write-back, its row ticked `done` — before the next one starts; a later phase reads the contract the
-earlier one just wrote, which is what the order is for. Before starting, sum the `est tokens` column: over
-~120k ⇒ **warn**, never block:
-
-> This plan is ~`<sum>`k tokens of read set. Running it in one session risks compaction mid-run — one phase
-> per session with `/clear` between them is cheaper and safer: `/ow-implement <plan> --phase P1` — except under `--auto`, which runs the phases back-to-back in one session and relies on `## Chunk Progress` + auto-compaction instead (`_shared/auto-loop.md` §1)
+earlier one just wrote, which is what the order is for. Never ask which phases to run. Sum the `est tokens`
+column: over ~120k ⇒ note it in the Phase 7 output — never ask and never block. The run continues in this
+session (resume state `## Step Progress` / `## Chunk Progress` plus auto-compaction, as under `--auto`,
+`_shared/auto-loop.md` §1). The note says the plan reads ~`<sum>`k tokens and that `--phase <id>` per session,
+with `/clear` between them, is the cheaper option next time.
 
 ## 3. Read set + resume, per phase
 
@@ -132,7 +132,8 @@ phase_section() {              # usage: phase_section <plan> <phase-id>  → tha
                   inp && /^### Phase |^## / { exit }
                   inp' "$1"
 }
-phase_section "$PLAN_PATH" "$PHASE_ID" | grep -c "\- \[ \]"   # must = 0 for THIS phase
+type open_boxes >/dev/null 2>&1 || { echo "FATAL: open_boxes undefined — re-paste it from ow-implement.md §6.0"; exit 1; }
+phase_section "$PLAN_PATH" "$PHASE_ID" | open_boxes   # must = 0 for THIS phase — open_boxes(): ow-implement.md §6.0, re-paste it (fresh shell)
 ```
 
 🔴 This assert fires **after** the code is written and 5.0/5.2/5.3 have passed, so it must never fire on a
@@ -151,12 +152,12 @@ Gates all passed ⇒ with **Edit (surgical)** set that phase's `status` cell in 
 `done` — never touch another row, never rewrite the table.
 
 Then:
-- **Every** row `done` → run the 6.0 gate once more against the **whole file** (the plan-level checkboxes —
-  Design System Compliance, Approvals, Verification — are not in any phase section and nobody has counted
+- **Every** row `done` → run the 6.0 gate once more against the **whole file** (`open_boxes < "$PLAN_PATH"`;
+  the plan-level checkboxes — Design System Compliance — are not in any phase section and nobody has counted
   them yet), then continue into `/ow-implement` 6.2
-- Any row not yet `done` → the plan **stays** at `status: approved`; skip 6.2, and tell the user
-  which phase is next: `/ow-implement <plan> --phase <next>`, 🔴 after a `/clear` — that is where the saving
-  comes from (except under `--auto`: the loop continues in-session)
+- Any row not yet `done` → the plan **stays** at `status: approved`; skip 6.2. This run had `--phase` → tell
+  the user which phase is next: `/ow-implement <plan> --phase <next>`, 🔴 after a `/clear` — that is where
+  the saving comes from. A run-all and `--auto` continue to the next phase in-session instead
 
 🔴 Never flip the plan's frontmatter `status: done` while one phase row is not `done` — `/ow-verify` and
 `$IMPL_STATUS` would both report work that was never run.

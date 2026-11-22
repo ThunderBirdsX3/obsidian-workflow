@@ -6,7 +6,7 @@
 
 ## เมื่อไหร่ใช้
 
-- Plan file `status: approved` แล้ว (user set เองใน frontmatter)
+- Plan file `status: approved` แล้ว (ตอบ `approve` ใน session ของ `/ow-plan` หรือแก้ frontmatter เอง)
 - เมื่อต้องการแก้โค้ดจริง — **command เดียวที่ได้รับอนุญาตให้แตะโค้ด**
 - หลัง `/ow-fix` → `/ow-plan fix:<slug>` → `/ow-implement` chain
 
@@ -36,7 +36,7 @@
 /ow-implement <plan> --worktree      # บังคับ build ใน git worktree แยก (#31)
 /ow-implement <plan> --no-worktree   # บังคับ build ใน main tree (override plan ที่มี worktree: true)
 /ow-implement --from-fix <fix-log>   # P2/P3 เท่านั้น (skip plan) — /ow-fix เรียกให้เอง
-/ow-implement <plan> --auto          # รันทุก phase ต่อกัน ไม่ถาม "Start now?" · build/test พัง → fix เองไม่เกิน auto.max_fix_per_phase · commit local เอง
+/ow-implement <plan> --auto          # ไม่ถามอะไรเลยแม้ plan `risk_level: high` · build/test พัง → fix เองไม่เกิน auto.max_fix_per_phase · commit local เอง
 /ow-implement <plan> --codex         # ส่ง chunk ให้ Codex CLI เขียน (host = Claude Code)
 /ow-implement <plan> --claude        # ส่ง chunk ให้ Claude CLI เขียน (host = Codex)
 ```
@@ -46,15 +46,15 @@
 plan ที่ `/ow-plan` แตกเป็น phase จะมีตาราง `## Phases` (id · area · depends_on · est tokens · status)
 และ `## Shared Contract` สำหรับค่าที่ใช้ข้าม phase
 
-- **อ่าน plan แบบเลือกส่วน** — `Read` ด้วย `offset`/`limit`: อ่าน header ร่วม (frontmatter/Task/Shared Contract/ตาราง Phases) + `### Phase` ของตัวเองเท่านั้น 🔴 ไม่อ่าน section ของ phase อื่น (ถ้าจำเป็นต้องรู้ค่าจาก phase อื่น = ค่านั้นควรอยู่ใน Shared Contract อยู่แล้ว)
+- **อ่าน plan แบบเลือกส่วน** — `Read` ด้วย `offset`/`limit`: อ่าน header ร่วม (frontmatter/Problem/Goals/Non-goals/Doc Gaps/Shared Contract/ตาราง Phases) + `### Phase` ของตัวเองเท่านั้น 🔴 ไม่อ่าน section ของ phase อื่น (ถ้าจำเป็นต้องรู้ค่าจาก phase อื่น = ค่านั้นควรอยู่ใน Shared Contract อยู่แล้ว)
 - `/ow-implement <plan> --phase P2` → รัน **เฉพาะ section ของ P2** — context_refs, Affected Files, Steps,
   Test Plan, Success Criteria, doc ที่ P2 เป็นเจ้าของ · 🔴 ห้ามแตะไฟล์/doc ของ phase อื่น
 - **gate ก่อนเริ่ม** — `depends_on` ต้อง `done` ครบ และ Shared Contract row ที่ P2 เป็น consumer ต้อง
   `state: actual` แล้ว (ยัง `planned` = producer ยังไม่รัน → **STOP** ไม่ implement ทับค่าที่ยังเดาอยู่)
 - **จบ phase** — gates ผ่าน → ติ๊ก `status: done` ให้ row นั้นในตาราง · plan frontmatter จะเป็น `done`
   ก็ต่อเมื่อ **ทุก row** done เท่านั้น
-- **ไม่ใส่ `--phase`** → รันทุก phase ตามลำดับในหนึ่ง session · รวม est tokens เกิน ~120k จะ **เตือน** ให้แยก session
-- 🔴 ประหยัด token จริงต่อเมื่อ `/clear` คั่นระหว่าง phase
+- **ไม่ใส่ `--phase`** → รันทุก phase ตามลำดับ ไม่ถามระหว่างทาง · est tokens เกิน ~120k แค่จด note ไม่หยุด
+- `--phase <id>` + `/clear` คั่น session แนะนำเฉพาะตอนมี phase เกิน `PHASE_BUDGET` (`/ow-plan` บอกไว้ในสรุปท้าย)
 - resume marker (`## Step Progress`) ของ plan แบบนี้ต้องมี phase id นำหน้า: `- [x] P2 steps 1-4 · …`
 
 ## 🌳 Worktree mode (#31)
@@ -110,13 +110,14 @@ subagent สั่ง compact ตัวเองไม่ได้ — วิ่
   แลกกับการไม่ต้องเดาใหม่ทั้งหมดตอน session ตาย)
 - เขียน `- [x]` เท่านั้น ไม่มี `- [ ]` → gate ตอนปิดงาน (Phase 6.0 ต้องไม่เหลือ checkbox เปิด) ไม่พัง
 - resume ทุกครั้ง **รัน exit ของบรรทัดล่าสุดเช็คก่อน** — ไม่ผ่าน (โค้ดหาย/ถูก revert) = **หยุด ถามคุณ** ไม่ข้ามมั่ว
-- ❌ ไม่ติ๊ก Goals / Success Criteria / Test Plan / DS Compliance ล่วงหน้าแทน — พวกนั้นต้องผ่าน gate จริงก่อน (Phase 5/6)
+- ❌ ไม่ติ๊ก Success Criteria / Test Plan / DS Compliance ล่วงหน้าแทน — พวกนั้นต้องผ่าน gate จริงก่อน (Phase 5/6)
+- gate ตอนปิดงานไม่นับ box ที่คนหรือ `/ow-test` เป็นเจ้าของ: บรรทัด `(ow-test)` กับ live-E2E · box เก่าใน `## Approvals` / `## Goals` ของ plan รุ่นก่อน และ box routing ใน `## Next` ของ fix-log
 
 ## ขั้นตอนภายใน (Phase summary)
 
-1. **Phase 1** — Validate plan: **Refuse ถ้า status != approved**, ตรวจ Implementation Steps + subagent_target
+1. **Phase 1** — Validate plan: **Refuse ถ้า status != approved**, ตรวจ Implementation Steps + subagent_target · แสดง task + จำนวน step แล้ว **เริ่มทันที** (พิมพ์ path = ไฟเขียวแล้ว) · ยกเว้น `risk_level: high` ที่ไม่มี `--auto` → ถาม "Start now?" หนึ่งครั้ง
    - **Phase 1.2** — resume gate: มี `## Chunk Progress` / `## Step Progress` → ตรวจ exit ของบรรทัดล่าสุด แล้วต่อจากจุดที่ค้าง
-2. **Phase 2** — Fix doc gaps ถ้า `Doc Gaps Found` ไม่ว่าง (inline เป็น default · `docs` subagent เมื่อ gap เยอะ/แยกอิสระ)
+2. **Phase 2** — Fix doc gaps ถ้า `Doc Gaps Found` มีรายการที่ไม่ใช่บรรทัด `excluded by budget:` (บรรทัดนั้นไม่ใช่ gap — แค่บอกว่า doc ไหนไม่ได้อ่าน) (inline เป็น default · `docs` subagent เมื่อ gap เยอะ/แยกอิสระ)
 3. **Phase 3** — **3.0 ตัดสินก่อนว่า inline หรือ delegate** (ดุลพินิจ ไม่บังคับทางไหน) → 3.1 กติกาการลงมือ (ใช้ทั้งสองโหมด) · delegate เมื่อนั้นถึงอ่าน `_shared/delegation.md` แล้วแบ่ง chunk + วน spawn พร้อม handoff · inline เขียน `## Step Progress` ระหว่างทาง (3.3)
 4. **Phase 4** — Design system gate: งาน frontend/mobile ต้องอ่าน DS-Tokens + DS-Components ก่อนเขียน UI (บังคับทั้ง inline และ delegate) → STOP ถ้าต้อง component ใหม่
 5. **Phase 5** — รัน build/test จริง (`_shared/build-test.md`) → coverage audit → discipline audit; output ลง scratch run dir ชั่วคราว ผลสรุปเข้า plan
@@ -155,8 +156,8 @@ obsidian-workflow ไม่ได้ ship มา · ไฟล์ไม่มี 
 ตัวอย่าง 1: feature implement
 ```
 1. /ow-plan FEAT-Checkout            ← plan file (status: planning)
-2. [user review + set status: approved]
-3. /ow-implement <path>              ← คุณอยู่ที่นี่
+2. [ตอบ `approve` ใน chat เดียวกัน — /ow-plan ใส่ status: approved ให้]
+3. /ow-implement <path>              ← session ใหม่ · เริ่มทันที ไม่ถาม              ← คุณอยู่ที่นี่
    → fix doc gaps (ถ้ามี)
    → read DS + implement + capture screenshots  (inline; งานใหญ่ค่อย delegate frontend agent)
    → update plan status: done
@@ -168,7 +169,7 @@ obsidian-workflow ไม่ได้ ship มา · ไฟล์ไม่มี 
 ```
 1. /ow-fix "search ค้าง"
 2. /ow-plan fix:search-stuck
-3. [approve]
+3. [ตอบ `approve`]
 4. /ow-implement <plan>
    → fix + add regression test (ตาม rules ของ backend)
    → Phase 6.5: ปิด fix-log ต้นทาง auto (status: fixed) — ไม่ต้องปิดมือ
@@ -188,7 +189,7 @@ plan: subagent_target: all
 ## Gotchas / ข้อควรระวัง
 
 - 🚫 **ห้ามเล่าการแก้ในเอกสาร vault** — "เดิม X → ใหม่ Y" / หัวข้อ `## Changelog` ให้ทับด้วยค่าปัจจุบันแทน · before/after อยู่ใน plan (`80-ImplementPlan`) หรือ fix-log (`85-FixLog`) · `/ow-secure` Phase 2.6 บล็อกให้
-- 🚫 **Refuse ถ้า plan ไม่ approved** — ต้อง set `status: approved` ใน frontmatter manually ก่อน
+- 🚫 **Refuse ถ้า plan ไม่ approved** — ตอบ `approve` ใน session ของ `/ow-plan` (หรือ set `status: approved` ใน frontmatter เอง) ก่อน
 - 🚫 **ห้ามแก้ scope** จาก plan โดยไม่ revise plan ก่อน — ใช้ `/ow-plan --revise`
 - 🚫 **ห้าม fake ผล test/build** — ถ้า fail บอก blocker แทน
 - 🚫 ห้ามแก้ shared/production env โดยไม่ confirm

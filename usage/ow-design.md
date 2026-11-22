@@ -100,7 +100,7 @@ docs/obsidian-vault/70-Reference/DesignSystem/
 
 ตัวอย่าง 2: เพิ่ม component ใหม่
 ```
-1. /ow-plan FEAT-Y                          ← plan ระบุ Design Additions: Datepicker
+1. /ow-plan FEAT-Y                          ← plan จด Datepicker เป็นหมายเหตุใต้ Design System Compliance
 2. (STOP — DS ยังไม่มี Datepicker)
 3. /ow-design component Datepicker          ← สร้าง spec ก่อน
 4. /ow-implement <plan>                     ← ใช้ Datepicker ได้

@@ -73,11 +73,11 @@ Empty → ask (render in `$PROJECT_LANG`) which plan, and list the 5 most recent
 ## Phase 1 — Validate
 
 1. Read the plan file — 🔴 phased (`## Phases`) → read it **selectively**, `_shared/phases.md` §1.5
-2. **Refuse** if `status != approved` → tell the user to set the status first
+2. **Refuse** if `status != approved` → tell the user to approve it first (reply `approve` in the `/ow-plan` session, or set `status: approved`)
 3. **Refuse** if it is already `status: done` → tell the user
 4. Check that `Implementation Steps` is complete + `subagent_target` is set (it names the **area** whose rules/gates apply — not an order to spawn, see 3.0)
-5. Show task + submodule + step count → ask (render in `$PROJECT_LANG`): "Start now?" · `AUTO_MODE=on` → skip the question, print the summary and start (the `/ow-auto` grant or the explicit `--auto` flag already answered it)
-6. If `Doc Gaps Found` is non-empty → go to Phase 2 first
+5. Show task + submodule + step count, then start — typing the plan path is the go-ahead. Only `risk_level: high` with `AUTO_MODE=off` asks first (render in `$PROJECT_LANG`): "Start now?" with the plan's risk line · `AUTO_MODE=on` → skip the question, print the summary and start (the `/ow-auto` grant or the explicit `--auto` flag already answered it)
+6. If `Doc Gaps Found` has entries other than `excluded by budget:` lines → go to Phase 2 first (those lines are not gaps)
 
 ### 1.1 `--from-fix` gate (fix-log mode)
 
@@ -119,6 +119,8 @@ the gap is closed by **overwriting** the wrong text, never by appending "was X, 
 Fix them **inline by default** — you already hold the plan; a spawn re-reads it from zero.
 Delegate to the `docs` subagent only when the gap list is genuinely large or independent of the code work
 (same judgment rule as 3.0). Rule either way: **fix factual discrepancies only — never change implementation intent.**
+
+`excluded by budget: <path> — <reason>` lines are not gaps to fix — they name a doc the plan did not read; read it yourself if the task needs it.
 
 Done (or the agent returned) → Phase 2.7
 
@@ -250,7 +252,7 @@ written:
 
 🔴 Rules (the same contract `## Chunk Progress` runs under — `_shared/delegation.md` §6) — it goes in
 `$PLAN_PATH`, under the vault-write rule 3.1 rule 9 already states (worktree mode included):
-- Write `- [x]` **only**, never `- [ ]` → the Phase 6.0 gate (`grep -c "- [ ]"` must = 0) keeps its meaning
+- Write `- [x]` **only**, never `- [ ]` → the Phase 6.0 gate (`open_boxes` must = 0) keeps its meaning
 - Write it **after the `exit:` actually ran and passed** — one written on faith is a lie 1.2 will believe,
   and it will skip work that never happened (no fake results)
 - Group so a line lands **every 2-4 steps**, not every step — a 15-step plan wants ~4-5 lines
@@ -314,8 +316,14 @@ follow-up — reverting with the safe method in rule 5 of 3.2 (surgical Edit on 
 
 ### 6.0 Open-checkbox gate (🔴 before flipping status: done)
 ```bash
-grep -c "\- \[ \]" "$PLAN_PATH"   # must = 0  (plan file in the MAIN_ROOT vault — flag-stripped, Phase 2.7.1)
+open_boxes() {   # stdin → open boxes this command owns; a human's or /ow-test's lines are skipped
+  awk '/^#+ / { skip = ($0 ~ /^## ([A-Z]\. )?(Approvals|Goals|Next)([[:space:]]|$)/) }
+       !skip && /^[[:space:]>|]*- \[ \]/ && !/\(ow-test\)|[Pp]laywright|Maestro|E2E|e2e|emulator|simulator/ { n++ }
+       END { print n + 0 }'
+}
+open_boxes < "$PLAN_PATH"   # must = 0  (plan file in the MAIN_ROOT vault — flag-stripped, Phase 2.7.1)
 ```
+Lines `open_boxes` skips (`## Approvals` / `## Goals` / `## Next`, E2E / `(ow-test)` boxes) belong to `/ow-test` or a human — you need not tick them to pass 6.0; tick one only after actually running its check.
 If >0 → finish the outstanding items first (inline, or the `docs` agent under the 3.0 rule) — never flip the status
 
 🔴 **`status: done` must pass all of:** 5.0 build/test run + 5.2 coverage audit + 5.3 discipline audit + 6.0 open-checkbox = 0
@@ -330,7 +338,7 @@ phase re-runs 6.0 whole-file first). 🔴 Never flip the plan `status: done` whi
 
 ### 6.2 Close the plan
 
-1. Plan frontmatter: `status: done`, `completed_at: YYYY-MM-DD HH:mm`
+1. Plan frontmatter: `status: done`, `completed_at:` = `date '+%Y-%m-%d %H:%M'` run now (never typed from memory)
 2. Append a section to the plan (its prose is in `$VAULT_LANG`; headings, frontmatter, IDs, and file paths stay English):
    ```markdown
    ## Implementation Result
@@ -361,7 +369,7 @@ Answer with **short bullets, quick to read**, in the configured language (`$PROJ
 
 - **What was done** — the main change + files/area + how it ran (inline, or subagent `<name>`)
 - **Verification** — the test/build actually run + its result (pass/fail count from stdout; cannot parse = `?/?` + `parse-failed: true`)
-- **Phase** — phased run only: which phase closed, which remain, the next command, and 🔴 `/clear` before it
+- **Phase** — phased run only: phases closed this run and which remain · after a `--phase` run the next command, with 🔴 `/clear` before it (a run-all or `--auto` run continues in-session) · plus the over-budget note from `phases.md` §2 when it applies
 - **Auto** — `AUTO_MODE=on` only: phases run this session, fix attempts (`fix n/N` + fix-log paths), Auto Decisions taken, and — when it could not finish — one line `STOPPED: <reason>` (`_shared/auto-loop.md` §3) · `WORKER≠native` → `worker: <backend> <version>` + `log dir: <RUN_DIR>`
 - **Risks / open / next** — only if any (e.g. "manual UAT not done yet"), plus any `context gap:` collected
 
@@ -377,7 +385,7 @@ Answer with **short bullets, quick to read**, in the configured language (`$PROJ
 - 🔴 Never run an inline plan without writing `## Step Progress` as you go (3.3) — a dead session then leaves zero recoverable state
 - 🔴 Never resume from a progress marker without first re-running the `exit:` of the last ticked line (1.2) — a marker whose code was reverted is worse than no marker
 - Never fake a test/build result — the pass/fail count must parse from real stdout; cannot parse → `?/?` + `parse-failed: true`, never guess
-- 🔴 Never flip `status: done` unless all four pass: 5.0 build/test run · 5.2 coverage (`PROD>0 && TEST==0` = STOP, write a test or map to untestable 1–6 — "hard" is not one) · 5.3 discipline · 6.0 open-checkbox = 0
+- 🔴 Never flip `status: done` unless all four pass: 5.0 build/test run · 5.2 coverage (`PROD>0 && TEST==0` = STOP, write a test or map to untestable 1–6 — "hard" is not one) · 5.3 discipline · 6.0 `open_boxes` = 0 — and never tick a box you did not verify just to make 6.0 pass
 - 🔴 Phased plan → every `Never` in `_shared/phases.md` applies in full: no phase runs on an unfinished `depends_on` or a `state: planned` contract row, no phase touches another phase's files, and the plan never flips `done` while a phase row is not
 - 🔴 Never flip a plan `done` while it has `source_fix:` but the source fix-log is not closed (6.5) — a `source_fix:` pointing at a missing file = **STOP**, never silent
 - Never deliver work without a verification map back to the success criteria · never touch a shared/production env without confirming

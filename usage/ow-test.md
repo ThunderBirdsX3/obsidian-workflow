@@ -69,11 +69,12 @@ per-worktree store ⇒ ก่อนลบ worktree จะ absorb objects เข�
 1. **Phase 0** — Detect mode
 2. **Phase 1** — Detect scope (auto only) จาก `git diff`
 3. **Phase 2** — Spin servers (dev server, API) เท่าที่จำเป็น (reuse ตัว healthy, `READY_URL` ต่อ target — ไม่ hardcode port); mobile emulator/simulator เปิด**เฉพาะ** `--e2e` (#32). ใครเปิดคนนั้น **ปิดทุกอย่างที่ตัวเองเปิด** ตอนจบ (Phase 7.5 teardown) — กัน dev-server/emulator ค้างกิน resource
-4. **Phase 3** — รัน smoke tests, เก็บ console+network output, PII mask, route source trace — **3.0 ตัดสินเองว่า inline หรือ delegate ให้ `test-runner`** (ไม่บังคับทางไหน · งาน/gate เหมือนกันทั้งสองแบบ)
+4. **Phase 3** — รัน smoke tests, เก็บ console+network output, PII mask, route source trace — เช็ค web/mobile ตามลำดับ **คำสั่ง test/E2E ของ project เอง → run-code tool ของ Playwright MCP (1 call ต่อสคริปต์หลายขั้น, MCP มี Playwright+browser ในตัว ไม่ต้องติดตั้ง) → MCP ทีละ step เฉพาะสิ่งที่สคริปต์ตัดสินไม่ได้** · 🔴 ห้ามติดตั้ง Playwright/browser/package ระหว่าง `/ow-test` — **3.0 ตัดสินเองว่า inline หรือ delegate ให้ `test-runner`** (ไม่บังคับทางไหน · งาน/gate เหมือนกันทั้งสองแบบ)
 6. **Phase T (Test Plan mode)** — รัน systematic ทุก role × scenario, status taxonomy: PASS/FAIL/INFO/LIMITED/PASS_NO_MUTATION/BLOCKED_*/NOT_RUN
 6. **Phase 4** — บันทึกสิ่งที่รันเห็นจริง: output ลง scratch run dir (`${TMPDIR:-/tmp}/ow-run-<slug>/`) แล้ว quote เฉพาะบรรทัดที่เกี่ยวลงรายงาน
 7. **Phase 5** — Visible-menu rule: route source = VISIBLE_MENU / DIRECT_URL_USER / DIRECT_URL_TECHNICAL
 8. **Phase 6** — Output report (PASS/FAIL summary + คำสั่งที่รันจริง)
+9. **Phase 6.5** (`/ow-test <plan>` เท่านั้น) — เติม 1 บรรทัดใต้ `## Implementation Result` ของ plan: `- Smoke test (/ow-test, YYYY-MM-DD HH:mm): PASS <n>/<total> · FAIL <n> · BLOCKED <n> — <target>` · ไม่แก้ `status` ไม่ติ๊ก box — การปิด plan เป็นของ `/ow-implement`
 
 ## Output ที่ได้
 
@@ -142,7 +143,7 @@ per-worktree store ⇒ ก่อนลบ worktree จะ absorb objects เข�
 ## FAQ
 
 **Q: ต้อง install Playwright/Maestro ก่อนไหม?**
-A: ใช่ — Playwright (web) + Maestro (mobile) ถ้า project ไม่มี → ใช้ unit/integration test ของ project แทน (จะรัน inline หรือผ่าน `test-runner` agent ที่ create ไว้ ก็ได้ผลเหมือนกัน)
+A: ไม่ต้อง และ `/ow-test` ไม่ติดตั้งให้ — web: ใช้คำสั่ง E2E ของ project ก่อน, ไม่มีก็ใช้ run-code tool ของ Playwright MCP (มี browser ในตัว) · mobile ต้องมี Maestro เอง · ไม่มีทางไหนเลย → ใช้ unit/integration test ของ project แทน (จะรัน inline หรือผ่าน `test-runner` agent ที่ create ไว้ ก็ได้ผลเหมือนกัน)
 
 **Q: output ของ test เก็บไว้ที่ไหน?**
 A: scratch run dir ชั่วคราวเท่านั้น — อ่าน, quote บรรทัดที่เกี่ยวลงรายงาน/vault (mask PII ก่อน) แล้วปล่อยทิ้ง ไม่มีการเก็บไฟล์ถาวรและไม่ commit

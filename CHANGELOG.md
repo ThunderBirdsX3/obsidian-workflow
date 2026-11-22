@@ -3,6 +3,40 @@
 Format: [Keep a Changelog](https://keepachangelog.com). Versions: SemVer.
 Version marker: `ow.version` in `.ow.yml`.
 
+## [2.6.0] — 2026-11-22
+
+Minor. No config change needed.
+
+### Changed — the plan file is lighter
+
+- The plan no longer has the sections Vault Context Read, Task, Verification, Approvals or Design Additions — removed from `/ow-plan`'s inline template and from the shipped `.ow/templates/plan.md`. The docs read go into `related_docs:`; a doc skipped for the token budget is an `excluded by budget:` line in Doc Gaps Found, and such lines never trigger the docs-fix phase (`/ow-implement` Phase 2).
+- Goals are plain bullets. Success Criteria carry `(unit)` / `(integration)` / `(build)` / `(ow-test)`; `(ow-test)` items have no checkbox because `/ow-test` owns them.
+- `## Risks` appears only when `risk_level` is medium or high.
+
+### Changed — approve a plan by replying in the `/ow-plan` chat
+
+- `/ow-plan` ends with a summary of at most 10 lines. The user replies `approve` in that chat and `/ow-plan` stamps `status: approved` · `approved_by: user (chat)` · `approved_at`. Setting the frontmatter by hand still works.
+- `/ow-plan` never starts `/ow-implement`; the user runs it in a new session.
+
+### Changed — `/ow-implement` starts without asking
+
+- `/ow-implement <plan>` starts at once — typing the plan path is the go-ahead. The "Start now?" question remains only for a `risk_level: high` plan without `--auto`.
+- With no `--phase` it runs every phase in order and never asks; over ~120k it only notes it. `--phase <id>` + `/clear` between sessions is advised only when a phase is over `PHASE_BUDGET`.
+
+### Changed — `/ow-implement` done-gate
+
+- The Phase 6.0 open-checkbox gate ignores boxes a human or `/ow-test` owns: old `## Approvals` / `## Goals` boxes, the routing boxes under a fix-log's `## Next`, `(ow-test)` lines and live-E2E lines. Boxes inside callouts (`> - [ ]`) and tables still count.
+- The `/ow-auto` item-close commit now stages `<plan>`.
+- Closing a fix-log (`_shared/fixlog-close.md` §2) ticks proven boxes, then runs `open_boxes` on the fix-log, and only then sets `status: fixed`. The fix-log template's "Out of scope" line is a plain bullet, not a box.
+- The shipped `.ow.yml` pins a model for four commands only — `ow-plan` / `ow-secure` → opus, `ow-implement` / `ow-fix` → sonnet; every other command inherits the session model. An existing project keeps the overrides in its own `.ow.yml`.
+- Every timestamp these commands write (`approved_at`, `completed_at`, plan and fix-log file names and `date:`, the Smoke test line) comes from `date '+%Y-%m-%d %H:%M'` run at that moment, never typed from memory.
+
+### Changed — `/ow-test` web checks and plan record
+
+- Web checks run in this order: the project's own test/E2E command → the Playwright MCP's run-code tool (one call per multi-step script; nothing installed) → step-by-step MCP only for what a script cannot judge. `/ow-test` never installs Playwright, a browser or a package.
+- `/ow-test <plan>` appends one line under the plan's `## Implementation Result`: `- Smoke test (/ow-test, YYYY-MM-DD HH:mm): PASS <n>/<total> · FAIL <n> · BLOCKED <n> — <target>`. It never closes the plan. `/ow-test <plan>` covers every `(ow-test)` Success Criterion and `→ /ow-test:` bullet in the plan; one that cannot run is reported BLOCKED / NOT_RUN, never dropped.
+- `usage/ow-plan.md`, `usage/ow-implement.md`, `usage/ow-test.md`, `usage/ow-design.md`, `usage/README.md`, `README.md` and `/ow-help` updated to match.
+
 ## [2.5.0] — 2026-11-16
 
 Minor. No config change needed.

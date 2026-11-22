@@ -155,7 +155,7 @@ Show the workflow card the user picked:
 3. /ow-new                             ← brainstorm → PRD + SRS + Tech-spec
 4. /ow-design init                     ← (optional) bootstrap design system
 5. /ow-plan FEAT-X                     ← plan the first feature
-6. [user review plan, set status: approved]
+6. [reply `approve` in the /ow-plan chat — it stamps status: approved]
 7. /ow-implement docs/80-.../plan.md   ← execute (inline, or a subagent when the work earns one)
 8. /ow-test                            ← smoke test
 9. /ow-secure                          ← pre-flight

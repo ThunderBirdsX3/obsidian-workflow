@@ -146,7 +146,7 @@ two writes per step, never one at the end. `export OW_AUTO_RUN="<run-log path>"`
    ```yaml
    status: approved
    approved_by: ow-auto
-   approved_at: <YYYY-MM-DD HH:mm>
+   approved_at: <YYYY-MM-DD HH:mm>     # date '+%Y-%m-%d %H:%M' run now — never typed from memory
    auto_grant: [implement, commit]    # + merge when the run-log grant has it
    auto_run: <run-log path>
    auto_brief: "<target or brief exactly as typed>"
@@ -161,8 +161,8 @@ two writes per step, never one at the end. `export OW_AUTO_RUN="<run-log path>"`
    (+ worker flag) → `/ow-test` again. At most `AUTO_MAX_FIX` rounds per item (Phase 0 var); still failing →
    `stopped: test-fail after <n> fix rounds` → step 7
 5. `state: done` — `/ow-implement` 6.2 already flipped the FEAT / `$IMPL_STATUS` and committed its own work
-   (`_shared/auto-loop.md` §2.5). Write the row, then **commit the item close** in the project root (`$ROOT`): `git add -- <run-log>
-   <FEAT doc> <$IMPL_STATUS> <test report /ow-test wrote>` then
+   (`_shared/auto-loop.md` §2.5). Write the row, then **commit the item close** in the project root (`$ROOT`): `git add --
+   <run-log> <plan> <FEAT doc> <$IMPL_STATUS> <test report /ow-test wrote>` then
    `git commit -m "docs(vault): close <FEAT> (auto · <run-log slug>)" -m "<Co-Authored-By trailer>" -- <the same paths>` — path-limited, so nothing the user staged rides along. Nothing staged → skip. Commit fails → `stopped: commit — <git last line>`,
    never `--no-verify`. **Never push** — `/ow-git` is the human's step after the run
 6. **Unmerged dependency** (`--worktree` without `--merge`): `/ow-test --no-merge` leaves an item's code on its worktree

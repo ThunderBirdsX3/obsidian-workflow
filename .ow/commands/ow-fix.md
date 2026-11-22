@@ -100,7 +100,7 @@ reproducible = `pending verification` (never fabricate)
 🔴 **Read `.ow/commands/_shared/coding-discipline.md` §1** before writing `## Success Criteria` —
 it is the contract for what a criterion must be (checkable, paired with a regression, mapped to a Test Case)
 
-Path: `<vault>/85-FixLog/YYYY-MM-DD-HHMM-<slug>.md`
+Path: `<vault>/85-FixLog/YYYY-MM-DD-HHMM-<slug>.md` — the file name and `date:` come from `date '+%Y-%m-%d-%H%M'` / `date '+%Y-%m-%d %H:%M'` run now, never typed from memory
 
 Prose written into the file is in `$VAULT_LANG` (Phase 0); headings and frontmatter stay English.
 
@@ -131,7 +131,7 @@ related_plan: <"[[plan-slug]]" or none>   # /ow-fix→/ow-plan path: /ow-plan fi
 <!-- Contract: `_shared/coding-discipline.md` §1 — what must become correct again + what must not break (regression). Map to Test Cases one by one -->
 - [ ] <fixed behavior — symptom gone> — verify via TC-01
 - [ ] <regression: adjacent feature X still works> — verify via TC-02
-- [ ] Out of scope: <unrelated refactor/cleanup this fix "will not do">
+- Out of scope: <unrelated refactor/cleanup this fix "will not do"> (a constraint, not a box — the 5.3 discipline audit checks it)
 
 ## Root Cause
 <technical cause — file path, function, line — from grep/read>

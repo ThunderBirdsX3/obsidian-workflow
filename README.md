@@ -97,8 +97,8 @@ cd my-app
 /ow-new                                 ← brainstorm → PRD + SRS + Tech-spec
 /ow-design init                         ← (optional) design system + preview.html
 /ow-plan FEAT-X                         ← วางแผน feature
-# [user review plan ใน docs/obsidian-vault/80-ImplementPlan/, mark status: approved]
-/ow-implement docs/obsidian-vault/80-ImplementPlan/... ← ลงมือทำจริง (inline หรือ delegate ให้ subagent ตามงาน)
+# [อ่านสรุปของ plan แล้วตอบ `approve` ใน chat เดียวกัน — /ow-plan ใส่ status: approved ให้]
+/ow-implement docs/obsidian-vault/80-ImplementPlan/... ← session ใหม่ · เริ่มทันที ลงมือทำจริง (inline หรือ delegate ให้ subagent ตามงาน)
 /ow-test                                ← smoke test
 /ow-verify                              ← ตรวจครบ (tests/vault/security/DS)
 /ow-handoff                             ← สร้าง HOR-*.md ส่ง reviewer
@@ -106,8 +106,8 @@ cd my-app
 ```
 
 > ✂️ **Plan ใหญ่เกินไป?** — `/ow-plan` แตกงานเป็น **phase** ในไฟล์เดียว (`## Phases` + `## Shared Contract`)
-> รันทีละ phase คนละ session — `/ow-implement <plan> --phase P1` แล้ว `/clear` ก่อนไป P2 → พอดี model context 200K
-> และลด token สะสม · ไม่ระบุ `--phase` = รันทุก phase ตามลำดับ · ปิดงานด้วย `/ow-verify <plan>`
+> `/ow-implement <plan>` รันทุก phase ตามลำดับในครั้งเดียว ไม่ถามระหว่างทาง · แยกทีละ phase (`--phase P1` แล้ว `/clear` ก่อนไป P2)
+> เฉพาะเมื่อมี phase ที่เกิน `PHASE_BUDGET` — `/ow-plan` บอกไว้ในสรุปท้าย · ปิดงานด้วย `/ow-verify <plan>`
 
 > 🌳 **Worktree mode** (#31) — เติม `--worktree` ที่ `/ow-plan` → `/ow-implement` build ใน worktree แยก
 > (กัน main tree ไม่ถูกแตะ — งาน uncommitted คู่ขนานปลอดภัย), `/ow-test` **auto-merge กลับ branch ตอน smoke PASS**

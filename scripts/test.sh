@@ -798,6 +798,10 @@ run "cmdmodel: inherit shim has NO model line"    '! grep -q "^model:" .claude/c
 run "cmdmodel: exactly 2 shims pinned to opus"    '[ "$(grep -lx "model: opus" .claude/commands/*.md | wc -l | tr -d " ")" -eq 2 ]'
 run "cmdmodel: ow-secure override = opus"       '[ "$(bash scripts/ow-paths.sh --command-model ow-secure)" = opus ]'
 run "cmdmodel: ow-implement override = sonnet"  '[ "$(bash scripts/ow-paths.sh --command-model ow-implement)" = sonnet ]'
+run "cmdmodel: default .ow.yml pins only plan/secure (opus) + implement/fix (sonnet)" \
+  '[ "$(yq -r ".commands.overrides | to_entries | map(.key + \"=\" + .value) | join(\",\")" .ow.yml)" = "ow-plan=opus,ow-secure=opus,ow-implement=sonnet,ow-fix=sonnet" ]'
+run "cmdmodel: exactly 4 shims carry a model: line" \
+  '[ "$(grep -l "^model:" .claude/commands/*.md | wc -l | tr -d " ")" -eq 4 ]'
 
 # generate_shims injects model end-to-end in an isolated fixture
 run "cmdmodel: generate_shims injects model from config" '
@@ -1772,7 +1776,7 @@ run "plan emits context_refs"      'grep -q "context_refs:" '"$PLAN"
 run "plan phase budget 120000"     'grep -q "PHASE_BUDGET=120000" '"$PLAN"
 run "plan phase FLOOR + MAX"       'grep -q "FLOOR=15000" '"$PLAN"' && grep -q "MAX_PHASES=8" '"$PLAN"
 run "plan merge keys same area"    'grep -q "only between phases with the same area" '"$PLAN"
-run "plan forces /clear"           'grep -q "/clear" '"$PLAN"
+run "plan keeps /clear advice for over-budget phases" 'grep -q "/clear" '"$PLAN"
 run "plan refuses to over-phase"   'grep -q "Never phase a plan that is already small enough" '"$PLAN"
 run "plan: one file, one phase"    'grep -q "Never assign the same Affected File to two phases" '"$PLAN"
 run "plan: no contract redefine"   'grep -q "Never redefine a Shared Contract value inside a phase" '"$PLAN"
@@ -2675,12 +2679,12 @@ run "impl-auto: 2.7.1 sed strips the three new flags" \
 run "impl-auto: 2.7.1 resolves AUTO_MODE and WORKER" \
   "grep -q '^AUTO_MODE=off' $IMPL && grep -q 'AUTO_MODE=on' $IMPL && grep -q '^WORKER=native' $IMPL && grep -q 'WORKER=codex' $IMPL && grep -q 'WORKER=claude' $IMPL"
 run "impl-auto: both worker flags → STOP" "grep -qi 'both --codex and --claude' $IMPL"
-run "impl-auto: Start now? skipped only under --auto" "grep -q 'AUTO_MODE=on. → skip the question' $IMPL"
+run "impl-auto: Start now? skipped under --auto" "grep -q 'AUTO_MODE=on. → skip the question' $IMPL"
 run "impl-auto: legacy BLOCKED line untouched" \
   "grep -q 'BLOCKED. → stop, ask a human, never auto-retry' $IMPL && grep -q 'Never trust a delegated .STATUS: DONE. without running .EXIT_STATE. yourself' $IMPL"
 run "impl-auto: phases.md PLAN_ARG sed strips new flags" \
   "grep -q 's/\\[\\[:space:\\]\\]\\*--auto//g' $PHZ"
-run "impl-auto: phases.md /clear advice carries the --auto exception" "grep -q 'except under .--auto' $PHZ"
+run "impl-auto: run-all never asks about phases" "grep -q 'never ask and never block' $PHZ"
 run "impl-auto: spec stays lean (<400 lines)" "[ \"\$(wc -l < $IMPL | tr -d ' ')\" -lt 400 ]"
 run "auto-loop: fragment exists with phase loop + fix loop" \
   "[ -f $ALOOP ] && grep -q '^## 1. Phase loop' $ALOOP && grep -q '^## 2. Fix loop' $ALOOP"
@@ -2761,8 +2765,8 @@ run "ow-auto docs: README counts 22"                   "grep -q '22 slash comman
 run "ow-auto docs: ow-help cheatsheet row"             "grep -q '| /ow-auto' .ow/commands/ow-help.md"
 run "ow-auto docs: AGENTS.md names /ow-auto and --claude worker" "grep -q 'ow-auto' AGENTS.md && grep -q -- '--claude' AGENTS.md"
 run "ow-auto docs: codex/README no longer claims no-subagents as the end of the story" "grep -q -- '--claude' codex/README.md"
-run "ow-auto docs: CHANGELOG 2.5.0 on top + version bumped" \
-  "grep -q '^## \[2.5.0\]' CHANGELOG.md && yq -e '.ow.version == \"2.5.0\"' .ow.yml >/dev/null"
+run "release: CHANGELOG 2.6.0 on top + version bumped" \
+  "grep -q '^## \[2.6.0\]' CHANGELOG.md && yq -e '.ow.version == \"2.6.0\"' .ow.yml >/dev/null"
 
 run "worker: TERM to the runner kills the CLI too (no orphan writer)" '_worker_fixture
   PATH="$TD/bin:$PATH" FAKE_MODE=timeout OW_WORKER_TIMEOUT_SEC=60 bash "$W" codex "$TD/wt" "$TD/runs" P1-chunk1 "$TD/prompt.md" >/dev/null 2>&1 &
@@ -2800,6 +2804,90 @@ run "worker: codex alias with no models cache → BLOCKED, nothing dispatched" '
 run "worker: full codex slug passes through, never retried" '_worker_fixture; _codex_cache
   out=$(PATH="$TD/bin:$PATH" FAKE_MODE=ok FAKE_REJECT=gpt-6.1-sol AUTO_CODEX_MODEL=gpt-6.1-sol bash "$W" codex "$TD/wt" "$TD/runs" P1-chunk1 "$TD/prompt.md")
   echo "$out" | grep -q "^REASON: exit-code 1" && grep -q -- "-m gpt-6.1-sol" "$FAKE_ARGV"'
+
+# ── fast-flow (2026-11-22 design) ──
+run "fast: open_boxes counts only boxes /ow-implement owns" '
+  d=$(mktemp -d)
+  sed -n "/^open_boxes() {/,/^}/p" .ow/commands/ow-implement.md > "$d/fn.sh"
+  [ "$(grep -c "^}" "$d/fn.sh")" -eq 1 ] || { echo "open_boxes() not found in ow-implement.md"; rm -rf "$d"; exit 1; }
+  . "$d/fn.sh"
+  printf "%s\n" "## Goals (MVP)" "- [ ] goal" "## Approvals" "- [ ] Approved" \
+    "## Design System Compliance" "- [ ] tokens only" \
+    "#### Test Plan" "  - [ ] unit: LoanService.create" "- [ ] Playwright journey" "- [ ] list renders (ow-test)" \
+    "#### Success Criteria" "- [ ] contract row R1 has state: actual" \
+    "## C. Goals / Non-goals" "- [ ] lettered goal" "## M. Approvals" "- [ ] lettered approval" \
+    "## Next" "- [ ] Run /ow-implement" \
+    "## Test Cases" "- [ ] TC1 repro fails before fix" "> - [ ] callout box" "| - [ ] table box |" "- [x] closed box" > "$d/p.md"
+  n=$(open_boxes < "$d/p.md"); rm -rf "$d"
+  [ "$n" -eq 6 ] || { echo "open_boxes = $n, want 6 (DS + unit + contract + Test Cases + callout + table)"; exit 1; }'
+run "fast: 6.0 and the phase gate run open_boxes, never a raw grep -c" \
+  'grep -q "^open_boxes < \"\$PLAN_PATH\"" .ow/commands/ow-implement.md && [ "$(sed -n "/^### 6.0 /,/^### 6.1 /p" .ow/commands/ow-implement.md | grep -c "grep -c")" -eq 0 ] && grep -qF "| open_boxes" .ow/commands/_shared/phases.md && ! grep -qF "| grep -c" .ow/commands/_shared/phases.md'
+run "fast: phase gate asserts open_boxes is defined before using it (never fails open)" \
+  'grep -qF "type open_boxes >/dev/null 2>&1 || { echo \"FATAL: open_boxes undefined" .ow/commands/_shared/phases.md'
+run "fast: /ow-test plan-scope covers every (ow-test) item, none dropped silently" \
+  'grep -qF "cover every \`(ow-test)\` Success Criterion" .ow/commands/ow-test.md && grep -qF "never dropped silently" .ow/commands/ow-test.md'
+run "fast: Never forbids ticking an unverified box" \
+  'grep -q "never tick a box you did not verify" .ow/commands/ow-implement.md'
+
+run "fast: plan template drops sections no command reads" \
+  '! grep -qE "^## (Vault Context Read|Task|Verification|Approvals|Design Additions)" .ow/commands/ow-plan.md'
+run "fast: related_docs lists every vault doc read; budget cuts go to Doc Gaps" \
+  'grep -q "every vault doc actually read" .ow/commands/ow-plan.md && grep -qF "excluded by budget:" .ow/commands/ow-plan.md'
+run "fast: Goals are bullets, not boxes" \
+  '! sed -n "/^## Goals/,/^## Non-goals/p" .ow/commands/ow-plan.md | grep -q -- "- \[ \]"'
+run "fast: Success Criteria carry a verifier tag" \
+  'sed -n "/^## Success Criteria/,/^## /p" .ow/commands/ow-plan.md | grep -qF "(ow-test)" && sed -n "/^## Success Criteria/,/^## /p" .ow/commands/ow-plan.md | grep -qF "(unit)"'
+run "fast: Risks section only at medium or high" \
+  'grep -q "only when .risk_level. is medium or high" .ow/commands/ow-plan.md'
+run "fast: phases.md shared header lists no dead sections" \
+  '! grep -q "Problem, Task, Goals" .ow/commands/_shared/phases.md && ! grep -q "Verification. / .## Risks. / .## Approvals" .ow/commands/_shared/phases.md'
+run "fast: shipped plan template drops the same sections" \
+  '! grep -qE "^## (A\. Vault Context Read|B\. Task|K\. Verification Checklist|M\. Approvals)" .ow/templates/plan.md && grep -q source_fix .ow/templates/plan.md'
+
+run "fast: shipped template Test Plan has no box /ow-implement cannot tick" \
+  '! sed -n "/^## J\\./,/^## L\\./p" .ow/templates/plan.md | grep -E -- "- \\[ \\]" | grep -qE "Manual|NVDA|k6|/ow-secure|Playwright|Maestro|E2E|axe-core"'
+
+run "fast: implement Phase 1 item 6 exempts excluded-by-budget lines from Doc Gaps" \
+  'grep -E "^6\\. If .Doc Gaps Found. has entries other than .excluded by budget:. lines" .ow/commands/ow-implement.md | grep -q "Phase 2" && grep -qF "are not gaps to fix" .ow/commands/ow-implement.md'
+
+run "fast: Phase 5 ends by asking for approve in chat" \
+  'sed -n "/^## Phase 5 /,/^## Output/p" .ow/commands/ow-plan.md | grep -q "Reply .approve."'
+run "fast: approve stamps approved_by user (chat)" \
+  'grep -qF "approved_by: user (chat)" .ow/commands/ow-plan.md'
+run "fast: only the user own reply approves" \
+  'grep -q "only the user.s own reply in this session" .ow/commands/ow-plan.md'
+run "fast: plan summary is at most 10 lines" \
+  'grep -q "at most 10 lines" .ow/commands/ow-plan.md'
+run "fast: Never no longer says /ow-plan never writes approved" \
+  '! grep -q "itself still never writes" .ow/commands/ow-plan.md'
+run "fast: implement starts when the plan is named" \
+  'grep -q "typing the plan path is the go-ahead" .ow/commands/ow-implement.md'
+run "fast: implement asks Start now? only for risk_level high" \
+  'sed -n "/^## Phase 1 /,/^### 1.1 /p" .ow/commands/ow-implement.md | grep -q "risk_level: high" && sed -n "/^## Phase 1 /,/^### 1.1 /p" .ow/commands/ow-implement.md | grep -q "Start now?"'
+run "fast: no file pushes one phase per session by default" \
+  '! grep -q "one phase per session" .ow/commands/ow-plan.md .ow/commands/_shared/phases.md && grep -q "/clear" .ow/commands/ow-plan.md'
+run "fast: ow-test drives web checks project-E2E first, then MCP run-code" \
+  'grep -q "own test/E2E command" .ow/commands/ow-test.md && grep -q "browser_run_code" .ow/commands/ow-test.md'
+run "fast: ow-test never installs Playwright" \
+  'grep -q "Never install Playwright" .ow/commands/ow-test.md'
+run "fast: ow-test records a Smoke test line in the plan" \
+  'grep -q "^## Phase 6.5 " .ow/commands/ow-test.md && grep -qF "Smoke test (/ow-test," .ow/commands/ow-test.md'
+run "fast: ow-test never closes the plan" \
+  'grep -q "Never flip the plan.s .status." .ow/commands/ow-test.md'
+run "fast: ow-auto item close commits the plan too" \
+  'grep -qF "<run-log> <plan> <FEAT doc>" .ow/commands/ow-auto.md'
+
+run "fast: docs teach approve-in-chat" \
+  'grep -q "ตอบ .approve." usage/ow-plan.md && grep -q "ตอบ .approve." usage/ow-implement.md && grep -q "ตอบ .approve." README.md && grep -q "reply .approve." .ow/commands/ow-help.md'
+run "fast: docs drop the manual frontmatter approve step" \
+  '! grep -q "set status: approved ใน frontmatter" usage/ow-plan.md && ! grep -q "mark status: approved" README.md && ! grep -q "set status: approved\]" .ow/commands/ow-help.md'
+# live run 2026-11-22: stamps were typed from memory, and /ow-fix → y closed a fix-log without the 6.0 gate
+run "fast: written timestamps come from date, never from memory" \
+  'for f in ow-plan ow-implement ow-test ow-auto ow-fix; do grep -qF "+%Y-%m-%d %H:%M" .ow/commands/$f.md && grep -q "never typed from memory" .ow/commands/$f.md || { echo "no date-stamp rule in $f.md"; exit 1; }; done'
+run "fast: fix-log close runs open_boxes before status: fixed" \
+  'F=.ow/commands/_shared/fixlog-close.md; a=$(grep -n "open_boxes < " $F | head -1 | cut -d: -f1); b=$(grep -n "fixed_commit: pending" $F | head -1 | cut -d: -f1); [ -n "$a" ] && [ -n "$b" ] && [ "$a" -lt "$b" ] && grep -q "type open_boxes" $F'
+run "fast: fix-log Out of scope is a plain bullet, not a box" \
+  '! grep -qF -- "- [ ] Out of scope" .ow/commands/ow-fix.md && grep -qF -- "- Out of scope" .ow/commands/ow-fix.md'
 
 # ════════════════════════════════════════════════════════════════════════════
 # Summary

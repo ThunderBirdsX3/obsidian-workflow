@@ -154,7 +154,7 @@ est_read_set() {    # usage: est_read_set <file>...  — count WHOLE files: Read
      a half-read spec is worse than a named gap
    - 🔴 The byte→token ratios are a heuristic, not a tokenizer measurement — say so whenever you report a number
 5. Read every doc **in the selected set** in full (never just skim) — a doc that made the set is never skimmed
-6. List in the plan file: every doc actually read **and** every doc the budget excluded, with the reason
+6. Record in the plan file: every vault doc actually read goes into `related_docs:` (paths only); every doc the budget excluded is one `## Doc Gaps Found` line `excluded by budget: <path> — <reason>`
 7. **Consistency check** — the plan must not contradict the vault it was read from, nor any rule the resolver returned (`ow-paths.sh --rules <area>`). Every claim of a result must name the check behind it — a step that cannot be verified yet is written as `pending verification`, never as a done state. If the task has an irreversible/destructive step → flag it + require explicit approval via `risk_level: high` in the plan frontmatter
 
 > **The vault already answers it → never ask the user again**
@@ -188,8 +188,8 @@ flat plan (no `## Phases` section) and move on. Over-phasing pays a cold-context
 
 Why phases exist: one session accumulates the context of every area the plan touches. That both breaks a
 small-context model and makes the run expensive — cost grows with accumulated context, so N short sessions
-cost far less than one long one. 🔴 The saving only materialises when the user runs `/clear` between phases;
-the Phase 5 STOP message must say so.
+cost far less than one long one. 🔴 The saving only materialises when the user runs `/clear` between phases —
+so the Phase 5 message advises `--phase` + `/clear` only for a phase over `PHASE_BUDGET`; every other plan runs all phases in one go.
 
 ### 2.5.1 Design the breakdown
 
@@ -290,6 +290,9 @@ concerns, which phase owns it · any release/dependency ordering constraint.
 
 Path: `<vault>/80-ImplementPlan/YYYY-MM-DD-HHmm-<slug>.md`
 
+🔴 Every timestamp this command writes — the file name, `date:`, `approved_at:` — is the output of
+`date '+%Y-%m-%d %H:%M'` (file name: `date '+%Y-%m-%d-%H%M'`) run at that moment, never typed from memory.
+
 (slug = kebab-case, ≤ 5 words)
 
 ### 🔴 Language split — this command does BOTH in one run
@@ -298,7 +301,7 @@ The plan file is a vault document; the summary at the end is chat. They are **no
 
 | What | Language | Where |
 |---|---|---|
-| Prose written into the plan file (Problem, Task, Goals, Non-goals, Steps, Risks, Success Criteria …) | `$VAULT_LANG` | Phase 3 (this phase) |
+| Prose written into the plan file (Problem, Goals, Non-goals, Steps, Risks, Success Criteria …) | `$VAULT_LANG` | Phase 3 (this phase) |
 | Headings, frontmatter keys+values, paths, IDs (`FR-###`, `T###`), code, proof commands | English — always | Phase 3 |
 | Every sentence said to the user in chat — questions, progress notes between tool calls, the Phase 5 STOP message, the `## Output` summary | `$PROJECT_LANG` | whole run |
 
@@ -334,7 +337,7 @@ context_closed: true                        # ⬅ include ONLY on a phased plan 
                                             #    context_refs, so /ow-implement + delegation take that list as the whole
                                             #    read set and skip include-when resolution. Flat plan ⇒ drop this field
 source_fix: <"[[fix-log-slug]]" or none>   # set when /ow-plan fix:<slug> — /ow-implement closes this fix-log when the plan is done (#30)
-related_docs:
+related_docs:                               # every vault doc actually read (paths only)
   - <vault>/10-PRD/PRD-xxx.md
   - <vault>/20-Features/FEAT-xxx.md
   - <vault>/40-Functions/FN-xxx.md
@@ -347,28 +350,18 @@ risk_level: <low | medium | high>
 ## Problem
 <2-4 sentences of plain human prose in $VAULT_LANG: what the problem/gap is (symptom, why it
  hurts) → what outcome is wanted. A reader must understand "what is being fixed and why" without
- reading code — not a task list (tasks are below)>
-
-## Vault Context Read
-- <vault>/00-Index/IMPLEMENTATION-STATUS.md
-- <vault>/10-PRD/PRD-xxx.md (section: ...)
-- <vault>/20-Features/FEAT-xxx.md (FR-001, FR-002)
-- <vault>/40-Functions/FN-xxx.md
-- <vault>/70-Reference/REF-TechStack.md
-- <vault>/70-Reference/DesignSystem/DS-Components.md  ← if frontend/mobile
-
-## Task
-<clear one-paragraph task description>
+ reading code — not a task list (tasks are below). Also states the wanted outcome>
 
 ## Goals
-- [ ] Goal 1
-- [ ] Goal 2
+- Goal 1
+- Goal 2
 
 ## Non-goals
 - What this plan **will not** do
 
 ## Doc Gaps Found
 - (list vault inconsistencies found while reading here — /ow-implement fixes them first)
+- excluded by budget: <path> — <reason>   (one line per doc the Phase 1 budget left out)
 
 ## Affected Files
 - `path/to/file.ts:120-145 @ "funcName"` — <what changes> · [fact]
@@ -383,41 +376,36 @@ risk_level: <low | medium | high>
 ## Design System Compliance (if frontend/mobile)
 - [ ] Use tokens from `DS-Tokens.md` only (color/font/spacing)
 - [ ] Use components from `DS-Components.md` (Button, Input, etc.)
-- [ ] A new component needed → log it under "Design Additions" first
-- [ ] WCAG AA contrast passes in every state
-
-## Design Additions (if any)
-- <New component or token to add — triggers /ow-design before /ow-implement>
+- A new component needed → `/ow-design component <name>` before `/ow-implement` (a plain note — no box)
+- [ ] Colour pairs come from DS tokens that meet WCAG AA (`DS-Accessibility.md`)
 
 ## Test Plan
 - [ ] Unit/Widget that `/ow-implement` closes itself: <X>
 - [ ] Integration (in-process) for <Y>
 - process check (order/grep/orphan) → **not a checkbox** — resolve it into fact+proof in Implementation Steps
-- live-E2E (Playwright/Maestro/emulator/live backend) → **hand off to `/ow-test`** — never put it in as an implement done-gate checkbox (it bloats implement time)
+- → /ow-test: <journey> (ow-test)   ← live-E2E (Playwright/Maestro/emulator/live backend): a plain bullet, **no box** — never an implement done-gate (it bloats implement time)
 
 ## Success Criteria
-- [ ] <falsifiable observable outcome — e.g. "createMedicalRecord returns an id + DoctorName=null really persisted in the DB", "endpoint answers 200", "UI renders component Y"> — the safety net against a wrong step (check the result, not the process)
-- [ ] <criterion 2>
+- [ ] <falsifiable observable outcome — e.g. "createMedicalRecord returns an id + DoctorName=null really persisted in the DB", "endpoint answers 200"> (unit) — the safety net against a wrong step (check the result, not the process)
+- [ ] <criterion 2> (integration)
+- [ ] <criterion 3> (build)
+- <a criterion only a browser can prove — e.g. "UI renders component Y"> (ow-test)
 
-## Verification
-- map back to each Success Criterion with the real result
+Tag each criterion with its verifier: `(unit)` / `(integration)` / `(build)` get a box `/ow-implement` ticks.
+A `(ow-test)` criterion has no box — `/ow-test` records its proof in the plan.
 
 ## Risks
+<!-- write this section only when `risk_level` is medium or high — drop it for low -->
 - <risk 1> → mitigation: <plan>
 - <risk 2> → mitigation: <plan>
-
-## Approvals
-- [ ] Requested by: <user>
-- [ ] Reviewed by: <reviewer>
-- [ ] Approved (set status: approved before /ow-implement)
 ```
 
 ### Phased layout (only when Phase 2.5 produced phases)
 
 Everything above stays, with one change: `## Affected Files` · `## Implementation Steps` · `## Test Plan` ·
 `## Success Criteria` **move inside each phase** (they are per-phase work) and these sections take their place,
-inserted after `## Doc Gaps Found`. `## Design System Compliance` · `## Design Additions` · `## Verification` ·
-`## Risks` · `## Approvals` stay at the top level, covering the plan as a whole.
+inserted after `## Doc Gaps Found`. `## Design System Compliance` · `## Risks` (medium/high only) stay at the
+top level, covering the plan as a whole.
 
 ```markdown
 ## Shared Contract
@@ -443,7 +431,7 @@ inserted after `## Doc Gaps Found`. `## Design System Compliance` · `## Design 
 
 Order: P1 → P2 · per-phase `status` is `planning | in-progress | done`, moved by `/ow-implement`
 (`in-progress` is stamped when a phase starts — it is what marks "died mid-run, work in the tree")
-🔴 Run **one phase per session with `/clear` between them** — without `/clear` there is no token saving at all
+Run them all with `/ow-implement <path>` · only a phase over `PHASE_BUDGET` gets `--phase P1`, `/clear`, `--phase P2` …
 
 ### Phase P1 — api-patient-endpoints
 
@@ -467,10 +455,11 @@ N. [contract] Write back to `## Shared Contract`: every row whose `producer` is 
    (A phase that produces no row omits this step.)
 
 #### Test Plan
-- [ ] <the test layer this phase owns>
+- [ ] <the unit/integration layer this phase owns>
+- → /ow-test: <journey> (ow-test)   ← a plain bullet, no box
 
 #### Success Criteria
-- [ ] <observable, really checkable>
+- [ ] <observable, really checkable> (unit)   ← `(unit)` / `(integration)` / `(build)` get a box · a browser-only criterion is `- <criterion> (ow-test)` with no box
 - [ ] Every Shared Contract row with `producer` = this phase has `state: actual` and a non-empty `actual`
 
 ### Phase P2 — web-patient-list
@@ -509,20 +498,17 @@ During Phase 1, if you find:
 
 ## Phase 5 — STOP
 
-Show the plan file created + this message. The quoted text is the English source — translate every line into `$PROJECT_LANG` (paths, commands and `status:` values stay verbatim; never paste it as English):
+Show the `## Output` summary (at most 10 lines: problem, what changes, phases if any, a risk line when `risk_level` is medium or high; the phased and worktree blocks below sit outside this cap), ending with this message. The quoted text is the English source — translate every line into `$PROJECT_LANG` (paths, commands and `status:` values stay verbatim; never paste it as English):
 
 > Plan created: `<vault>/80-ImplementPlan/2026-05-20-1430-add-search-feature.md`
 >
-> Next:
-> - Review the plan + set `status: approved` in the frontmatter
-> - Change/extend → `/ow-plan <task> --revise <path>`
-> - Once approved → `/ow-implement <path>`
+> Reply `approve` to approve this plan · to change it, say what (→ `/ow-plan <task> --revise <path>`)
+
+**Approving** — only the user's own reply in this session approving this plan counts. On that reply, make a surgical Edit of the plan frontmatter to `status: approved` · `approved_by: user (chat)` · `approved_at:` = `date '+%Y-%m-%d %H:%M'` run on that reply, then answer with the next command — `/ow-implement <path>`, in a new session — and stop. No reply, an ambiguous reply, or a reply about something else is not approval; `/ow-plan` never starts `/ow-implement` itself.
 
 The plan is phased (Phase 2.5) → add, with the phase table and its `est tokens` per phase:
 > 📐 **N phases** — P1 → P2 → … · coverage proof: the file→phase mapping (proves nothing is orphaned or duplicated)
-> 🔴 Run **one phase per session and `/clear` between them** — without `/clear` there is no token saving at all:
-> `/ow-implement <path> --phase P1`, then `/clear`, then `--phase P2` …
-> All phases at once (small plan, or a large context) → `/ow-implement <path>` with no flag
+> No phase over `PHASE_BUDGET` → run them all with `/ow-implement <path>` — no flag, no questions. Otherwise → `/ow-implement <path> --phase P1`, then `/clear`, then `--phase P2` … (without `/clear` there is no token saving at all)
 > Warn here — and only here — if a phase is over `PHASE_BUDGET` or the count is over `MAX_PHASES`
 
 If the plan has `worktree: true` → add a line:
@@ -537,20 +523,19 @@ At the end of /ow-plan answer with **short, quick-to-read bullets** in the confi
 
 - **Problem** — 1 line: what is broken/missing (taken from the plan's `## Problem` — translate it into `$PROJECT_LANG`; the plan file itself stays `$VAULT_LANG`)
 - **What gets fixed** — 1-3 bullets: goal + the main changes (files/areas)
-- **Plan file** — the path created
 - **Phases** — only when the plan is phased: `P1 → P2 → …` with area + `est tokens` each, and any warning from 2.5.2; flat plan → drop the bullet
 - **Risks / good to know** — only when there are any (`risk_level` ≥ medium, or a doc gap found); none → drop the bullet
-- **Next** — review + set `status: approved` → `/ow-implement <path>` (phased → `--phase P1`, `/clear`, `--phase P2`, …)
+- **Next** — reply `approve`, then `/ow-implement <path>` in a new session (a phased plan with a phase over `PHASE_BUDGET` → `/ow-implement <path> --phase P1`, `/clear`, `--phase P2`, …)
 
-The doc list and plan path already live in the plan file — never repeat them in the summary.
+Keep the summary at most 10 lines (the phased and worktree blocks of Phase 5 sit outside the cap). The plan path appears once, in the Phase 5 message above, and the doc list lives in the plan file — never repeat either in the summary.
 
 ## Never
 
 - Never touch code, never run build/test/lint in /ow-plan
 - Never spawn a subagent — the plan file is text only
-- Never set `status: approved` on the user's behalf — the user must do it. The one exception is **`/ow-auto`**, which
+- Never set `status: approved` on the user's behalf — only the user's own reply in this session approving this plan sets it (Phase 5); no reply, an ambiguous reply, or a reply about something else is not approval. The one exception is **`/ow-auto`**, which
   approves under the grant the user gave by running it and stamps `approved_by: ow-auto` + `auto_brief:` into the
-  frontmatter (`ow-auto.md` Phase 3 step 2) — `/ow-plan` itself still never writes `approved`
+  frontmatter (`ow-auto.md` Phase 3 step 2) — `/ow-plan` itself writes `approved` only on the user's own reply (Phase 5)
 - Never add Implementation Steps outside the requested scope (no speculative abstraction/refactor)
 - Success Criteria must be observable outcomes that can really be checked, not broad goals
 - Never leave a step whose action is a bare "check/confirm/grep" for implement to investigate — resolve it at plan time → write it as fact+proof

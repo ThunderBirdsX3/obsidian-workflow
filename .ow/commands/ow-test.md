@@ -65,6 +65,8 @@ emulator/simulator in Phase 2 and adds the Maestro flow to the Phase 3 tasks. No
 | path under `90-TestPlan/` | **Test Plan** — Phase T |
 | path under `80-ImplementPlan/` | **Plan scope** — Phase 2 → 3 (infer target from the plan) |
 
+🔴 Plan scope: the scenarios must cover every `(ow-test)` Success Criterion and every `→ /ow-test:` bullet in the plan, phase sections included. One that cannot run is reported BLOCKED / NOT_RUN with its reason — never dropped silently.
+
 ## Phase 0.5 — Resolve worktree + WORK_ROOT (always runs — #31)
 
 🔴 **Always runs, in every mode** — sets the `WORK_ROOT` that Phase 1/2/3/7 use. normal mode → `WT_MODE=off`, `WORK_ROOT=$MAIN_ROOT`
@@ -175,6 +177,8 @@ resolved vars exactly as `/ow-implement` Phase 3 — `VAULT_ABS`, `TEST_DIR`,
 multi-repo). The block is inherited unchanged — this command defines no language of its own;
 test-runner reports results back in `LANG` and never writes vault docs itself.
 
+Web / mobile checks follow the fixed order in task 1 below (project E2E first, then one MCP run-code script).
+
 Prompt — delegated mode. 🔴 **Inline: tasks 1-7 are your own list** (same gates; the
 `Working dir` / `READY_URL` values are already resolved in your own context):
 ```
@@ -192,7 +196,16 @@ Serve cmd (if a spin is needed): <serve cmd from the project — the runner capt
 Vault context: $TEST_DIR (read what is relevant)
 
 Tasks:
-1. Run smoke tests for the changed surface
+1. Run smoke tests for the changed surface — web / mobile checks in this order (fewest model turns first):
+   a. the project's own test/E2E command for the changed surface (`npm run e2e`, `npx playwright test <spec>`,
+      `maestro test <flow>` — Maestro needs `--e2e`)
+   b. web only; none of (a) → the Playwright MCP's run-code tool (`browser_run_code_unsafe`, or the name the MCP version uses):
+      one call runs a multi-step script, and the MCP ships its own Playwright and browser, so nothing is
+      installed in the project
+   c. step-by-step MCP actions only for what a script cannot judge (a screen read by eye, a flow that needs
+      a decision mid-way)
+   The visible-menu rule (Phase 5) applies to scripts too.
+   🔴 Never install Playwright, a browser or any package during `/ow-test`.
 2. Capture console + network output into the scratch run dir (never stream long logs into context)
 3. Quote the failing lines verbatim in the report — never paraphrase a failure into a pass
 4. Detect PII/secrets in anything you quote → mask before it reaches the report
@@ -268,6 +281,17 @@ Test Plan mode (Phase T) → write the full execution report into the vault unde
 
 Prose written into the vault is in `$VAULT_LANG` (Phase 0); headings and frontmatter stay English.
 
+## Phase 6.5 — Record the result in the plan (plan-scope mode only)
+
+`/ow-test <plan>` → after the Phase 6 report, add **one** line to the plan with a surgical Edit, under its
+`## Implementation Result` (create that heading at the end of the file if absent):
+
+`- Smoke test (/ow-test, YYYY-MM-DD HH:mm): PASS <n>/<total> · FAIL <n> · BLOCKED <n> — <target>`
+
+The time is `date '+%Y-%m-%d %H:%M'` run at that moment, never typed from memory. Counts exactly as the run reported them, PII masked. The plan lives in the **MAIN_ROOT** vault (vault
+writes never go inside a worktree). It never changes `status` and never ticks a box — closing the plan is
+`/ow-implement` 6.2. Every other mode adds no Smoke test line (Phase T still writes its `90-TestPlan/` report).
+
 ## Phase 7 — Auto-merge on PASS (worktree mode only — #31)
 
 Runs only when **`WT_MODE=on` AND every scenario PASS AND no `--no-merge`** → merge the feature branch back into the base branch
@@ -290,6 +314,7 @@ At the end of /ow-test answer with **short bullets, quick to read**, in the conf
 
 - **What was done** — the surface tested + result (status taxonomy: PASS/FAIL/BLOCKED count)
 - **Results** — pass/fail counts as the run reported them
+- **Plan** — plan-scope mode: the Smoke test line written to `<plan>`
 - **Risks / open** — only if any: flaky tests · blocked scenarios · suggested fix-log
 - **Next** — worktree mode: merge result → `/ow-git --bump` (PASS) or "worktree kept at … fix on there" (FAIL/conflict)
 
@@ -302,6 +327,8 @@ At the end of /ow-test answer with **short bullets, quick to read**, in the conf
 - Never run tests against a production env
 - Never claim PASS if the test did not actually run — mark `NOT_RUN_RISK` instead
 - Never write unmasked PII into the vault or the report
+- 🔴 Never flip the plan's `status` or tick its boxes — /ow-test adds one Smoke test line (6.5)
+- 🔴 Never install Playwright, a browser or any package to run a check
 - 🔴 `/ow-test` **never push**es, in any mode — pushing is `/ow-git`'s job
 - 🔴 **Never auto-merge if any scenario is FAIL/BLOCKED** or `--no-merge` is set — keep the worktree to fix on (this gate decides whether Phase 7 runs at all)
 - 🔴 Merging a worktree back → the bans that protect the user's parallel uncommitted work and the unpushed submodule commits (no force-merge, no delete before the gate passes) live in `_shared/worktree-merge.md` — Phase 7 reads it **before** touching git, never from memory

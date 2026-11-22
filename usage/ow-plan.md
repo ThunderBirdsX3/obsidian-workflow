@@ -23,14 +23,14 @@ docs/obsidian-vault/80-ImplementPlan/2026-05-21-1430-add-search-feature.md
 
 ---
 tags: [type/plan]
-status: planning            ← user ต้อง set เป็น approved ก่อน /ow-implement
+status: planning            ← ตอบ `approve` ใน chat → /ow-plan ใส่ approved ให้ก่อน /ow-implement
 submodule_target: web
 subagent_target: frontend
 related_docs: [...]
 ---
 
 # เพิ่ม search สำหรับ book inventory
-## Vault Context Read · Task · Goals · Affected Files · Steps · DS Compliance · Test Plan · Risks · Approvals
+## Goals · Affected Files · Steps · DS Compliance · Test Plan · Success Criteria (· Risks เมื่อ risk_level medium/high)
 ```
 
 ## รูปแบบเต็ม
@@ -59,13 +59,13 @@ related_docs: [...]
 
 ## ขั้นตอนภายใน (Phase summary)
 
-1. **Phase 1** — อ่าน vault context (บังคับ แต่มี budget): `IMPLEMENTATION-STATUS` + **FR coverage check** (warn orphan/underspecified FR) → **เลือก read set ก่อนเปิด** (ALWAYS = PRD/FEAT/FN ที่ task ระบุ + code/test เดิม · SRS ที่แยกไฟล์ ⇒ hub + เฉพาะโมดูลที่งานแตะ · CONDITIONAL = ตามตาราง include-when ใน `.ow/commands/_shared/context-refs.md` · DS docs ถ้าเป็น frontend/mobile) → วัดด้วย `est_read_set()` เทียบ `BUDGET` → doc ที่เข้า set อ่านเต็มเสมอ, doc ที่ถูกตัดต้อง list ไว้ใน plan พร้อมเหตุผล
+1. **Phase 1** — อ่าน vault context (บังคับ แต่มี budget): `IMPLEMENTATION-STATUS` + **FR coverage check** (warn orphan/underspecified FR) → **เลือก read set ก่อนเปิด** (ALWAYS = PRD/FEAT/FN ที่ task ระบุ + code/test เดิม · SRS ที่แยกไฟล์ ⇒ hub + เฉพาะโมดูลที่งานแตะ · CONDITIONAL = ตามตาราง include-when ใน `.ow/commands/_shared/context-refs.md` · DS docs ถ้าเป็น frontend/mobile) → วัดด้วย `est_read_set()` เทียบ `BUDGET` → doc ที่เข้า set อ่านเต็มเสมอ และลงใน `related_docs:` · doc ที่ถูกตัดเพราะ budget เป็นบรรทัด `excluded by budget:` ใน Doc Gaps Found
 2. **Phase 2** — Clarifying questions **1 batch** (ถามที่ vault ไม่ตอบเท่านั้น)
    - **Phase 2.5** — แตกงานเป็น **phase** เมื่อคุ้ม (หลาย area / ใหญ่เกิน 1 session): 1 phase = 1 area = 1 เรื่องที่จบในตัว → ดึงค่าที่ใช้ข้าม phase ออกมาเป็น `## Shared Contract` (producer/consumers) → เรียงลำดับตาม `depends_on` → วัด read set ต่อ phase เทียบ `PHASE_BUDGET` (เกิน = แตกต่อ, เล็กกว่า `FLOOR` = ยุบรวม) · งานเล็กพอ **ห้ามแตก**
-3. **Phase 3** — เขียน plan file ตาม template (Vault Context Read, Task, Goals, Non-goals, Affected Files, Steps, DS Compliance, Test Plan, Risks, Approvals)
+3. **Phase 3** — เขียน plan file ตาม template (Goals, Non-goals, Affected Files, Steps, DS Compliance, Test Plan, Success Criteria, Risks เฉพาะ `risk_level` medium/high)
    - **Phase 3.5** (fix-source mode เท่านั้น) — เขียน `related_plan: "[[<plan-slug>]]"` กลับลง fix-log (back-link สองทาง)
 4. **Phase 4** — Doc gap detection (จด ใน `Doc Gaps Found` — implement จะ fix ก่อน)
-5. **Phase 5** — **STOP** — แสดง path + ขอ user review + set `status: approved`
+5. **Phase 5** — **STOP** — สรุปไม่เกิน 10 บรรทัด + path · user ตอบ `approve` ใน chat นี้ → `/ow-plan` ใส่ `status: approved` · `approved_by: user (chat)` · `approved_at` ให้ (ถ้าอยากแก้ → บอกว่าแก้อะไร หรือ `--revise`) · `/ow-plan` ไม่เริ่ม `/ow-implement` — ผู้ใช้รันเองใน session ใหม่
 
 ## Output ที่ได้
 
@@ -83,27 +83,23 @@ Frontmatter:
   worktree: true                          ← เฉพาะ --worktree: implement+test ทำงานใน git worktree แยก (#31)
   source_fix: "[[fix-log-slug]]" | none   ← set เมื่อ fix:<slug> (/ow-implement ปิด fix-log นี้ตอน done)
   context_closed: true                    ← เฉพาะ plan ที่แตก phase: ทุก phase มี context_refs ของตัวเอง → implement/delegation ใช้ list นั้นเป็น read set ทั้งหมด
-  related_docs: [list]
+  related_docs: [list]                    ← ทุก doc ที่อ่านจริง (path เท่านั้น)
+  approved_by / approved_at               ← ใส่ตอน user ตอบ `approve` (approved_by: user (chat))
   estimate_hours: <number>
   risk_level: low | medium | high
 
 Body:
-  ## Vault Context Read       ← ทุก doc ที่อ่าน + doc ที่ budget ตัดออก พร้อมเหตุผล
-  ## Task                     ← clear one-paragraph
-  ## Goals / Non-goals
-  ## Doc Gaps Found           ← จะ fix ก่อน implement
+  ## Goals / Non-goals        ← Goals เป็น bullet ธรรมดา (ไม่มี checkbox)
+  ## Doc Gaps Found           ← จะ fix ก่อน implement · doc ที่ budget ตัด = บรรทัด `excluded by budget:`
   ## Shared Contract          ← เฉพาะ plan ที่แตก phase: ค่าที่ใช้ร่วมข้าม phase (R1/R2…) + producer/consumers + planned|actual
   ## Phases                   ← เฉพาะ plan ที่แตก phase: ตาราง id · name · area · depends_on · est tokens · status
   ### Phase P1 — <name>       ← context_refs + contract keys + owns docs แล้วตามด้วย 4 หัวข้อข้างล่างของ phase นั้น
   ## Affected Files           ← plan ที่แตก phase: ย้ายไปอยู่ใต้ `### Phase Pn` (เป็น `#### Affected Files`)
   ## Implementation Steps     ← 5-15 steps medium / 3-5 small · plan ที่แตก phase: 3-8 steps ต่อ phase
   ## Design System Compliance ← ถ้า frontend/mobile
-  ## Design Additions          ← component ใหม่ที่ต้อง /ow-design ก่อน
   ## Test Plan
-  ## Success Criteria         ← observable outcomes ที่ตรวจได้จริง
-  ## Verification             ← map กลับไปยัง success criteria แต่ละข้อ
-  ## Risks
-  ## Approvals
+  ## Success Criteria         ← observable outcomes ติดป้าย (unit) / (integration) / (build) / (ow-test) · (ow-test) ไม่มี checkbox — /ow-test เป็นเจ้าของ
+  ## Risks                    ← มีเฉพาะ risk_level: medium | high
 ```
 
 ## Workflow ที่นิยม
@@ -113,8 +109,8 @@ Body:
 1. /ow-new                    ← PRD/SRS/Tech
 2. /ow-clarify                 ← resolve ambiguity
 3. /ow-plan FEAT-Checkout      ← คุณอยู่ที่นี่
-4. [user review + set status: approved ใน frontmatter]
-5. /ow-implement <path>
+4. [ตอบ `approve` ใน chat นี้ — /ow-plan ใส่ status: approved ให้ · แก้ frontmatter เองก็ยังได้]
+5. /ow-implement <path>      ← session ใหม่
 ```
 
 ตัวอย่าง 2: revise plan ที่ค้าง
@@ -129,14 +125,14 @@ Body:
 ```
 1. /ow-fix "search ค้าง"             ← สร้าง fix-log
 2. /ow-plan fix:<slug>                ← mini-plan link ไปยัง fix-log
-3. [approve]
+3. [ตอบ `approve`]
 4. /ow-implement <plan>
 ```
 
 ตัวอย่าง 4: worktree flow (กัน main tree, auto-merge ตอน test PASS — #31)
 ```
 1. /ow-plan "เพิ่ม search" --worktree   ← frontmatter worktree: true
-2. [approve]
+2. [ตอบ `approve`]
 3. /ow-implement <plan>                  ← build ใน worktrees/plan-<slug>/ (main tree ไม่ถูกแตะ) + commit
 4. /ow-test <plan>                       ← test ใน worktree → PASS = auto-merge กลับ branch (local) + cleanup
 5. /ow-git --bump                        ← push (— /ow-test ไม่ push)
@@ -146,10 +142,10 @@ Body:
 
 - 🚫 **ห้ามแตะโค้ด ห้ามรัน build/test/lint** — `/ow-plan` text-only
 - 🚫 **ห้าม spawn subagent** — plan file เท่านั้น
-- 🚫 **ห้าม set `status: approved` ให้ user** — user ต้องทำเอง (gate manual)
+- 🚫 **ห้าม set `status: approved` เอง** — มีผลเฉพาะตอน user ตอบ `approve` ใน session นี้ (หรือแก้ frontmatter เอง) · ตอบอย่างอื่น/คลุมเครือ = ไม่ approve
 - ⚠️ Vault-first: ถ้า vault ตอบอยู่แล้ว → ห้ามถาม user
 - ⚠️ คำถามใน Phase 2 ต้อง **batch** (ต่างจาก `/ow-clarify` ที่ 1-at-a-time)
-- 💡 ถ้า plan มี Design Additions → ต้องรัน `/ow-design component <name>` ก่อน `/ow-implement`
+- 💡 component ที่ DS ยังไม่มี → plan จดเป็นหมายเหตุใต้ Design System Compliance → ต้องรัน `/ow-design component <name>` ก่อน `/ow-implement`
 - 💡 Doc Gaps ที่ list ใน plan → `/ow-implement` Phase 2 จะแก้ให้ก่อน (inline หรือ `docs` subagent ถ้ารายการใหญ่)
 
 ## Related
@@ -168,4 +164,4 @@ A: obsidian-workflow แยก plan/implement เคร่งครัด — pl
 A: ไม่แนะนำ — `/ow-implement` ต้องการ plan file ที่ `status: approved` ถ้าจริงๆ ต้องการ → ใช้ `/ow-implement --from-fix` (เฉพาะ P3 polish)
 
 **Q: ต้อง read full doc หรือ skim ก็ได้?**
-A: **อ่านเต็ม** — Phase 1 บังคับ list ทุก doc ที่อ่านใน plan file (เป็นหลักฐาน)
+A: **อ่านเต็ม** — Phase 1 บังคับ list ทุก doc ที่อ่านลง `related_docs:` ใน plan file (เป็นหลักฐาน)

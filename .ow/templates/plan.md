@@ -20,13 +20,13 @@ submodule_target: <api | web | mobile | docs | all>
 subagent_target: <backend | frontend | mobile | docs | design | all>   # the AREA whose rules/gates apply — /ow-implement decides inline vs delegated itself
 source_fix: <"[[fix-log-slug]]" or none>   # set when escalated from /ow-fix (/ow-plan fix:<slug>) — /ow-implement closes this fix-log when done (#30)
 related_feature: "[[FEAT-<slug>]]"
-related_docs:
-  - "[[PRD-<slug>]]"
-  - "[[SRS-<slug>]]"                # split SRS → the module(s) this plan covers: "[[SRS-<slug>-<module>]]"
-  - "[[FN-Web-<slug>]]"
-  - "[[FN-API-<slug>]]"
-  - "[[REF-TechStack]]"
-  - "[[REF-AuthorizationMatrix]]"
+related_docs:                         # every vault doc actually read (paths only)
+  - <vault>/10-PRD/PRD-<slug>.md
+  - <vault>/10-PRD/SRS-<slug>.md      # split SRS → the module(s) this plan covers: SRS-<slug>-<module>.md
+  - <vault>/40-Functions/FN-Web-<slug>.md
+  - <vault>/40-Functions/FN-API-<slug>.md
+  - <vault>/70-Reference/REF-TechStack.md
+  - <vault>/70-Reference/REF-AuthorizationMatrix.md
 covers_user_stories: [US1, US2]       # which US# from this feature the plan covers
 covers_frs: [FR-001, FR-005, FR-010]  # FR-### the tasks cover
 estimate_hours: <number>
@@ -37,35 +37,13 @@ risk_level: <low | medium | high>     # used to decide reviewer + smoke test dep
 
 <!-- Tip: the filename slug = kebab-case ≤ 5 words; e.g. `add-checkout-mvp.md` -->
 
-## A. Vault Context Read
-
-<!-- Tip: list every doc read during /ow-plan Phase 1 — it is what shows "vault-first" really happened -->
-<!-- Every doc in this list must be read in full, not skimmed -->
-
-- [x] `docs/00-Index/IMPLEMENTATION-STATUS.md`
-- [x] `docs/10-PRD/PRD-library-book-tracker.md` (section: User Stories US1, US2)
-- [x] `docs/20-Features/FEAT-checkout.md` (covers FR-001, FR-005, FR-010)
-- [x] `docs/40-Functions/FN-Web-Lib-Checkout.md`
-- [x] `docs/40-Functions/FN-API-Loan-Create.md`
-- [x] `docs/70-Reference/REF-TechStack.md`
-- [x] `docs/70-Reference/REF-AuthorizationMatrix.md`
-- [x] `docs/70-Reference/DesignSystem/DS-Tokens.md`
-- [x] `docs/70-Reference/DesignSystem/DS-Components.md`
-- [ ] `docs/60-Flows/FLOW-checkout-counter.md` _does not exist yet — flagged under Doc Gaps_
-
-## B. Task
-
-<!-- Tip: 1 paragraph; answer what + why in the first sentence -->
-
-Implement the Member checkout flow (US1 + US2 from FEAT-checkout): the librarian at the counter scans the member barcode + book barcode → presses confirm → the system creates the loan record + updates book status atomically + shows due_date; includes the member loan history page so a member can see their own current loans
-
 ## C. Goals / Non-goals
 
 **Goals:**
-- [ ] US1 works end-to-end (FR-001 acceptance Given/When/Then pass)
-- [ ] US2 works end-to-end (FR-005 pass)
-- [ ] Test coverage ≥ 80% for the loan service
-- [ ] Performance: checkout p95 ≤ 500 ms in a 200-concurrent load test
+- US1 works end-to-end (FR-001 acceptance Given/When/Then pass)
+- US2 works end-to-end (FR-005 pass)
+- Test coverage ≥ 80% for the loan service
+- Performance: checkout p95 ≤ 500 ms in a 200-concurrent load test
 
 **Non-goals:**
 - US3 (override loan limit) — next plan
@@ -93,14 +71,14 @@ Implement the Member checkout flow (US1 + US2 from FEAT-checkout): the librarian
 <!-- Tip: GATE before implementation starts — every rule must be PASS or JUSTIFIED -->
 
 **Source rules:**
-- the vault docs listed in section A — the plan must not contradict them
+- the vault docs listed in `related_docs:` — the plan must not contradict them
 - `.ow/rules/<area>.md` — whatever `ow-paths.sh --rules <area>` resolved for this task
 - `docs/00-Index/CONSTITUTION.md` _(if exists; project-specific principles)_
 
 | # | Rule / Principle                                          | Status     | Note                                                                          |
 |---|-----------------------------------------------------------|------------|-------------------------------------------------------------------------------|
 | 1 | Plan/Implement stay separate (/ow-plan never edits code) | PASS       | this plan file touches no code                                                |
-| 2 | Vault-first (read docs/ before planning)                  | PASS       | see section A — all 9 docs read                                               |
+| 2 | Vault-first (read docs/ before planning)                  | PASS       | see `related_docs:` — all 6 docs read                                               |
 | 3 | No fake results (never invent a result)                   | PASS       | uses real /ow-test + /ow-verify                                             |
 | 4 | Single source of truth (FR-### linked in the SRS only)    | PASS       | section H uses FR-### from SRS-library-book-tracker                            |
 | 5 | Test before claim done                                    | PASS       | section J lists tests for every story                                         |
@@ -125,6 +103,7 @@ Implement the Member checkout flow (US1 + US2 from FEAT-checkout): the librarian
 
 - **FLOW-checkout-counter.md** does not exist yet (referenced by FEAT-checkout § UX Flows) → run /ow-doc flow before /ow-implement
 - **FR-005 (loan history)** in the SRS has an incomplete Given/When/Then — needs the "empty state" and "pagination > 50 items" scenarios added
+- excluded by budget: <vault>/70-Reference/DesignSystem/DS-Patterns.md — over the Phase 1 token budget (not a gap — read it if the task needs it)
 
 ## H. Implementation Steps
 
@@ -171,7 +150,7 @@ Implement the Member checkout flow (US1 + US2 from FEAT-checkout): the librarian
 - [ ] T030 [P] [FND] add structured logging to loan-service (events: `loan.created`, `loan.create_failed`) — file: `apps/api/src/services/loan-service.ts`
 - [ ] T031 [P] [FND] add Datadog APM trace + custom metric `loan.checkout.duration_ms` — file: `apps/api/src/services/loan-service.ts`
 - [ ] T032 [FND] run the load test (k6) — 200 concurrent → confirm p95 ≤ 500 ms — record the measured p95
-- [ ] T033 [FND] axe-core CI gate passes on both new pages — record the CI run URL
+- T033 [FND] axe-core CI gate passes on both new pages — record the CI run URL (human step: `/ow-implement` never pushes)
 
 ## I. Design System Compliance
 
@@ -181,14 +160,10 @@ Implement the Member checkout flow (US1 + US2 from FEAT-checkout): the librarian
 - [ ] use `color.primary`, `color.danger`, `color.text.muted` (no hardcoded hex)
 - [ ] use `space.4`, `space.6` (no hardcoded px)
 - [ ] use components: `Button`, `Input`, `Toast`, `Modal`, `Card`, `Badge`, `EmptyState`, `Pagination`
-- [ ] **New components needed:** _none_ (if there are any → list them under "Design Additions" + run /ow-design first)
-- [ ] WCAG AA contrast passes in every state (default/hover/focus/disabled)
+- **New components needed:** _none_ (if there are any → run `/ow-design component <name>` before `/ow-implement`)
+- [ ] Colour pairs come from DS tokens that meet WCAG AA (`DS-Accessibility.md`)
 - [ ] Keyboard nav: Tab → CheckoutForm fields → Confirm button (focus visible)
 - [ ] Screen reader: `aria-label` on the barcode input + result toast `aria-live="polite"`
-
-### Design Additions (if any)
-
-_None — the existing components cover everything_
 
 ## J. Test Plan
 
@@ -199,34 +174,20 @@ _None — the existing components cover everything_
 **US1 — Checkout** ([[TP-FEAT-checkout#US1]])
 - [ ] Unit: `LoanService.create()` — 3 scenarios (happy / loan limit / book unavailable)
 - [ ] Integration: POST `/api/loans` — 4 scenarios (including the race condition test)
-- [ ] E2E (Playwright): librarian login → scan → confirm → see due_date
-- [ ] Manual: barcode scanner on a real device (HID input ≤ 50ms buffer)
+- → /ow-test: librarian login → scan → confirm → see due_date (ow-test)
+- Manual: barcode scanner on a real device (HID input ≤ 50ms buffer)
 
 **US2 — Loan history** ([[TP-FEAT-checkout#US2]])
 - [ ] Unit: `LoanService.listByMember()` — pagination + empty
 - [ ] Integration: GET `/api/members/:id/loans` — RBAC (member ↔ librarian)
-- [ ] E2E: member login → `/my-loans` → see list + pagination
-- [ ] A11y: NVDA + VoiceOver navigation
+- → /ow-test: member login → `/my-loans` → see list + pagination (ow-test)
+- A11y: NVDA + VoiceOver navigation (manual)
 
 ### Cross-cutting / Non-functional
 
-- [ ] Load test: k6 → 200 concurrent checkouts, p95 ≤ 500 ms (NFR-001)
-- [ ] Security: /ow-secure — no secret/PII leak in the logs
-- [ ] A11y: axe-core passes with 0 violations on both new pages
-
-## K. Verification Checklist
-
-<!-- Tip: /ow-verify reads this checklist and checks each item against a real run -->
-
-- [ ] every task in section H is `[x]`
-- [ ] every Given/When/Then acceptance for US1 + US2 passes (link the test result)
-- [ ] Test coverage ≥ 80% for `loan-service.ts` (link the coverage report)
-- [ ] Load test meets the NFR-001 threshold (link the k6 report)
-- [ ] /ow-secure passes (link the report)
-- [ ] axe-core 0 violations (link the CI run)
-- [ ] /ow-test --since <ref> fully passes
-- [ ] Doc updated: FEAT-checkout § Implementation Status, IMPLEMENTATION-STATUS.md
-- [ ] Coverage Summary (from /ow-plan Phase 1 FR coverage check): FR-001, FR-005, FR-010 → mapped to this plan's T###
+- Load test: k6 → 200 concurrent checkouts, p95 ≤ 500 ms (NFR-001)
+- Security: /ow-secure — no secret/PII leak in the logs
+- → /ow-test: axe-core passes with 0 violations on both new pages (ow-test)
 
 ## L. Risks / Open Questions
 
@@ -234,17 +195,6 @@ _None — the existing components cover everything_
 - **R2** — barcode scanner buffer timing → mitigation: 50ms debounce window + manual real-device test
 - **R3** — `listByMember` performance when a member has > 1000 loans → mitigation: index + cursor pagination (not offset)
 - **OQ1** — a member viewing "their own" loans — should we check both the JWT user_id and the URL `:id` match? → the plan currently uses JWT-only (see T022) — confirm?
-
-## M. Approvals
-
-| Role             | Name        | Status              | Date       |
-|------------------|-------------|---------------------|------------|
-| Requested by     | <user>      | requested           | YYYY-MM-DD |
-| Tech reviewer    | <reviewer>  | pending             | —          |
-| Product owner    | <owner>     | pending             | —          |
-| Approved         |             | _set status above_  | —          |
-
-> Once every row = approved → set frontmatter `status: approved` → /ow-implement is ready to run
 
 ---
 
@@ -261,10 +211,10 @@ _None — the existing components cover everything_
 
 ## O. Pipeline trace
 
-- **Understand**: Phase 1 vault read (section A — 9 docs)
+- **Understand**: Phase 1 vault read (`related_docs:` — 6 docs)
 - **Plan**: /ow-plan creates this file + (optional) /ow-clarify
 - **Execute**: /ow-implement runs the plan under the area named by `subagent_target` — inline, or delegated to that subagent when the work earns it
-- **Verify**: /ow-test + /ow-verify use section K
+- **Verify**: /ow-test + /ow-verify read the Success Criteria
 - **Handoff**: /ow-verify issues the HOR + updates IMPLEMENTATION-STATUS
 
 ## P. Post-run notes (filled in after /ow-implement)
@@ -274,5 +224,5 @@ _None — the existing components cover everything_
 - **Rule files applied** — _filled in after execution_
 - **Pipeline trace** — see section O (updated after execution)
 - **Commands run** — _filled in after execution_
-- **Verification** — link to section K + the commands actually run
+- **Verification** — the Success Criteria results + the commands actually run
 - **Limitations / Risks / Next steps** — see section L + next plan suggestion

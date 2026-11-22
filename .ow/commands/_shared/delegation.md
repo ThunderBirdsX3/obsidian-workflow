@@ -200,6 +200,6 @@ The next chunk spawns **only after the previous one closes** (never parallel —
 ```
 🔴 Phased plan → the phase id leads the line (`P2 chunk 2/4 · …`): without it the 1.2 resume gate reads P1's
 chunks as P2's and skips real work, and `/ow-plan --revise` cannot tell which phase the marker protects
-🔴 Write `- [x]` **only**, never `- [ ]` → the Phase 6.0 gate (`grep -c "- [ ]"` must = 0) is unaffected
+🔴 Write `- [x]` **only**, never `- [ ]` → the Phase 6.0 gate (`open_boxes` must = 0) is unaffected
 🔴 Always write to the plan in `$VAULT_ABS` (MAIN_ROOT) — worktree mode must never write `docs/` inside the worktree
 🔴 Chunks do not commit — worktree mode commits once at Phase 6.4; scope isolation (rule 5) is enforced per chunk

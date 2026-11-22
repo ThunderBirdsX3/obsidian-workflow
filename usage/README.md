@@ -69,7 +69,7 @@
 4. /ow-design init                         ← (optional) bootstrap design system
 4b. /ow-agent suggest → create <name>       ← (optional) agent เฉพาะทางที่ stack นี้ต้องการจริง
 5. /ow-plan FEAT-X                         ← research vault + plan file
-6. [user review plan, set status: approved ใน frontmatter]
+6. [ตอบ `approve` ใน chat ของ /ow-plan — /ow-plan ใส่ status: approved ให้]
 7. /ow-implement docs/...                  ← execute (inline/subagent ตามงาน) + รัน build/test จริง
 8. /ow-test                                ← smoke test ส่วนที่แก้
 9. /ow-secure                              ← pre-flight scan

@@ -38,7 +38,7 @@ vault_path: docs/obsidian-vault
 # - `source`  = where /ow-sync pulls from
 # - `last_synced` = updated by /ow-sync Phase 6 + scripts/upgrade.sh
 ow:
-  version: "2.5.0"
+  version: "2.6.0"
   source: "https://github.com/ThunderBirdsX3/obsidian-workflow"
   last_synced: "2026-09-10"
 
@@ -89,12 +89,6 @@ commands:
     ow-secure: opus                    # a missed secret/PII leak ships to a remote
     ow-implement: sonnet
     ow-fix: sonnet
-    ow-fix-issue: sonnet
-    ow-reverse-engineer: sonnet
-    ow-clarify: sonnet
-    ow-checklist: sonnet
-    ow-new: sonnet
-    ow-design: sonnet
 
 # Submodules (used by /ow-git and /ow-implement)
 # Leave empty for monorepo / single-codebase projects
