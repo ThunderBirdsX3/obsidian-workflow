@@ -1,7 +1,7 @@
 # `_shared/git-sync.md` — sync with origin before commit/push (multi-person)
 
-Read this **only when a sync actually runs** — `/ow-git` Phase 2.5, Phase 6, Phase 7.
-`--status` / `--switch-only` / `--no-sync` / `git.auto_sync: false` ⇒ nothing here applies.
+Reference for `scripts/ow-git-sync.sh`. `/ow-git` handles exit 0/3/4/5 inline, so a clean sync
+never opens this file — read it only for an unexpected exit code or the conflict-class table.
 
 Shared-branch teams hit three failures that a single-person repo never sees: a push rejected
 because a teammate pushed first, two people bumping to the same version, and a branch cut from a

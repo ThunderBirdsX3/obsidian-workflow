@@ -67,6 +67,7 @@ figma  [read-only]  skipped
 2.6. **Phase 2.6** — prose ใน vault doc ที่ยังชน → AI merge ตาม plan/fix-log ของทั้งสองฝั่ง ผ่าน gate แล้ว `rebase --continue` ให้; ไม่แน่ใจหรือมีโค้ดชน → หยุดให้คนแก้
 3. **Phase 3** — `--pull` เดี่ยวๆ (ไม่มี `--plan`/`--fix`/`--message`/free text) = **sync แล้วจบ** ไม่ commit ไม่ push; พ่วงกับ flag อื่น = sync แล้วไหลต่อ
 4. **Phase 4** — Scope staged files (จาก plan `Affected Files` — file นอก list ไม่ stage + แจ้ง)
+4.5. **Phase 4.5** — สแกน secret ใน diff ที่ stage (grep เร็ว ไม่ใช่ `/ow-secure` เต็ม) — เจอ = หยุด ไม่ commit
 5. **Phase 5** — Generate commit message (plan → `feat(<area>): <title>`, fix → `fix(<area>): <title>`)
 5.5. **Phase 5.5** — Unified bump version (`--bump`): คำนวณ `TARGET_VERSION` ครั้งเดียว = bump(max(current ของทุก repo **รวม version file**)) → ใช้ tag + commit-tag **เลขเดียวกันทุก submodule** (กัน web/app version ไม่ตรงกัน)
 6. **Phase 6** — Commit + push per submodule (skip read-only + no-stage) — tag `v$TARGET_VERSION` เดียวกันทุก repo
@@ -159,7 +160,7 @@ version_bump:
 ## Gotchas / ข้อควรระวัง
 
 - 🚫 **ห้าม `git push --force` โดยไม่ explicit user confirm**
-- 🚫 **ห้าม commit ก่อนรัน `/ow-secure`** — workflow บังคับ pre-flight
+- 🔎 ก่อน commit `/ow-git` สแกน secret ใน diff ที่ stage ไว้ให้เองแบบเร็ว (Phase 4.5) — เจอ = หยุด ไม่ commit · สแกนเต็ม (PII, dependency) ใช้ `/ow-secure`
 - 🚫 ห้าม delete branch โดยไม่ verify ว่า merged
 - 🚫 **ห้าม commit ที่ figma (หรือ read-only) submodule** — skip silently
 - 🚫 ห้าม `git reset --hard` โดยไม่ confirm
@@ -172,7 +173,7 @@ version_bump:
 
 ## Related
 
-- ก่อน `/ow-git`: [/ow-secure](./ow-secure.md) (บังคับ), [/ow-verify](./ow-verify.md) (recommended)
+- ก่อน `/ow-git`: [/ow-secure](./ow-secure.md) (แนะนำ), [/ow-verify](./ow-verify.md) (recommended)
 - หลัง `/ow-git`: reviewer review
 - Config: `.ow.yml` `submodules:` (path + branch + read_only)
 - Rules: `.ow/rules/<area>.md` (resolver `ow-paths.sh --rules <area>`)

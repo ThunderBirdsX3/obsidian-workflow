@@ -474,9 +474,9 @@ run "fix-issue r4t no-fake version"    'grep -q "Never fabricate the version" .o
 run "git auto issue-handoff phase"     'grep -q "Auto issue-handoff" .ow/commands/ow-git.md'
 run "git handoff gated on Closes"      'grep -q "Closes #NN" .ow/commands/ow-git.md'
 run "git --no-ready-for-test opt-out"  'grep -q "no-ready-for-test" .ow/commands/ow-git.md'
-run "git unified bump phase"           'grep -q "Resolve unified bump version" .ow/commands/ow-git.md'
-run "git unified = max of repos"       'grep -q "max(current" .ow/commands/ow-git.md && grep -q "TARGET_VERSION" .ow/commands/ow-git.md'
-run "git same tag all submodules"      'grep -q "v\$TARGET_VERSION" .ow/commands/ow-git.md'
+run "git unified bump phase"           'grep -q "Resolve unified bump version" .ow/commands/_shared/git-bump.md'
+run "git unified = max of repos"       'grep -q "max(current" .ow/commands/_shared/git-bump.md && grep -q "TARGET_VERSION" .ow/commands/_shared/git-bump.md'
+run "git same tag all submodules"      'grep -q "v\$TARGET_VERSION" .ow/commands/_shared/git-bump.md'
 run "version_bump.unified default"     'bash scripts/ow-paths.sh --json | jq -e ".version_bump.unified" >/dev/null'
 run "yml documents unified bump"       'grep -q "unified: true" .ow.yml'
 run "git default = no bump (opt-in)"   'grep -q "Default = no bump (opt-in)" .ow/commands/ow-git.md && grep -qF "Never add \`--bump\` yourself" .ow/commands/ow-git.md'
@@ -1666,16 +1666,16 @@ run "git-post-push: gate is stated at the pointer" 'grep -q "only after a succes
 run "git-sync: ow-git has Phase 2.5 sync"  'grep -q "Phase 2.5 — Sync with origin" .ow/commands/ow-git.md'
 run "git-sync: --no-sync documented"        'grep -q -- "--no-sync" .ow/commands/ow-git.md'
 run "git-sync: bare --pull is sync-only"    'grep -q "sync-only gate" .ow/commands/ow-git.md && grep -q "Sync-only never commits" .ow/commands/ow-git.md'
-run "git-sync: bump fetches tags first"     'grep -q "fetch --tags" .ow/commands/ow-git.md'
+run "git-sync: bump fetches tags first"     'grep -q "fetch --tags" .ow/commands/_shared/git-bump.md'
 run "git-sync: push goes through helper"    'grep -q "ow-git-sync.sh" .ow/commands/ow-git.md'
 run "git-sync: exit 3 stops the command"    'grep -q "Exit 3 ends the command" .ow/commands/ow-git.md'
-run "git-sync: ow-git has Phase 2.6 vault-ai merge" 'grep -q "Phase 2.6 — Merge vault docs by intent" .ow/commands/ow-git.md && grep -q "sides <repo> <file>" .ow/commands/ow-git.md && grep -q "continue \"\$repo\"" .ow/commands/ow-git.md'
-run "git-sync: vault-ai is vault-only + unsure = human" 'grep -q "Vault \`.md\` only" .ow/commands/ow-git.md && grep -q "Unsure = leave it" .ow/commands/ow-git.md'
+run "git-sync: ow-git has Phase 2.6 vault-ai merge" 'grep -q "Phase 2.6" .ow/commands/ow-git.md && grep -q "_shared/git-conflict.md" .ow/commands/ow-git.md && grep -q "sides <repo> <file>" .ow/commands/_shared/git-conflict.md && grep -q "continue \"\$repo\"" .ow/commands/_shared/git-conflict.md'
+run "git-sync: vault-ai is vault-only + unsure = human" 'grep -q "Vault \`.md\` only" .ow/commands/_shared/git-conflict.md && grep -q "Unsure = leave it" .ow/commands/_shared/git-conflict.md'
 run "git-sync: worktree fetches base"       'grep -q "START_REF" .ow/commands/_shared/worktree.md && grep -q "worktree_base_sha" .ow/commands/_shared/worktree.md'
 run "git-sync: fragment registered in README" 'grep -q "git-sync.md" .ow/commands/_shared/README.md'
 # /ow-sync ships commands/ but never scripts/ → every call site must degrade, not fail
 run "git-sync: callers guard on helper presence" \
-  '[ "$(grep -c "\[ ! -x \"\$SYNC\" \]" .ow/commands/ow-git.md)" -ge 4 ] && grep -q "\[ -x \"\$SYNC\" \]" .ow/commands/_shared/worktree.md'
+  '[ "$(cat .ow/commands/ow-git.md .ow/commands/_shared/git-bump.md | grep -c "\[ ! -x \"\$SYNC\" \]")" -ge 4 ] && grep -q "\[ -x \"\$SYNC\" \]" .ow/commands/_shared/worktree.md'
 run "git-sync: fragment documents the degrade"  'grep -q "Never fail a run because the helper is missing" .ow/commands/_shared/git-sync.md'
 # the autostash stop needs its own wording: the rebase is over, so `rebase --continue` is a dead end
 run "git-sync: ow-git branches on the autostash stop" \
@@ -1736,13 +1736,15 @@ run "version: validate mismatch vs target (exit 5)" \
 rm -rf "$BV_TMP"
 
 # spec wiring — the gate only exists if /ow-git actually routes through it
-run "version: ow-git calls the writer twice"  '[ "$(grep -c "VERW.* write " .ow/commands/ow-git.md)" -ge 2 ]'
-run "version: ow-git gates before commit"     '[ "$(grep -c "VERW.* validate " .ow/commands/ow-git.md)" -ge 2 ]'
+run "version: ow-git calls the writer twice"  '[ "$(grep -c "VERW.* write " .ow/commands/_shared/git-bump.md)" -ge 1 ] && grep -q "_shared/git-bump.md" .ow/commands/ow-git.md'
+run "version: ow-git gates before commit"     '[ "$(grep -c "VERW.* validate " .ow/commands/_shared/git-bump.md)" -ge 1 ]'
 run "version: no undefined bump_version_file"  '! grep -rq "bump_version_file" .ow/commands/'
-run "version: tag-vs-file convention stated"   'grep -q "the .v. belongs on a git tag" .ow/commands/ow-git.md'
+run "version: tag-vs-file convention stated"   'grep -q "the .v. belongs on a git tag" .ow/commands/_shared/git-bump.md'
 # the Phase 6 loop is a pipeline subshell: without this an aborted submodule still lets main tag
 run "version: Phase 6 loop aborts the run"     'grep -q "^done || exit 1" .ow/commands/ow-git.md'
-run "version: writer absence stops --bump"     'grep -q "ow-version.sh missing" .ow/commands/ow-git.md'
+run "git: plain commit gates on a staged-diff secret scan, not full /ow-secure" 'grep -q "Phase 4.5 — Secret scan" .ow/commands/ow-git.md && ! grep -q "Never commit before running /ow-secure" .ow/commands/ow-git.md'
+run "git: bump + conflict detail live in on-demand fragments" '[ -f .ow/commands/_shared/git-bump.md ] && [ -f .ow/commands/_shared/git-conflict.md ] && grep -q "git-bump.md" .ow/commands/_shared/README.md && grep -q "git-conflict.md" .ow/commands/_shared/README.md && [ "$(wc -c < .ow/commands/ow-git.md)" -lt 20000 ]'
+run "version: writer absence stops --bump"     'grep -q "ow-version.sh missing" .ow/commands/_shared/git-bump.md'
 run "version: yml documents build_number"      'grep -q "build_number" .ow.yml && grep -q "verify_cmd" .ow.yml'
 run "version: resolver passes the new knobs"   'bash scripts/ow-paths.sh --json | jq -e ".version_bump.build_number" >/dev/null'
 run "version: conformance-lint check 10"       'bash scripts/conformance-lint.sh 2>&1 | grep -q "check 10"'
@@ -2765,8 +2767,8 @@ run "ow-auto docs: README counts 22"                   "grep -q '22 slash comman
 run "ow-auto docs: ow-help cheatsheet row"             "grep -q '| /ow-auto' .ow/commands/ow-help.md"
 run "ow-auto docs: AGENTS.md names /ow-auto and --claude worker" "grep -q 'ow-auto' AGENTS.md && grep -q -- '--claude' AGENTS.md"
 run "ow-auto docs: codex/README no longer claims no-subagents as the end of the story" "grep -q -- '--claude' codex/README.md"
-run "release: CHANGELOG 2.6.0 on top + version bumped" \
-  "grep -q '^## \[2.6.0\]' CHANGELOG.md && yq -e '.ow.version == \"2.6.0\"' .ow.yml >/dev/null"
+run "release: CHANGELOG 2.7.0 on top + version bumped" \
+  "grep -q '^## \[2.7.0\]' CHANGELOG.md && yq -e '.ow.version == \"2.7.0\"' .ow.yml >/dev/null"
 
 run "worker: TERM to the runner kills the CLI too (no orphan writer)" '_worker_fixture
   PATH="$TD/bin:$PATH" FAKE_MODE=timeout OW_WORKER_TIMEOUT_SEC=60 bash "$W" codex "$TD/wt" "$TD/runs" P1-chunk1 "$TD/prompt.md" >/dev/null 2>&1 &

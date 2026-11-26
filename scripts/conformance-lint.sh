@@ -250,8 +250,9 @@ fi
 if [ -f "$CMDS/ow-git.md" ]; then
   _bv_bad=""
   [ -f "$ROOT/scripts/ow-version.sh" ] || _bv_bad="$_bv_bad scripts/ow-version.sh(absent)"
-  _bash_lines "$CMDS/ow-git.md" | grep -c 'ow-version\.sh' >/dev/null \
-    || _bv_bad="$_bv_bad ow-git.md(no-writer-call)"
+  _bash_lines "$FRAG/git-bump.md" | grep -c 'ow-version\.sh' >/dev/null \
+    || _bv_bad="$_bv_bad git-bump.md(no-writer-call)"
+  grep -q '_shared/git-bump.md' "$CMDS/ow-git.md" || _bv_bad="$_bv_bad ow-git.md(no-bump-pointer)"
   grep -rn 'bump_version_file' "$CMDS" 2>/dev/null | grep -c . >/dev/null \
     && _bv_bad="$_bv_bad bump_version_file(undefined-ghost-helper)"
   [ -z "$_bv_bad" ] && okk "check 10: --bump writes version files via scripts/ow-version.sh" \

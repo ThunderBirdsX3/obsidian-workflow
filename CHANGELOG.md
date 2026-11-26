@@ -3,6 +3,22 @@
 Format: [Keep a Changelog](https://keepachangelog.com). Versions: SemVer.
 Version marker: `ow.version` in `.ow.yml`.
 
+## [2.7.0] — 2026-11-26
+
+Minor. No config change needed.
+
+### Changed — `/ow-git` reaches the commit faster
+
+- `ow-git.md` is 13.7KB instead of 38.7KB. A plain `--plan` / `--fix` / `--message` commit opens no `_shared/` fragment.
+- `--bump` detail (unified version, version-file writer, tags) lives in `_shared/git-bump.md` and is read only when the user passes `--bump`.
+- The Phase 2.6 vault-ai conflict merge lives in `_shared/git-conflict.md` and is read only when Phase 2.5 leaves a repo at exit 3.
+- `_shared/git-sync.md` is reference only: `/ow-git` handles exit 0/3/4/5 inline and opens it only for an unexpected exit code or the conflict-class table.
+- Phase 6/7 have one commit + push path each; `--bump` hooks in at two marked points.
+
+### Changed — secret check before commit
+
+- `/ow-git` no longer requires a full `/ow-secure` run before committing. New Phase 4.5 greps the staged diff of every repo for common key patterns (AWS, private key, GitHub, `sk-`, Slack, Google) and stops before the commit on a hit. `/ow-secure` stays the recommended full pre-flight (PII, dependencies).
+
 ## [2.6.0] — 2026-11-22
 
 Minor. No config change needed.
