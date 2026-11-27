@@ -3,6 +3,16 @@
 Format: [Keep a Changelog](https://keepachangelog.com). Versions: SemVer.
 Version marker: `ow.version` in `.ow.yml`.
 
+## [2.9.0] — 2026-11-27
+
+Minor. No config change needed.
+
+### Added — names stamped from `git config user.name`
+
+- `scripts/ow-paths.sh` resolves `OW_USER` from `git config user.name` (falls back to `$USER`). Phase 0 caches it in `.ow/local/paths.env` with the other resolved vars, so a later phase re-hydrates it without calling git again.
+- The plan, fix-log, test-plan and handoff templates gain `created_by: <$OW_USER>`. `/ow-plan` approval stamps `approved_by: <$OW_USER> (chat)`, and `/ow-auto` stamps `approved_by: ow-auto (grant: <$OW_USER>)`.
+- `install.sh`, `upgrade.sh` and `ow regen` also rewrite `.ow/local/paths.env` when they finish, so the cache matches the new config and resolver before the next command runs. A failed refresh only warns; the next Phase 0 writes it.
+
 ## [2.8.0] — 2026-11-27
 
 Minor. No config change needed.

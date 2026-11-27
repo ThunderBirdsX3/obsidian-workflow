@@ -65,7 +65,7 @@ related_docs: [...]
 3. **Phase 3** — เขียน plan file ตาม template (Goals, Non-goals, Affected Files, Steps, DS Compliance, Test Plan, Success Criteria, Risks เฉพาะ `risk_level` medium/high)
    - **Phase 3.5** (fix-source mode เท่านั้น) — เขียน `related_plan: "[[<plan-slug>]]"` กลับลง fix-log (back-link สองทาง)
 4. **Phase 4** — Doc gap detection (จด ใน `Doc Gaps Found` — implement จะ fix ก่อน)
-5. **Phase 5** — **STOP** — สรุปไม่เกิน 10 บรรทัด + path · user ตอบ `approve` ใน chat นี้ → `/ow-plan` ใส่ `status: approved` · `approved_by: user (chat)` · `approved_at` ให้ (ถ้าอยากแก้ → บอกว่าแก้อะไร หรือ `--revise`) · `/ow-plan` ไม่เริ่ม `/ow-implement` — ผู้ใช้รันเองใน session ใหม่
+5. **Phase 5** — **STOP** — สรุปไม่เกิน 10 บรรทัด + path · user ตอบ `approve` ใน chat นี้ → `/ow-plan` ใส่ `status: approved` · `approved_by: <git user.name> (chat)` · `approved_at` ให้ (ถ้าอยากแก้ → บอกว่าแก้อะไร หรือ `--revise`) · `/ow-plan` ไม่เริ่ม `/ow-implement` — ผู้ใช้รันเองใน session ใหม่
 
 ## Output ที่ได้
 
@@ -84,7 +84,7 @@ Frontmatter:
   source_fix: "[[fix-log-slug]]" | none   ← set เมื่อ fix:<slug> (/ow-implement ปิด fix-log นี้ตอน done)
   context_closed: true                    ← เฉพาะ plan ที่แตก phase: ทุก phase มี context_refs ของตัวเอง → implement/delegation ใช้ list นั้นเป็น read set ทั้งหมด
   related_docs: [list]                    ← ทุก doc ที่อ่านจริง (path เท่านั้น)
-  approved_by / approved_at               ← ใส่ตอน user ตอบ `approve` (approved_by: user (chat))
+  approved_by / approved_at               ← ใส่ตอน user ตอบ `approve` (approved_by: `<git user.name> (chat)` — ดึงจาก `$OW_USER` ใน `.ow/local/paths.env` อัตโนมัติ)
   estimate_hours: <number>
   risk_level: low | medium | high
 

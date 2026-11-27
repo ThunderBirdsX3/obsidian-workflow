@@ -15,6 +15,7 @@
 tags: [type/plan]
 date: <YYYY-MM-DD HH:mm>
 title: <one-line task title>
+created_by: <$OW_USER>           # git config user.name — cached in .ow/local/paths.env by Phase 0
 status: planning              # planning | approved | in-progress | done | abandoned
 submodule_target: <api | web | mobile | docs | all>
 subagent_target: <backend | frontend | mobile | docs | design | all>   # the AREA whose rules/gates apply — /ow-implement decides inline vs delegated itself

@@ -15,6 +15,7 @@
 tags: [type/test-plan]
 status: draft                  # draft | active | archived
 date: <YYYY-MM-DD>
+created_by: <$OW_USER>         # git config user.name — cached in .ow/local/paths.env by Phase 0
 feature: [[FEAT-<slug>]]
 target: <web | mobile | api | cross>
 ---

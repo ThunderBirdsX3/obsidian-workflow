@@ -15,6 +15,7 @@
 tags: [type/handoff]
 date: <YYYY-MM-DD HH:mm>
 title: <handoff title>
+created_by: <$OW_USER>         # git config user.name — cached in .ow/local/paths.env by Phase 0
 scope: <plan-slug | feature-name | diff-range>
 status: ready-for-review       # ready-for-review | approved | deployed
 audience: [executive, reviewer, qa]

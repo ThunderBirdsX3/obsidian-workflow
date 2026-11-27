@@ -153,6 +153,10 @@ AUTO_CLAUDE_MODEL=$(get "auto.claude_model" "")
 # so a project that never sets the key keeps its existing behaviour.
 VAULT_LANG=$(get "project.vault_language" "$PROJECT_LANG")
 PROJECT_TZ=$(get "project.timezone" "Asia/Bangkok")
+# Who is running the command — stamped into created_by / approved_by of vault logs.
+# Resolved once per Phase 0 and cached in .ow/local/paths.env (per-machine, gitignored).
+OW_USER=$(git -C "$ROOT" config user.name 2>/dev/null || true)
+[ -n "$OW_USER" ] || OW_USER="${USER:-unknown}"
 
 MODE_VAL=$(get "mode" "standalone")
 
@@ -489,6 +493,7 @@ case "$MODE" in
     print_var PROJECT_LANG     "$PROJECT_LANG"
     print_var VAULT_LANG       "$VAULT_LANG"
     print_var PROJECT_TZ       "$PROJECT_TZ"
+    print_var OW_USER          "$OW_USER"
     print_var MODE_VAL         "$MODE_VAL"
     print_var VAULT_PATH       "$VAULT_PATH"
     print_var VAULT_ABS        "$VAULT_ABS"
@@ -555,7 +560,8 @@ case "$MODE" in
   "git": $GIT_SYNC_JSON,
   "ow": {"version":"$OW_VERSION","source":"$OW_SOURCE","last_synced":"$OW_LAST_SYNC"},
   "subagents_enabled": "$ENABLED_AGENTS",
-  "today": "$TODAY"
+  "today": "$TODAY",
+  "user": "$OW_USER"
 }
 EOF
     ;;

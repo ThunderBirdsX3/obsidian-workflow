@@ -504,7 +504,7 @@ Show the `## Output` summary (at most 10 lines: problem, what changes, phases if
 >
 > Reply `approve` to approve this plan · to change it, say what (→ `/ow-plan <task> --revise <path>`)
 
-**Approving** — only the user's own reply in this session approving this plan counts. On that reply, make a surgical Edit of the plan frontmatter to `status: approved` · `approved_by: user (chat)` · `approved_at:` = `date '+%Y-%m-%d %H:%M'` run on that reply, then answer with the next command — `/ow-implement <path>`, in a new session — and stop. No reply, an ambiguous reply, or a reply about something else is not approval; `/ow-plan` never starts `/ow-implement` itself.
+**Approving** — only the user's own reply in this session approving this plan counts. On that reply, make a surgical Edit of the plan frontmatter to `status: approved` · `approved_by: <$OW_USER> (chat)` (the git user.name cached in `.ow/local/paths.env` — re-hydrate it, never type a name) · `approved_at:` = `date '+%Y-%m-%d %H:%M'` run on that reply, then answer with the next command — `/ow-implement <path>`, in a new session — and stop. No reply, an ambiguous reply, or a reply about something else is not approval; `/ow-plan` never starts `/ow-implement` itself.
 
 The plan is phased (Phase 2.5) → add, with the phase table and its `est tokens` per phase:
 > 📐 **N phases** — P1 → P2 → … · coverage proof: the file→phase mapping (proves nothing is orphaned or duplicated)

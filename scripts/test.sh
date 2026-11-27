@@ -209,6 +209,12 @@ if [ -x scripts/ow-paths.sh ]; then
     out=$( cd "$d" && OW_ROOT=. bash '"$PWD"'/scripts/ow-paths.sh --shell 2>/dev/null ); rm -rf "$d";
     printf "%s\n" "$out" | grep -q "^VAULT_LANG=en$" && printf "%s\n" "$out" | grep -q "^PROJECT_LANG=th$"'
   run "config template ships vault_language" 'grep -q "^  vault_language:" .ow.yml'
+  # OW_USER — git user.name cached in paths.env, stamped into created_by / approved_by
+  run "shell emits OW_USER = git user.name" '
+    d=$(mktemp -d); git -C "$d" init -q; git -C "$d" config user.name "Jane Doe"; : > "$d/.ow.yml";
+    out=$( cd "$d" && bash '"$PWD"'/scripts/ow-paths.sh --shell 2>/dev/null ); rm -rf "$d";
+    printf "%s\n" "$out" | grep -qF "OW_USER=Jane\\ Doe"'
+  run "log templates carry created_by" 'for t in plan fix-log test-plan handoff; do grep -q "^created_by: <\$OW_USER>" .ow/templates/$t.md || exit 1; done'
 fi
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -2098,6 +2104,11 @@ run "regen[behavioral]: ow-regen rebuilds shims + agent links on a clone with .c
   d=$(mktemp -d); cp -R .ow .ow.yml scripts "$d/" && rm -rf "$d/.ow/local";
   ( cd "$d" && bash scripts/ow-regen.sh ) >/dev/null 2>&1; rc=$?;
   r=1; [ "$rc" = 0 ] && [ -f "$d/.claude/commands/ow-plan.md" ] && [ -f "$d/.claude/agents/docs.md" ] && [ -L "$d/.claude/agents/docs.md" ] && r=0; rm -rf "$d"; [ "$r" = 0 ]'
+run "regen[behavioral]: ow-regen refreshes the paths.env cache with OW_USER" '
+  d=$(mktemp -d); cp -R .ow .ow.yml scripts "$d/" && rm -rf "$d/.ow/local"; git -C "$d" init -q; git -C "$d" config user.name "Jane Doe";
+  ( cd "$d" && bash scripts/ow-regen.sh ) >/dev/null 2>&1;
+  r=1; grep -qF "OW_USER=Jane\\ Doe" "$d/.ow/local/paths.env" 2>/dev/null && [ ! -e "$d/.ow/local/paths.env.tmp" ] && r=0; rm -rf "$d"; [ "$r" = 0 ]'
+run "install + upgrade refresh the paths.env cache" 'grep -q "paths.env.tmp" scripts/install.sh && grep -q "paths.env.tmp" scripts/upgrade.sh'
 run "upgrade[behavioral]: old layout migrates — owned file adopted, project file kept, shipped body refreshed" '
   d=$(mktemp -d); cp -R .ow .ow.yml scripts bin "$d/" && rm -rf "$d/.ow/subagents" "$d/.ow/local"; mkdir -p "$d/.claude/agents";
   for a in docs verifier security gh-issue; do cp .ow/subagents/$a.md "$d/.claude/agents/"; done;
@@ -2768,8 +2779,8 @@ run "ow-auto docs: README counts 22"                   "grep -q '22 slash comman
 run "ow-auto docs: ow-help cheatsheet row"             "grep -q '| /ow-auto' .ow/commands/ow-help.md"
 run "ow-auto docs: AGENTS.md names /ow-auto and --claude worker" "grep -q 'ow-auto' AGENTS.md && grep -q -- '--claude' AGENTS.md"
 run "ow-auto docs: codex/README no longer claims no-subagents as the end of the story" "grep -q -- '--claude' codex/README.md"
-run "release: CHANGELOG 2.8.0 on top + version bumped" \
-  "grep -q '^## \[2.8.0\]' CHANGELOG.md && yq -e '.ow.version == \"2.8.0\"' .ow.yml >/dev/null"
+run "release: CHANGELOG 2.9.0 on top + version bumped" \
+  "grep -q '^## \[2.9.0\]' CHANGELOG.md && yq -e '.ow.version == \"2.9.0\"' .ow.yml >/dev/null"
 
 run "worker: TERM to the runner kills the CLI too (no orphan writer)" '_worker_fixture
   PATH="$TD/bin:$PATH" FAKE_MODE=timeout OW_WORKER_TIMEOUT_SEC=60 bash "$W" codex "$TD/wt" "$TD/runs" P1-chunk1 "$TD/prompt.md" >/dev/null 2>&1 &
@@ -2855,8 +2866,8 @@ run "fast: implement Phase 1 item 6 exempts excluded-by-budget lines from Doc Ga
 
 run "fast: Phase 5 ends by asking for approve in chat" \
   'sed -n "/^## Phase 5 /,/^## Output/p" .ow/commands/ow-plan.md | grep -q "Reply .approve."'
-run "fast: approve stamps approved_by user (chat)" \
-  'grep -qF "approved_by: user (chat)" .ow/commands/ow-plan.md'
+run "fast: approve stamps approved_by <\$OW_USER> (chat)" \
+  'grep -qF "approved_by: <\$OW_USER> (chat)" .ow/commands/ow-plan.md'
 run "fast: only the user own reply approves" \
   'grep -q "only the user.s own reply in this session" .ow/commands/ow-plan.md'
 run "fast: plan summary is at most 10 lines" \

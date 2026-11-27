@@ -965,6 +965,14 @@ for _b in .ow.backup-*; do
 done
 [ "$_pruned" -gt 0 ] && log "Pruned $_pruned old backup(s) — kept latest only"
 
+# ── refresh the Phase 0 cache (resolved paths + OW_USER) against the upgraded resolver ──
+mkdir -p .ow/local
+if bash scripts/ow-paths.sh --shell > .ow/local/paths.env.tmp 2>/dev/null; then
+  mv .ow/local/paths.env.tmp .ow/local/paths.env && log "Refreshed .ow/local/paths.env"
+else
+  rm -f .ow/local/paths.env.tmp; warn "Could not refresh .ow/local/paths.env — the next /ow-* Phase 0 rewrites it"
+fi
+
 # ── summary ──
 echo ""
 printf "${c_green}${c_bold}✓ Upgrade complete${c_reset}\n"

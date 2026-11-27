@@ -1278,6 +1278,16 @@ if [[ $DRY_RUN -eq 0 && -d "$TARGET/.ow/backups" ]]; then
   done < <(ls -td "$TARGET/.ow/backups"/*/ 2>/dev/null | tail -n +4)
   [[ $_bk_pruned -gt 0 ]] && log "   Pruned $_bk_pruned old backup dir(s) — kept the 3 most recent"
 fi
+# Refresh the Phase 0 cache (resolved paths + OW_USER) so it matches the config just written.
+# Best-effort: Phase 0 of the next /ow-* command rewrites it anyway.
+if [[ $DRY_RUN -eq 0 && -f "$TARGET/scripts/ow-paths.sh" ]]; then
+  mkdir -p "$TARGET/.ow/local"
+  if OW_ROOT="$TARGET" bash "$TARGET/scripts/ow-paths.sh" --shell > "$TARGET/.ow/local/paths.env.tmp" 2>/dev/null; then
+    mv "$TARGET/.ow/local/paths.env.tmp" "$TARGET/.ow/local/paths.env"
+  else
+    rm -f "$TARGET/.ow/local/paths.env.tmp"
+  fi
+fi
 log ""
 log "ขั้นต่อไป:"
 # Guidance for EVERY installed front-end, not just the first — invocation syntax

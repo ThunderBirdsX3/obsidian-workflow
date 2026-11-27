@@ -15,6 +15,7 @@
 tags: [type/fix-log]
 date: <YYYY-MM-DD HH:mm>
 title: <one-line bug title>
+created_by: <$OW_USER>        # git config user.name — cached in .ow/local/paths.env by Phase 0
 status: in-progress           # in-progress | fixed | wont-fix | regressed
 severity: P1                   # P0 blocker | P1 major | P2 minor | P3 polish
 area: <api | web | mobile | cross>

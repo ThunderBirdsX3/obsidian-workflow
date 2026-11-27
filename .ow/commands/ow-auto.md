@@ -145,7 +145,7 @@ two writes per step, never one at the end. `export OW_AUTO_RUN="<run-log path>"`
 2. **Grant** — surgical Edit on the plan frontmatter:
    ```yaml
    status: approved
-   approved_by: ow-auto
+   approved_by: ow-auto (grant: <$OW_USER>)   # $OW_USER = git user.name cached in .ow/local/paths.env
    approved_at: <YYYY-MM-DD HH:mm>     # date '+%Y-%m-%d %H:%M' run now — never typed from memory
    auto_grant: [implement, commit]    # + merge when the run-log grant has it
    auto_run: <run-log path>

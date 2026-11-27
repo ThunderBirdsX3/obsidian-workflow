@@ -40,4 +40,11 @@ for ai in $ais; do
               echo "  $ai: $(ow_frontend_folder "$ai")/prompts/router.md" ;;
   esac
 done
+# Refresh the Phase 0 cache (resolved paths + OW_USER) — a fresh clone has none yet.
+mkdir -p .ow/local
+if bash "$SCRIPT_DIR/ow-paths.sh" --shell > .ow/local/paths.env.tmp 2>/dev/null; then
+  mv .ow/local/paths.env.tmp .ow/local/paths.env && echo "  cache: .ow/local/paths.env"
+else
+  rm -f .ow/local/paths.env.tmp; echo "  cache: .ow/local/paths.env not refreshed (next /ow-* Phase 0 writes it)" >&2
+fi
 echo "ow regen: done ($(echo $ais | tr '\n' ' '))"
