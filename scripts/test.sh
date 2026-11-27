@@ -500,6 +500,7 @@ run "check 6 guards the retirement"       'bash scripts/conformance-lint.sh 2>&1
 # results are quoted into the vault doc, never stored as files
 run "ow-test: scratch run dir only"           'grep -q "ow-run-" .ow/commands/ow-test.md'
 run "ow-fix: RED baseline section"            'grep -q "RED baseline" .ow/commands/ow-fix.md'
+run "ow-fix: recall prior fix-logs"           'grep -q "Recall prior fixes" .ow/commands/ow-fix.md && grep -qF "\"\$FIX_DIR\"" .ow/commands/ow-fix.md'
 run "fix-log template: RED + GREEN"            'grep -q "RED baseline" .ow/templates/fix-log.md && grep -q "GREEN result" .ow/templates/fix-log.md'
 run "implement: runs build-test fragment"      'grep -q "_shared/build-test.md" .ow/commands/ow-implement.md'
 # #29 — safe revert of format churn: scope formatter to changed files; never destructive git ops on un-owned files
@@ -2767,8 +2768,8 @@ run "ow-auto docs: README counts 22"                   "grep -q '22 slash comman
 run "ow-auto docs: ow-help cheatsheet row"             "grep -q '| /ow-auto' .ow/commands/ow-help.md"
 run "ow-auto docs: AGENTS.md names /ow-auto and --claude worker" "grep -q 'ow-auto' AGENTS.md && grep -q -- '--claude' AGENTS.md"
 run "ow-auto docs: codex/README no longer claims no-subagents as the end of the story" "grep -q -- '--claude' codex/README.md"
-run "release: CHANGELOG 2.7.0 on top + version bumped" \
-  "grep -q '^## \[2.7.0\]' CHANGELOG.md && yq -e '.ow.version == \"2.7.0\"' .ow.yml >/dev/null"
+run "release: CHANGELOG 2.8.0 on top + version bumped" \
+  "grep -q '^## \[2.8.0\]' CHANGELOG.md && yq -e '.ow.version == \"2.8.0\"' .ow.yml >/dev/null"
 
 run "worker: TERM to the runner kills the CLI too (no orphan writer)" '_worker_fixture
   PATH="$TD/bin:$PATH" FAKE_MODE=timeout OW_WORKER_TIMEOUT_SEC=60 bash "$W" codex "$TD/wt" "$TD/runs" P1-chunk1 "$TD/prompt.md" >/dev/null 2>&1 &

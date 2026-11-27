@@ -46,7 +46,7 @@ area: web
 ## ขั้นตอนภายใน (Phase summary)
 
 1. **Phase 1** — Detect mode (new vs --update)
-2. **Phase 2** — Diagnose (read-only): identify area, reproduce (read code preferred), grep/Read root cause, draft fix approach + test cases
+2. **Phase 2** — Diagnose (read-only): identify area, reproduce (read code preferred), ค้น fix-log เก่าใน `85-FixLog/` (รวม `archive/`) ด้วยชื่อไฟล์ / FN-* / คำจากอาการ — เจอ = อ่านก่อน + ระบุถ้าเป็น regression, grep/Read root cause, draft fix approach + test cases
 3. **Phase 2.5** — RED baseline: บันทึกสภาพที่บั๊ก **ยังเกิดอยู่** (quote output จริงที่ fail) — ยังไม่แก้โค้ด · เป็นหลักฐานฝั่ง RED ที่ `/ow-implement` เอาไปเทียบตอน GREEN
 4. **Phase 3** — สร้าง fix-log `docs/obsidian-vault/85-FixLog/YYYY-MM-DD-HHMM-<slug>.md`
 5. **Phase 4** — Auto-fix gate + ถาม: gate ผ่าน (P2/P3 + scope เล็ก + มี reproduce/regression test) → ถาม `แก้เลยไหม? y / plan / pause`; `y` = รัน `/ow-implement --from-fix` ทันที (gate ครบทุกด่าน, ปิด fix-log เองตอนเสร็จ). gate ไม่ผ่าน → เสนอ `/ow-plan fix:<slug>` (ผูก link สองทาง `source_fix:` ↔ `related_plan:`) (#30)

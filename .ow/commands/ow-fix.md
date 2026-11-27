@@ -65,8 +65,11 @@ Empty → ask (render in `$PROJECT_LANG`): "What's the bug?"
 Before writing any file:
 1. Identify the submodule/area (api / web / mobile / cross)
 2. Reproduce if possible (start a dev server only as far as needed; preferred: read code)
-3. Find the root cause via grep/Read — **never edit code**
-4. Draft **Success Criteria** (fixed behavior + regressions that must not break + out-of-scope) → map them to the test cases that will prove the bug is gone
+3. **Recall prior fixes** — search past fix-logs (incl. `archive/`) for the suspect file basename, the related `FN-*`, or a distinctive symptom keyword:
+   `grep -rliE '<file-basename>|FN-<name>|<symptom-keyword>' "$FIX_DIR"`
+   Hit → read it; list it under `## Vault Context Read`; same root cause again → say so in `## Root Cause` (regression of `[[<slug>]]`). No hit → move on, never block on it
+4. Find the root cause via grep/Read — **never edit code**
+5. Draft **Success Criteria** (fixed behavior + regressions that must not break + out-of-scope) → map them to the test cases that will prove the bug is gone
 
 Bug unclear → ask 1-3 questions **in a single message**
 
@@ -139,7 +142,7 @@ related_plan: <"[[plan-slug]]" or none>   # /ow-fix→/ow-plan path: /ow-plan fi
 ## Vault Context Read
 - <vault>/40-Functions/FN-<related>.md
 - <vault>/70-Reference/REF-AuthorizationMatrix.md (if auth-related)
-- <vault>/85-FixLog/<previous-similar>.md (if there was a prior regression)
+- <vault>/85-FixLog/<previous-similar>.md (Phase 2 step 3 hit — omit when none)
 
 ## RED baseline
 <!-- Text only — quote the real output, trimmed to the relevant lines. The vault holds no binaries -->

@@ -3,6 +3,15 @@
 Format: [Keep a Changelog](https://keepachangelog.com). Versions: SemVer.
 Version marker: `ow.version` in `.ow.yml`.
 
+## [2.8.0] — 2026-11-27
+
+Minor. No config change needed.
+
+### Added — `/ow-fix` recalls prior fix-logs
+
+- Phase 2 has a new step 3, run before the root-cause search. It greps `$FIX_DIR`, including `archive/`, for the suspect file basename, the related `FN-*` or a distinctive symptom keyword.
+- A match is read first and listed under `## Vault Context Read`. If it has the same root cause, `## Root Cause` names it as a regression of `[[<slug>]]`. No match means the step is skipped; it never blocks the diagnosis.
+
 ## [2.7.0] — 2026-11-26
 
 Minor. No config change needed.
