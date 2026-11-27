@@ -118,7 +118,7 @@ severity: P1                # P0 blocker | P1 major | P2 minor | P3 polish
 area: <api | web | mobile | cross>
 reported_by: <user | qa | self | customer>
 related_plan: <"[[plan-slug]]" or none>   # /ow-fix→/ow-plan path: /ow-plan fix: writes the back-link; closed automatically by /ow-implement (#30)
-# fixed_commit / fixed_in_version — filled in automatically on close (/ow-fix path: /ow-git --bump · /ow-fix-issue path: closes + stamps itself in Phase 8.5)
+# fixed_commit / fixed_in_version — filled in automatically on close (/ow-fix path: /ow-git --fix|--plan, sha auto from git · /ow-fix-issue path: closes + stamps itself in Phase 8.5)
 ---
 
 # <Bug title>
@@ -178,7 +178,7 @@ related_plan: <"[[plan-slug]]" or none>   # /ow-fix→/ow-plan path: /ow-plan fi
 ## Next
 - [ ] Run `/ow-plan fix:<slug>` — create the plan + wire the two-way link (`source_fix:` ↔ `related_plan:`)
 - [ ] Run `/ow-implement <plan-path>` to apply the real fix (prove red→green with a real run)
-- [ ] Close the fix-log: `status: fixed` + tick checkboxes — 🤖 **automatic via `/ow-implement` when the plan is done**; `fixed_in_version`/`fixed_commit` filled in by `/ow-git --bump` (no manual work — #30)
+- [ ] Close the fix-log: `status: fixed` + tick checkboxes — 🤖 **automatic via `/ow-implement` when the plan is done**; `fixed_commit` filled in by `/ow-git` from git (+ `fixed_in_version` with `--bump`) — no manual work, no prompt (#30)
 ```
 
 ## Phase 4 — Auto-fix gate + choose the next path
@@ -228,7 +228,7 @@ every gate still runs in full: build/test run (5.0) · coverage audit (5.2) · d
 open-checkbox (6.0) · close the fix-log (6.5). The only thing skipped is **typing a second command**, not a gate
 
 🔴 `y` / `plan` → no need to close the fix-log by hand (`status: fixed` + checkboxes are automatic via `/ow-implement`;
-`fixed_in_version`/`fixed_commit` via `/ow-git --bump`). `pause` → stays `in-progress` until it is escalated
+`fixed_commit` via `/ow-git`, `fixed_in_version` via `--bump`). `pause` → stays `in-progress` until it is escalated
 
 ## Phase 5 — Update mode (`--update`)
 

@@ -21,7 +21,7 @@ severity: P1                   # P0 blocker | P1 major | P2 minor | P3 polish
 area: <api | web | mobile | cross>
 reported_by: <user | qa | self | customer>
 related_plan: <"[[plan-slug]]" or none>   # /ow-fix→/ow-plan path: /ow-plan fix: writes the back-link; closed automatically by /ow-implement (#30)
-# fixed_commit / fixed_in_version — filled in automatically on close (/ow-fix path: /ow-git --bump · /ow-fix-issue path: closes + stamps itself in Phase 8.5)
+# fixed_commit / fixed_in_version — filled in automatically on close (/ow-fix path: /ow-git --fix|--plan, sha auto from git · /ow-fix-issue path: closes + stamps itself in Phase 8.5)
 ---
 
 # <Bug title>
@@ -64,7 +64,7 @@ related_plan: <"[[plan-slug]]" or none>   # /ow-fix→/ow-plan path: /ow-plan fi
 ## Next
 - [ ] run `/ow-plan fix:<slug>` — creates the plan + wires the two-way link (`source_fix:` ↔ `related_plan:`)
 - [ ] run `/ow-implement` to apply the actual fix (prove red→green with a real run)
-- [ ] close the fix-log: `status: fixed` + tick the checkboxes — 🤖 automatic via `/ow-implement` when the plan is done; `fixed_in_version`/`fixed_commit` via `/ow-git --bump` (#30)
+- [ ] close the fix-log: `status: fixed` + tick the checkboxes — 🤖 automatic via `/ow-implement` when the plan is done; `fixed_commit` via `/ow-git` (auto from git, no prompt) + `fixed_in_version` with `--bump` (#30)
 
 ---
 

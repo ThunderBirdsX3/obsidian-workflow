@@ -74,7 +74,7 @@ figma  [read-only]  skipped
 7. **Phase 7** — Main repo commit (stage submodule pointer updates + main files)
 8. **Phase 8** — Merge-to (optional)
 8.5. **Phase 8.5** — Auto issue-handoff: push มี `Closes #NN` → comment "fixed in vX.Y.Z" + flip label `ready for test` (default-on; `--no-ready-for-test` ปิด; ห้าม close — tester verify เอง)
-8.6. **Phase 8.6** — Fix-log version stamp: `--bump` push ของ plan ที่มี `source_fix:` → stamp `fixed_in_version` + `fixed_commit` (sha จริง) ลง fix-log ต้นทาง (mirror 8.5 สำหรับ fix-log local — ไม่ comment/ไม่ flip label) (#30)
+8.6. **Phase 8.6** — Fix-log commit stamp: push ของ `--plan` ที่มี `source_fix:` หรือ `--fix` ที่ยัง `pending` (ไม่ต้อง `--bump`) → stamp `fixed_commit` (sha จริงจาก git) + `fixed_in_version` (เฉพาะตอน `--bump`) ลง fix-log แล้ว commit แยกเป็น `docs(fixlog): stamp …` + push ให้เอง — ไม่ถาม hash (mirror 8.5 สำหรับ fix-log local — ไม่ comment/ไม่ flip label) (#30)
 9. **Phase 9** — Report summary table (+ handoff result)
 
 ## `--bump` เขียน version file ยังไง (#34)

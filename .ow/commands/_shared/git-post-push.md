@@ -39,23 +39,22 @@ Continues in the current session — fix-issue Phase 8 runs verify-pushed (8.2, 
 ### 8.5.5 Roll the result into the Report (Phase 9)
 Show in the summary which issues were commented + flipped (or skipped, with the reason)
 
-## Phase 8.6 — Fix-log version stamp (#30) — **after a successful push**
+## Phase 8.6 — Fix-log commit stamp (#30) — **after a successful push**
 
-Purpose: when a `--bump` push closes out a local fix-log (`/ow-implement` set `fixed_commit: pending` in Phase 6.5 because the commit/version did not exist yet) → fill in `fixed_in_version` + `fixed_commit` (real sha) on the fix-log — **a mirror of 8.5**, but a local fix-log has no GitHub issue → **no comment / no label flip**, just stamp the frontmatter so it stays traceable. Covers both the plan-driven path and the `--from-fix` path
+Purpose: when a push closes out a local fix-log (`/ow-implement` set `fixed_commit: pending` in Phase 6.5 because the commit did not exist yet) → fill in `fixed_commit` (real sha) + `fixed_in_version` (only with `--bump`) on the fix-log, then commit + push that stamp as its own follow-up commit — **never ask the user for the sha** — **a mirror of 8.5**, but a local fix-log has no GitHub issue → **no comment / no label flip**, just stamp the frontmatter so it stays traceable. Covers both the plan-driven path and the `--from-fix` path
 
 ### 8.6.1 Trigger gate (all must hold, otherwise skip silently)
-- ✅ `--bump` ran this round (`$TARGET_VERSION` non-empty = a real push + tag, Phase 5.5)
+- ✅ a push actually happened (not `--no-push` / `--status` / `--switch-only`) — `--bump` is **not** required
 - ✅ a local fix-log is finalized by this push — found two ways:
   - **plan-driven** — `--plan <path>` whose plan has `source_fix:` (escalated via `/ow-plan fix:`)
   - **from-fix** — `--fix <fixlog>` whose fix-log has `fixed_commit: pending` (P2/P3 via `/ow-implement --from-fix`, no plan)
 
-> No `--bump` / no `--plan` with `source_fix:` / no `--fix` with `pending` → gate fails → no fix-log is touched (safe for everyday `/ow-git` — same as 8.5). A fix-log carrying `github_issue:` goes to Phase 8.5 (not here)
+> No push / no `--plan` with `source_fix:` / no `--fix` with `pending` → gate fails → no fix-log is touched (safe for everyday `/ow-git` — same as 8.5). A fix-log carrying `github_issue:` goes to Phase 8.5 (not here)
 
 ### 8.6.2 Resolve fix-log + stamp
 ```bash
 . "$(git rev-parse --show-toplevel)/.ow/local/paths.env"
 [ -n "$FIX_DIR" ] || { echo 'FATAL: Phase 0 not loaded'; exit 1; }
-[ -n "${TARGET_VERSION:-}" ] || exit 0          # no bump → no stamp
 RESOLVER="$(git rev-parse --show-toplevel)/scripts/ow-paths.sh"
 FIXLOG=""; AREA_HINT=""
 if [ -n "${plan:-}" ]; then                      # plan-driven — "$plan" = --plan <path> arg (Phase 4 scope)
@@ -79,11 +78,30 @@ FIX_SHA=$(git -C "$FIX_REPO" rev-parse --short HEAD)   # real sha from git — n
 ```
 
 Edit the frontmatter of `$FIXLOG` (surgical **Edit**):
-- `fixed_in_version: v$TARGET_VERSION`   (the same number as the unified bump — Phase 5.5)
 - `fixed_commit: $FIX_SHA`               (overwrites the `pending` that `/ow-implement` wrote in Phase 6.5)
+- `fixed_in_version: v$TARGET_VERSION`   (**only** when `--bump` ran — same number as Phase 5.5; no bump → leave the field as it is)
+
+Then commit + push the stamp — the fix commit is already on origin, so its sha can no longer change:
+
+```bash
+SYNC="$(git rev-parse --show-toplevel)/scripts/ow-git-sync.sh"
+FL_REPO=$(git -C "$(dirname "$FIXLOG")" rev-parse --show-toplevel)   # repo that holds the vault (main or a vault submodule)
+FL_BR=$(git -C "$FL_REPO" branch --show-current)
+git -C "$FL_REPO" add "$FIXLOG"
+git -C "$FL_REPO" commit -m "docs(fixlog): stamp $(basename "$FIXLOG" .md) fixed_commit $FIX_SHA"
+bash "$SYNC" push "$FL_REPO" "$FL_BR" || echo "⚠ stamp commit made but not pushed — push it with the next /ow-git"
+# vault is a submodule → its pointer moved in main: commit + push the pointer the same way
+if [ "$FL_REPO" != "$(git rev-parse --show-toplevel)" ]; then
+  git add "$FL_REPO" && git commit -m "chore: bump vault pointer (fixlog stamp $FIX_SHA)" \
+    && bash "$SYNC" push . "$(git branch --show-current)"
+fi
+```
+
+> Why a follow-up commit, not amend / squash / rebase: a sha is a hash of the commit's own content, so a commit can never contain its own sha — amending the fix-log in changes the sha it would record. The stamp must come after the fix commit, and only after the push: `ow-git-sync.sh push` may rebase local commits on retry, which would change a sha stamped before the push
 
 🔴 **no fake results:** `fixed_in_version` = `$TARGET_VERSION` from Phase 5.5 (a real tag); `fixed_commit` = the real sha from git — never fabricate / never guess
-🔴 A local fix-log has **no** GitHub issue → unlike 8.5: **never invoke** `/ow-fix-issue --ready-for-test`, no comment, no label flip — only stamp the 2 fields
+🔴 A local fix-log has **no** GitHub issue → unlike 8.5: **never invoke** `/ow-fix-issue --ready-for-test`, no comment, no label flip — only stamp the fields
+🔴 **never ask the user** for the sha or prompt for it — it is read from git; gate fails ⇒ skip silently, `pending` stays until the next push that carries `--fix` / `--plan`
 
 ### 8.6.3 Roll into the Report (Phase 9)
-Show the line: `fix-log stamp (Phase 8.6) v$TARGET_VERSION: <fix-slug> ← plan <plan-slug>`
+Show the line: `fix-log stamp (Phase 8.6) <fix-slug> ← $FIX_SHA${TARGET_VERSION:+ v$TARGET_VERSION}` (+ `← plan <plan-slug>` when plan-driven)

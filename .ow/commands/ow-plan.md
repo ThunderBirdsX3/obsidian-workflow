@@ -106,7 +106,7 @@ When a plan is escalated from `/ow-fix` → build the plan from the fix-log + bi
 
 1. **Resolve fix-log** — `fix:<slug>` → find `<slug>.md` in `$FIX_DIR`; `--from-fix <path>` → use the path directly. Not found → STOP + tell the user (never guess)
 2. **Ingest (pre-fill, never re-ask)** — read the fix-log: `Symptom` / `Root Cause` → Task · `Affected Files` → Affected Files · `Success Criteria` → Success Criteria · `Test Cases` → Test Plan
-3. **Link plan → fix** — write `source_fix: "[[<fix-log-slug>]]"` into the plan frontmatter (structured, machine-readable — `/ow-implement` uses it to close the fix-log, `/ow-git --bump` uses it to stamp the version)
+3. **Link plan → fix** — write `source_fix: "[[<fix-log-slug>]]"` into the plan frontmatter (structured, machine-readable — `/ow-implement` uses it to close the fix-log, `/ow-git` uses it to stamp the commit sha + version)
 4. **Link fix → plan (back-link)** — after the plan file is written (Phase 3), write `related_plan: "[[<plan-slug>]]"` back into the fix-log frontmatter (replacing `none`/a stale value)
 
 🔴 Both `source_fix:` (plan) **and** `related_plan:` (fix-log) must be written — they bind the relation in both directions, otherwise the fix-log is orphaned (#30)

@@ -3,6 +3,17 @@
 Format: [Keep a Changelog](https://keepachangelog.com). Versions: SemVer.
 Version marker: `ow.version` in `.ow.yml`.
 
+## [2.10.0] — 2026-11-27
+
+Minor. No config change needed.
+
+### Changed — `/ow-git` fills `fixed_commit` by itself, never asks
+
+- Phase 8.6 no longer needs `--bump`. After any successful push of `--fix <fix-log>` (still `fixed_commit: pending`) or `--plan` with `source_fix:`, it reads the real sha from git and writes `fixed_commit`. `fixed_in_version` is still stamped only with `--bump`.
+- The stamp goes in its own follow-up commit, `docs(fixlog): stamp <slug> fixed_commit <sha>`, pushed in the same run. When the vault is a submodule, the main repo's pointer is committed and pushed too.
+- Why not amend / squash / rebase: a commit cannot contain its own sha, and rewriting pushed history needs `--force`. The stamp runs only after the push, because a push retry may rebase and change the sha.
+- The spec now says never ask the user for the sha. The fix-log template, `/ow-fix`, `/ow-plan`, `fixlog-close.md` and usage docs no longer say "`/ow-git --bump` fills it". 1 new test (1178 pass).
+
 ## [2.9.0] — 2026-11-27
 
 Minor. No config change needed.

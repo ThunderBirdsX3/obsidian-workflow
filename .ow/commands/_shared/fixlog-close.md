@@ -56,6 +56,6 @@ fi
    n=$(open_boxes < "$FIXLOG"); [ "$n" = 0 ] || { echo "🛑 STOP: $n open box(es) in $FIXLOG — finish or report them; status stays in-progress"; exit 1; }
    ```
 3. Only after step 2 exits 0 — frontmatter (surgical **Edit**): `status: fixed` · `fixed_commit: pending`
-   (🔴 the real sha is filled by `/ow-git --bump` Phase 8.6 — `/ow-implement` does not commit to the main tree
+   (🔴 the real sha is filled by `/ow-git` Phase 8.6 after the push (with or without `--bump`) — `/ow-implement` does not commit to the main tree
    itself; **never** write a HEAD sha that is not yet this work's commit = no fake results) ·
    leave `fixed_in_version` for `/ow-git` to stamp

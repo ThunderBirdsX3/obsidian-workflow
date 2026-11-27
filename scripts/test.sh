@@ -963,6 +963,8 @@ run "fixclose: ow-implement STOPs on missing source_fix target (no silent orphan
   "grep -q '🛑 STOP' $FIXCLOSE_MD"
 run "fixclose: ow-git Phase 8.6 stamps --from-fix fix-log (--fix with pending)" \
   "grep -qE 'fixed_commit:.*pending' $GITPOST_MD && grep -q 'from-fix' $GITPOST_MD"
+run "fixclose: ow-git Phase 8.6 stamps sha without --bump + commits it (never asks)" \
+  "! grep -q 'TARGET_VERSION:-}\" ] || exit 0' $GITPOST_MD && grep -q 'docs(fixlog): stamp' $GITPOST_MD && grep -q 'never ask the user' $GITPOST_MD"
 
 # cross-file consistency — source_fix is the shared linkage field across all 4 specs + plan template
 run "fixclose: source_fix present in all 4 command specs" \
@@ -2779,8 +2781,8 @@ run "ow-auto docs: README counts 22"                   "grep -q '22 slash comman
 run "ow-auto docs: ow-help cheatsheet row"             "grep -q '| /ow-auto' .ow/commands/ow-help.md"
 run "ow-auto docs: AGENTS.md names /ow-auto and --claude worker" "grep -q 'ow-auto' AGENTS.md && grep -q -- '--claude' AGENTS.md"
 run "ow-auto docs: codex/README no longer claims no-subagents as the end of the story" "grep -q -- '--claude' codex/README.md"
-run "release: CHANGELOG 2.9.0 on top + version bumped" \
-  "grep -q '^## \[2.9.0\]' CHANGELOG.md && yq -e '.ow.version == \"2.9.0\"' .ow.yml >/dev/null"
+run "release: CHANGELOG 2.10.0 on top + version bumped" \
+  "grep -q '^## \[2.10.0\]' CHANGELOG.md && yq -e '.ow.version == \"2.10.0\"' .ow.yml >/dev/null"
 
 run "worker: TERM to the runner kills the CLI too (no orphan writer)" '_worker_fixture
   PATH="$TD/bin:$PATH" FAKE_MODE=timeout OW_WORKER_TIMEOUT_SEC=60 bash "$W" codex "$TD/wt" "$TD/runs" P1-chunk1 "$TD/prompt.md" >/dev/null 2>&1 &

@@ -122,7 +122,7 @@ subagent สั่ง compact ตัวเองไม่ได้ — วิ่
 4. **Phase 4** — Design system gate: งาน frontend/mobile ต้องอ่าน DS-Tokens + DS-Components ก่อนเขียน UI (บังคับทั้ง inline และ delegate) → STOP ถ้าต้อง component ใหม่
 5. **Phase 5** — รัน build/test จริง (`_shared/build-test.md`) → coverage audit → discipline audit; output ลง scratch run dir ชั่วคราว ผลสรุปเข้า plan
 6. **Phase 6** — Update plan (`status: done`, `Implementation Result` section) + IMPLEMENTATION-STATUS
-   - **Phase 6.5** — ปิด fix-log อัตโนมัติเมื่อ plan มี `source_fix:` **หรือ** รันแบบ `--from-fix`: flip `status: fixed` + tick checkboxes + `fixed_commit: pending` (sha จริง/`fixed_in_version` เติมโดย `/ow-git --bump`) — ไม่ปล่อย fix-log ค้าง `in-progress` (#30)
+   - **Phase 6.5** — ปิด fix-log อัตโนมัติเมื่อ plan มี `source_fix:` **หรือ** รันแบบ `--from-fix`: flip `status: fixed` + tick checkboxes + `fixed_commit: pending` (sha จริงเติมโดย `/ow-git` หลัง push · `fixed_in_version` เติมตอน `--bump`) — ไม่ปล่อย fix-log ค้าง `in-progress` (#30)
 
 ## Area routing (`subagent_target`)
 

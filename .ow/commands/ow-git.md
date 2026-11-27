@@ -39,7 +39,7 @@ FRESH SHELL — Phase 0's exports are gone — so it re-hydrates first, then ass
 
 ```
 /ow-git --plan <vault>/80-ImplementPlan/<slug>.md
-/ow-git --plan <vault>/80-ImplementPlan/<slug>.md --bump patch   # plan has source_fix: → stamp fixed_in_version + fixed_commit into the fix-log (Phase 8.6)
+/ow-git --plan <vault>/80-ImplementPlan/<slug>.md [--bump patch] # plan has source_fix: → stamp fixed_commit (+ fixed_in_version with --bump) into the fix-log (Phase 8.6)
 /ow-git --fix <vault>/85-FixLog/<slug>.md [--bump patch]          # push → comment version + flip label on every issue it Closes (Phase 8.5)
 /ow-git --message "feat: add search"
 /ow-git --status | --pull | --branch <name> | --merge-to default | --no-push | --no-sync
@@ -237,8 +237,9 @@ Run **only after a successful push** (never on `--no-push` / `--status` / `--swi
 
 - **8.5 issue-handoff** — the pushed commits carry `Closes` / `Fixes` / `Resolves #NN`, **or**
   `--fix <fix-log>` whose fix-log has `github_issue:` — and no `--no-ready-for-test`
-- **8.6 fix-log version stamp (#30)** — `--bump` ran **and** a local fix-log is finalized:
-  `--plan` whose plan has `source_fix:`, **or** `--fix` whose fix-log has `fixed_commit: pending`
+- **8.6 fix-log commit stamp (#30)** — a local fix-log is finalized (`--bump` not required):
+  `--plan` whose plan has `source_fix:`, **or** `--fix` whose fix-log has `fixed_commit: pending` —
+  the sha is read from git and committed as a follow-up `docs(fixlog): stamp …` commit; never ask the user for it
 
 Neither gate holds → Phase 9. Either holds → 🔴 Read `.ow/commands/_shared/git-post-push.md` and run it.
 

@@ -62,7 +62,7 @@ Frontmatter:
   area: api | web | mobile | cross
   reported_by: user | qa | self | customer
   related_plan: "[[plan-slug]]" | none   ← /ow-plan fix: เขียน (back-link); ปิด fix-log auto โดย /ow-implement
-  # fixed_commit / fixed_in_version — เติม auto โดย /ow-git --bump ตอนปิด
+  # fixed_commit / fixed_in_version — เติม auto โดย /ow-git หลัง push (version เฉพาะ --bump)
 
 Body:
   ## Symptom               ← what user sees
