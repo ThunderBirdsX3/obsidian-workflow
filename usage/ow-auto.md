@@ -37,7 +37,7 @@ flag เสริม: `--worktree` (implement+test ใน worktree แยก) ·
 
 1. **รวบรวมคิว** แล้วแสดงให้ดู (ไม่ใช่คำถาม)
 2. **Phase 1.5 — ถามครั้งเดียว** — สแกนความกำกวมของทุก FEAT ในคิว รวมเป็นชุดเดียว ทุกข้อมี Recommended ตอบ "ตาม recommended ทั้งหมด" ได้ · คำตอบเขียนลง `## Clarifications` ของ FEAT doc และ run-log
-3. **หลังจากนั้นไม่ถามอีก** — ต่อ FEAT: `/ow-plan` (ไม่ถาม ใช้ Clarifications) → stamp `status: approved` + `approved_by: ow-auto` → `/ow-implement --auto` → `/ow-test --no-merge`
+3. **หลังจากนั้นไม่ถามอีก** — ต่อ FEAT: `/ow-plan` (ไม่ถาม ใช้ Clarifications) → stamp `status: approved` + `approved_by: ow-auto (grant: <git user.name>)` → `/ow-implement --auto` → `/ow-test --no-merge`
 4. build/test พัง → fix chunk + fix-log สั้นๆ ไม่เกิน `auto.max_fix_per_phase` รอบ · `/ow-test` FAIL → fix-log → `/ow-implement --from-fix <fix-log> --auto` ไม่เกินจำนวนรอบเดียวกัน
 5. ทำต่อไม่ได้ → FEAT นั้นเป็น `stopped` พร้อมเหตุผล แล้ว**ไปต่อ FEAT ที่ไม่ได้พึ่งมัน** · FEAT ที่พึ่งมัน → `stopped: depends on …`
 6. จบ: run-log `status: done` หรือ `done-with-stops`

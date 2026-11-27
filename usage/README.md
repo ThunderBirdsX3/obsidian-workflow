@@ -114,6 +114,7 @@
 5. **Thai-first** reports (เว้นแต่ `.ow.yml` `language: en`)
 6. **Coding discipline** — ระบุ success criteria ก่อนลงมือ; minimum correct change; ทุก changed line trace กลับ request/criteria ได้; ห้าม speculative abstraction/refactor นอก scope — สัญญาเต็มที่ `.ow/commands/_shared/coding-discipline.md`
 7. **เอกสาร vault = สถานะปัจจุบัน** — โน้ตนอก `80-ImplementPlan` `85-FixLog` `90-TestPlan` `95-Handoff` เขียนได้เฉพาะสิ่งที่จริงตอนนี้ · ห้าม "เดิม X → ใหม่ Y" ห้ามหัวข้อ `## Changelog` (ของเก่าอยู่ใน git + plan/fix-log) — สัญญาเต็มที่ `.ow/commands/_shared/vault-doc-style.md` · `/ow-secure` Phase 2.6 บล็อกให้
+8. **ชื่อคนใน log มาจาก git** — `created_by` (plan · fix-log · test-plan · handoff) และ `approved_by` เติมจาก `$OW_USER` = `git config user.name` ของเครื่องที่รัน (ไม่ได้ตั้ง → `$USER`) · ค่าถูก cache ไว้ที่ `.ow/local/paths.env` (gitignore, แยกต่อเครื่อง) — เขียนใหม่ทุกครั้งที่ Phase 0 ของ `/ow-*` รัน และตอน install / upgrade / `ow regen` จบ · clone ใหม่ยังไม่มี cache ก็ไม่พัง: คำสั่งแรกสร้างให้เอง · อยากเปลี่ยนชื่อ → `git config user.name "<ชื่อ>"` แล้วคำสั่งถัดไปใช้ชื่อใหม่
 
 ---
 

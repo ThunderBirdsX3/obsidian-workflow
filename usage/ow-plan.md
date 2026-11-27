@@ -77,6 +77,7 @@ related_docs: [...]
 ```
 Frontmatter:
   tags: [type/plan]
+  created_by: <git user.name>             ← เติมจาก $OW_USER (.ow/local/paths.env) อัตโนมัติ
   status: planning | approved | in-progress | done | abandoned
   submodule_target: api | web | mobile | docs | all
   subagent_target: backend | frontend | mobile | docs | design | all

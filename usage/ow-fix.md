@@ -56,6 +56,7 @@ area: web
 
 ```
 Frontmatter:
+  created_by: <git user.name>   ← เติมจาก $OW_USER (.ow/local/paths.env) อัตโนมัติ
   status: in-progress | fixed | wont-fix | regressed
   severity: P0 blocker | P1 major | P2 minor | P3 polish
   area: api | web | mobile | cross
